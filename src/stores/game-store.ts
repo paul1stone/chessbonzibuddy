@@ -14,6 +14,7 @@ interface GameActions {
   setGames: (games: Game[]) => void;
   setActiveGame: (game: Game | null) => void;
   addGame: (game: Game) => void;
+  removeGame: (id: string) => void;
   setActiveMove: (move: number) => void;
   setIsAnalyzing: (val: boolean) => void;
   setAnalysisProgress: (progress: number) => void;
@@ -31,6 +32,12 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
   setActiveGame: (game) =>
     set({ activeGame: game, activeMove: 0, view: game ? "review" : "import" }),
   addGame: (game) => set((state) => ({ games: [game, ...state.games] })),
+  removeGame: (id) =>
+    set((state) => ({
+      games: state.games.filter((g) => g.id !== id),
+      activeGame: state.activeGame?.id === id ? null : state.activeGame,
+      view: state.activeGame?.id === id ? "import" : state.view,
+    })),
   setActiveMove: (move) => set({ activeMove: move }),
   setIsAnalyzing: (val) => set({ isAnalyzing: val }),
   setAnalysisProgress: (progress) => set({ analysisProgress: progress }),
