@@ -96,27 +96,17 @@ export class StockfishEngine {
       );
     }
 
-    // Try CDN-based inline worker first, then fall back to local copy.
     try {
-      this.worker = this.createCdnWorker();
+      this.worker = this.createLocalWorker();
       await this.handshake();
-    } catch {
-      // CDN worker failed (likely CORS). Try local path.
+    } catch (err) {
       this.worker?.terminate();
       this.worker = null;
-
-      try {
-        this.worker = this.createLocalWorker();
-        await this.handshake();
-      } catch (innerErr) {
-        this.worker?.terminate();
-        this.worker = null;
-        throw new Error(
-          `Failed to initialise Stockfish engine. ` +
-            `Make sure stockfish.js is available at /stockfish/stockfish.js ` +
-            `or that the CDN is reachable. Original error: ${innerErr}`
-        );
-      }
+      throw new Error(
+        `Failed to initialise Stockfish engine. ` +
+          `Make sure stockfish.js is available at /stockfish/stockfish.js. ` +
+          `Original error: ${err}`
+      );
     }
 
     this.isReady = true;
@@ -171,26 +161,10 @@ export class StockfishEngine {
   // Worker creation helpers
   // ------------------------------------------------------------------
 
-  private createCdnWorker(): Worker {
-    // CDN approach: inline worker that loads stockfish, then bridges the API
-    const code = `
-      importScripts('https://cdn.jsdelivr.net/npm/stockfish.wasm@0.10.0/stockfish.js');
-      var engine = typeof Stockfish === 'function' ? Stockfish() : Stockfish;
-      self.onmessage = function(e) { engine.postMessage(e.data); };
-      engine.addMessageListener(function(line) { self.postMessage(line); });
-    `;
-    const blob = new Blob([code], { type: "application/javascript" });
-    const url = URL.createObjectURL(blob);
-    const worker = new Worker(url);
-    URL.revokeObjectURL(url);
-    this.attachListener(worker);
-    return worker;
-  }
-
   private createLocalWorker(): Worker {
-    // Uses the wrapper at public/stockfish/worker.js which bridges
-    // Stockfish's custom API to the standard Worker messaging protocol
-    const worker = new Worker("/stockfish/worker.js");
+    // Stockfish 18 single-threaded build handles Worker messaging natively
+    // (onmessage for input, postMessage for output) — no wrapper needed.
+    const worker = new Worker("/stockfish/stockfish.js");
     this.attachListener(worker);
     return worker;
   }
