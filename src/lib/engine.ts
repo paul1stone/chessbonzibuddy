@@ -172,7 +172,13 @@ export class StockfishEngine {
   // ------------------------------------------------------------------
 
   private createCdnWorker(): Worker {
-    const code = `importScripts('https://cdn.jsdelivr.net/npm/stockfish.wasm@0.10.0/stockfish.js');`;
+    // CDN approach: inline worker that loads stockfish, then bridges the API
+    const code = `
+      importScripts('https://cdn.jsdelivr.net/npm/stockfish.wasm@0.10.0/stockfish.js');
+      var engine = typeof Stockfish === 'function' ? Stockfish() : Stockfish;
+      self.onmessage = function(e) { engine.postMessage(e.data); };
+      engine.addMessageListener(function(line) { self.postMessage(line); });
+    `;
     const blob = new Blob([code], { type: "application/javascript" });
     const url = URL.createObjectURL(blob);
     const worker = new Worker(url);
@@ -182,8 +188,9 @@ export class StockfishEngine {
   }
 
   private createLocalWorker(): Worker {
-    // Expects stockfish.js in Next.js public dir: public/stockfish/stockfish.js
-    const worker = new Worker("/stockfish/stockfish.js");
+    // Uses the wrapper at public/stockfish/worker.js which bridges
+    // Stockfish's custom API to the standard Worker messaging protocol
+    const worker = new Worker("/stockfish/worker.js");
     this.attachListener(worker);
     return worker;
   }
