@@ -102,8 +102,26 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
     }
   }
 
-  function handleGameClick(game: Game) {
-    setActiveGame(game);
+  async function handleGameClick(game: Game) {
+    // If the game already has pgn data (e.g. just imported), use it directly
+    if (game.pgn) {
+      setActiveGame(game);
+      onGameSelect?.();
+      return;
+    }
+
+    // Otherwise fetch the full game record (with pgn + analysis)
+    try {
+      const res = await fetch(`/api/games/${game.id}`);
+      if (res.ok) {
+        const fullGame = (await res.json()) as Game;
+        setActiveGame(fullGame);
+      } else {
+        setActiveGame(game);
+      }
+    } catch {
+      setActiveGame(game);
+    }
     onGameSelect?.();
   }
 

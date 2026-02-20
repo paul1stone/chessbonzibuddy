@@ -233,8 +233,8 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
 
       {/* Main content: board + feedback */}
       <div className="flex flex-1 items-start gap-6">
-        {/* Board */}
-        <div className="shrink-0">
+        {/* Board — constrained to a max size */}
+        <div className="w-[min(480px,50vh)] shrink-0">
           <Board
             position={positionFen}
             interactive={isCorrect === null && !showAnswer}

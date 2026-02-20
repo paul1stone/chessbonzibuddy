@@ -210,17 +210,32 @@ export function BoardPanel({
 
   return (
     <div className="flex flex-col items-center gap-0">
-      <Board
-        position={currentFen}
-        interactive={interactive}
-        onPieceDrop={onPieceDrop}
-        boardOrientation={boardOrientation}
-        customArrows={arrows.length > 0 ? arrows : undefined}
+      {/* Controls above the board */}
+      <MoveControls
+        currentMove={clampedMove}
+        totalMoves={totalMoves}
+        onFirst={goToFirst}
+        onPrevious={goToPrevious}
+        onNext={goToNext}
+        onLast={goToLast}
+        isPlaying={isPlaying}
+        onTogglePlay={moves && moves.length > 0 ? togglePlay : undefined}
       />
 
-      {/* Move info overlay: shows played vs best move with classification */}
+      {/* Board — scaled down ~10% */}
+      <div className="w-[90%]">
+        <Board
+          position={currentFen}
+          interactive={interactive}
+          onPieceDrop={onPieceDrop}
+          boardOrientation={boardOrientation}
+          customArrows={arrows.length > 0 ? arrows : undefined}
+        />
+      </div>
+
+      {/* Move info bar: shows played vs best move with classification */}
       {currentMoveAnalysis && (
-        <div className="mt-2 flex w-full items-center justify-center gap-3 rounded-lg bg-zinc-900/70 px-4 py-2">
+        <div className="mt-2 flex w-[90%] items-center justify-center gap-3 rounded-lg bg-zinc-900/70 px-4 py-2">
           {/* Played move */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500">Played</span>
@@ -244,17 +259,6 @@ export function BoardPanel({
           )}
         </div>
       )}
-
-      <MoveControls
-        currentMove={clampedMove}
-        totalMoves={totalMoves}
-        onFirst={goToFirst}
-        onPrevious={goToPrevious}
-        onNext={goToNext}
-        onLast={goToLast}
-        isPlaying={isPlaying}
-        onTogglePlay={moves && moves.length > 0 ? togglePlay : undefined}
-      />
     </div>
   );
 }

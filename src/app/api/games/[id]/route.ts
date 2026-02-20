@@ -4,6 +4,40 @@ import { db } from "@/db";
 import { games } from "@/db/schema";
 
 /**
+ * GET /api/games/[id]
+ *
+ * Returns the full game record including PGN and analysis.
+ */
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const [game] = await db
+      .select()
+      .from(games)
+      .where(eq(games.id, id));
+
+    if (!game) {
+      return NextResponse.json(
+        { error: "Game not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(game);
+  } catch (error) {
+    console.error("Error fetching game:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * DELETE /api/games/[id]
  *
  * Removes a game from the database.
