@@ -118,30 +118,28 @@ const USER_AGENT = "ChessAnalyzer/1.0";
  *
  * Strategy:
  *  1. Parse the URL to get the game ID and type.
- *  2. Try the Chess.com callback JSON API (`/callback/{type}/game/{id}`).
- *  3. If that fails, attempt to scrape the game page for embedded PGN data.
+ *  2. Use the callback API to get player username and game date.
+ *  3. Use the public API to fetch the game with full PGN.
+ *  4. Fall back to scraping if the public API fails.
  *
  * @throws Error with a descriptive message on failure.
  */
 export async function fetchChessComGame(url: string): Promise<ChessComGame> {
   const { gameId, type } = parseChessComUrl(url);
 
-  // Attempt 1 -- callback JSON API
+  // Attempt 1 -- Use callback API to get metadata, then public API for PGN
   try {
-    const game = await fetchViaCallbackApi(gameId, type, url);
+    const game = await fetchViaPublicApi(gameId, type, url);
     return game;
-  } catch (callbackError) {
-    // Attempt 2 -- public PGN endpoint (chess.com serves PGN at the game URL
-    // with specific Accept headers, but this is fragile). We wrap and rethrow
-    // with a helpful message.
+  } catch (publicApiError) {
+    // Attempt 2 -- scrape the game page
     try {
       const game = await fetchViaPgnEndpoint(gameId, type, url);
       return game;
     } catch {
-      // Both approaches failed -- surface the original callback error
       throw new Error(
         `Failed to fetch game ${gameId} from Chess.com: ${
-          callbackError instanceof Error ? callbackError.message : String(callbackError)
+          publicApiError instanceof Error ? publicApiError.message : String(publicApiError)
         }`
       );
     }
@@ -149,90 +147,128 @@ export async function fetchChessComGame(url: string): Promise<ChessComGame> {
 }
 
 // ---------------------------------------------------------------------------
-// Internal: Callback API approach
+// Internal: Public API approach (most reliable)
 // ---------------------------------------------------------------------------
 
 interface CallbackApiResponse {
-  // The callback API returns a large JSON object. We only care about a subset.
   game?: {
-    pgn?: string;
     pgnHeaders?: {
       White?: string;
       Black?: string;
-      Result?: string;
       Date?: string;
-      EndDate?: string;
     };
   };
   players?: {
-    top?: { username?: string };
-    bottom?: { username?: string };
+    top?: { username?: string; color?: string };
+    bottom?: { username?: string; color?: string };
   };
-  // Some responses nest differently
-  pgn?: string;
-  white?: { username?: string };
-  black?: { username?: string };
   [key: string]: unknown;
 }
 
-async function fetchViaCallbackApi(
+interface PublicApiGame {
+  url: string;
+  pgn: string;
+  white?: { username: string };
+  black?: { username: string };
+  end_time?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Use the callback API to get player info, then the public API for the full PGN.
+ * The public API endpoint is: /pub/player/{username}/games/{YYYY}/{MM}
+ */
+async function fetchViaPublicApi(
   gameId: string,
   type: "live" | "daily",
   originalUrl: string
 ): Promise<ChessComGame> {
+  // Step 1: Get player username and date from callback API
   const callbackUrl = `https://www.chess.com/callback/${type}/game/${gameId}`;
-
-  const response = await fetch(callbackUrl, {
+  const callbackResponse = await fetch(callbackUrl, {
     headers: {
       "User-Agent": USER_AGENT,
       Accept: "application/json",
     },
   });
 
-  if (!response.ok) {
-    if (response.status === 404) {
+  if (!callbackResponse.ok) {
+    if (callbackResponse.status === 404) {
       throw new Error("Game not found on Chess.com");
     }
+    throw new Error(`Chess.com API returned status ${callbackResponse.status}`);
+  }
+
+  const callbackData = (await callbackResponse.json()) as CallbackApiResponse;
+
+  // Find a username from the callback response
+  const username =
+    callbackData.game?.pgnHeaders?.White ??
+    callbackData.players?.top?.username ??
+    callbackData.players?.bottom?.username;
+
+  if (!username) {
+    throw new Error("Could not determine player username from Chess.com");
+  }
+
+  // Get the date (YYYY.MM.DD format from PGN headers)
+  const dateStr = callbackData.game?.pgnHeaders?.Date;
+  let year: string;
+  let month: string;
+
+  if (dateStr) {
+    const parts = dateStr.split(".");
+    year = parts[0];
+    month = parts[1];
+  } else {
+    // Fallback to current month
+    const now = new Date();
+    year = String(now.getFullYear());
+    month = String(now.getMonth() + 1).padStart(2, "0");
+  }
+
+  // Step 2: Fetch games from the public API
+  const publicApiUrl = `https://api.chess.com/pub/player/${username.toLowerCase()}/games/${year}/${month}`;
+  const publicResponse = await fetch(publicApiUrl, {
+    headers: {
+      "User-Agent": USER_AGENT,
+      Accept: "application/json",
+    },
+  });
+
+  if (!publicResponse.ok) {
+    throw new Error(`Chess.com public API returned status ${publicResponse.status}`);
+  }
+
+  const publicData = (await publicResponse.json()) as { games?: PublicApiGame[] };
+  const games = publicData.games ?? [];
+
+  // Find the matching game by URL containing the game ID
+  const targetUrl = `https://www.chess.com/game/${type}/${gameId}`;
+  const matchedGame = games.find(
+    (g) => g.url === targetUrl || g.url.includes(gameId)
+  );
+
+  if (!matchedGame) {
     throw new Error(
-      `Chess.com API returned status ${response.status}`
+      `Game ${gameId} not found in ${username}'s recent games. The game may be from a different month.`
     );
   }
 
-  const data = (await response.json()) as CallbackApiResponse;
-
-  // Extract PGN -- the shape varies between API versions
-  const pgn = data.game?.pgn ?? data.pgn;
+  const pgn = matchedGame.pgn;
   if (!pgn || typeof pgn !== "string") {
-    throw new Error("No PGN data found in Chess.com API response");
+    throw new Error("No PGN data found for this game");
   }
 
-  // Extract player names
-  const whitePlayer =
-    data.game?.pgnHeaders?.White ??
-    data.white?.username ??
-    data.players?.top?.username ??
-    "Unknown";
-  const blackPlayer =
-    data.game?.pgnHeaders?.Black ??
-    data.black?.username ??
-    data.players?.bottom?.username ??
-    "Unknown";
-
-  // Extract result
-  const result =
-    data.game?.pgnHeaders?.Result ?? extractResultFromPgn(pgn);
-
-  // Extract date played
-  const dateStr =
-    data.game?.pgnHeaders?.Date ?? data.game?.pgnHeaders?.EndDate;
-  const playedAt = dateStr ? parseChessComDate(dateStr) : null;
+  // Extract info from PGN headers (most reliable source)
+  const headers = parsePgnHeaders(pgn);
 
   return {
     pgn,
-    whitePlayer,
-    blackPlayer,
-    result,
-    playedAt,
+    whitePlayer: headers.White ?? matchedGame.white?.username ?? "Unknown",
+    blackPlayer: headers.Black ?? matchedGame.black?.username ?? "Unknown",
+    result: headers.Result ?? extractResultFromPgn(pgn),
+    playedAt: headers.Date ? parseChessComDate(headers.Date) : null,
     url: originalUrl,
   };
 }
