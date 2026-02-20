@@ -5,6 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
+  Play,
+  Pause,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +17,8 @@ interface MoveControlsProps {
   onPrevious: () => void;
   onNext: () => void;
   onLast: () => void;
+  isPlaying?: boolean;
+  onTogglePlay?: () => void;
 }
 
 export function MoveControls({
@@ -24,6 +28,8 @@ export function MoveControls({
   onPrevious,
   onNext,
   onLast,
+  isPlaying = false,
+  onTogglePlay,
 }: MoveControlsProps) {
   const atStart = currentMove === 0;
   const atEnd = currentMove === totalMoves;
@@ -35,7 +41,7 @@ export function MoveControls({
           variant="ghost"
           size="icon"
           onClick={onFirst}
-          disabled={atStart}
+          disabled={atStart || isPlaying}
           aria-label="First move"
           className="text-zinc-400 hover:text-zinc-100"
         >
@@ -46,18 +52,39 @@ export function MoveControls({
           variant="ghost"
           size="icon"
           onClick={onPrevious}
-          disabled={atStart}
+          disabled={atStart || isPlaying}
           aria-label="Previous move"
           className="text-zinc-400 hover:text-zinc-100"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
+        {onTogglePlay && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onTogglePlay}
+            disabled={atEnd && !isPlaying}
+            aria-label={isPlaying ? "Pause" : "Play"}
+            className={
+              isPlaying
+                ? "text-blue-400 hover:text-blue-300"
+                : "text-zinc-400 hover:text-zinc-100"
+            }
+          >
+            {isPlaying ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+
         <Button
           variant="ghost"
           size="icon"
           onClick={onNext}
-          disabled={atEnd}
+          disabled={atEnd || isPlaying}
           aria-label="Next move"
           className="text-zinc-400 hover:text-zinc-100"
         >
@@ -68,7 +95,7 @@ export function MoveControls({
           variant="ghost"
           size="icon"
           onClick={onLast}
-          disabled={atEnd}
+          disabled={atEnd || isPlaying}
           aria-label="Last move"
           className="text-zinc-400 hover:text-zinc-100"
         >

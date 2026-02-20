@@ -67,6 +67,7 @@ export function ReviewView({
           pgn={pgn}
           currentMove={currentMove}
           onMoveChange={onMoveChange}
+          moves={moves.length > 0 ? moves : undefined}
         />
       </div>
 
