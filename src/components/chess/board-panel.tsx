@@ -222,8 +222,8 @@ export function BoardPanel({
         onTogglePlay={moves && moves.length > 0 ? togglePlay : undefined}
       />
 
-      {/* Board — scaled down ~10% */}
-      <div className="w-[90%]">
+      {/* Board — 90% of column width, but capped by viewport height so it never overflows */}
+      <div className="w-[90%] max-w-[calc(100vh-14rem)]">
         <Board
           position={currentFen}
           interactive={interactive}
@@ -235,7 +235,7 @@ export function BoardPanel({
 
       {/* Move info bar: shows played vs best move with classification */}
       {currentMoveAnalysis && (
-        <div className="mt-2 flex w-[90%] items-center justify-center gap-3 rounded-lg bg-zinc-900/70 px-4 py-2">
+        <div className="mt-2 flex w-[90%] max-w-[calc(100vh-14rem)] items-center justify-center gap-3 rounded-lg bg-zinc-900/70 px-4 py-2">
           {/* Played move */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500">Played</span>

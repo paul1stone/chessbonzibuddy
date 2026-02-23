@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Chess Analyzer",
   description: "Analyze your chess games",
+  icons: {
+    icon: "/coolmonkey.gif",
+  },
 };
 
 export default function RootLayout({

@@ -64,7 +64,7 @@ export function ReviewView({
   return (
     <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
       {/* Left column: Board */}
-      <div className="flex items-start justify-center">
+      <div className="flex items-center justify-center">
         <BoardPanel
           pgn={pgn}
           currentMove={currentMove}
