@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["stockfish"],
+  outputFileTracingIncludes: {
+    "/api/games/\\[id\\]/analyze": ["./.stockfish/**/*"],
+  },
 };
 
 export default nextConfig;

@@ -16,24 +16,16 @@ export interface ServerEngineEvaluation {
 }
 
 /**
- * Find the stockfish WASM JS file. Tries several locations since
- * bundlers and serverless runtimes may place node_modules differently.
+ * Find the stockfish lite WASM JS file. Uses the lite build (.stockfish/)
+ * which is only ~7 MB instead of 108 MB, fitting within Vercel's 250 MB limit.
  */
 function resolveStockfishPath(): string {
   const candidates = [
-    // Standard node_modules relative to project root
-    path.join(process.cwd(), "node_modules/stockfish/bin/stockfish-18-single.js"),
-    // Relative to this file (works in some bundled contexts)
-    path.join(__dirname, "../../node_modules/stockfish/bin/stockfish-18-single.js"),
-    path.join(__dirname, "../../../node_modules/stockfish/bin/stockfish-18-single.js"),
+    // Lite build copied by postinstall (primary — used on Vercel)
+    path.join(process.cwd(), ".stockfish/stockfish.js"),
+    // Fallback to node_modules lite build
+    path.join(process.cwd(), "node_modules/stockfish/bin/stockfish-18-lite-single.js"),
   ];
-
-  // Also try require.resolve if available
-  try {
-    candidates.unshift(require.resolve("stockfish/bin/stockfish-18-single.js"));
-  } catch {
-    // require.resolve may fail in some bundled environments
-  }
 
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
