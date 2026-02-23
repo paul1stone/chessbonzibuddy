@@ -1,10 +1,11 @@
 /**
  * Server-side Stockfish engine using the WASM build via Node.js subprocess.
- * Falls back from native binary to WASM so it works on Vercel serverless.
+ * Works on both local (native or WASM) and Vercel serverless (WASM only).
  */
 
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
-import { createRequire } from "module";
+import path from "path";
+import fs from "fs";
 
 export interface ServerEngineEvaluation {
   eval: number;
@@ -14,17 +15,44 @@ export interface ServerEngineEvaluation {
   mate: number | null;
 }
 
+/**
+ * Find the stockfish WASM JS file. Tries several locations since
+ * bundlers and serverless runtimes may place node_modules differently.
+ */
+function resolveStockfishPath(): string {
+  const candidates = [
+    // Standard node_modules relative to project root
+    path.join(process.cwd(), "node_modules/stockfish/bin/stockfish-18-single.js"),
+    // Relative to this file (works in some bundled contexts)
+    path.join(__dirname, "../../node_modules/stockfish/bin/stockfish-18-single.js"),
+    path.join(__dirname, "../../../node_modules/stockfish/bin/stockfish-18-single.js"),
+  ];
+
+  // Also try require.resolve if available
+  try {
+    candidates.unshift(require.resolve("stockfish/bin/stockfish-18-single.js"));
+  } catch {
+    // require.resolve may fail in some bundled environments
+  }
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    `Could not find stockfish WASM. Searched:\n${candidates.join("\n")}`
+  );
+}
+
 export class ServerStockfishEngine {
   private process: ChildProcessWithoutNullStreams | null = null;
   private buffer = "";
   private lineResolvers: Array<(line: string) => void> = [];
 
   async init(): Promise<void> {
-    // Resolve the WASM stockfish JS entry point from the npm package
-    const require2 = createRequire(import.meta.url);
-    const stockfishPath = require2.resolve(
-      "stockfish/bin/stockfish-18-single.js"
-    );
+    const stockfishPath = resolveStockfishPath();
 
     this.process = spawn(process.execPath, [stockfishPath], {
       stdio: ["pipe", "pipe", "pipe"],
@@ -46,15 +74,21 @@ export class ServerStockfishEngine {
       }
     });
 
+    // Capture stderr for debugging
+    this.process.stderr.setEncoding("utf-8");
+    this.process.stderr.on("data", (data: string) => {
+      console.error("[stockfish stderr]", data);
+    });
+
     this.process.on("error", (err) => {
       throw new Error(`Failed to start Stockfish WASM: ${err.message}`);
     });
 
-    // UCI handshake
-    await this.sendAndWaitFor("uci", "uciok");
+    // UCI handshake — WASM init can be slow on cold start
+    await this.sendAndWaitFor("uci", "uciok", 30_000);
     // WASM build is single-threaded, skip Threads option
     this.send("setoption name Hash value 64");
-    await this.sendAndWaitFor("isready", "readyok");
+    await this.sendAndWaitFor("isready", "readyok", 30_000);
   }
 
   async evaluate(
@@ -85,9 +119,13 @@ export class ServerStockfishEngine {
     this.process?.stdin.write(cmd + "\n");
   }
 
-  private async sendAndWaitFor(cmd: string, token: string): Promise<void> {
+  private async sendAndWaitFor(
+    cmd: string,
+    token: string,
+    timeoutMs = 10_000
+  ): Promise<void> {
     this.send(cmd);
-    await this.waitForLine(token, 10_000);
+    await this.waitForLine(token, timeoutMs);
   }
 
   private waitForLine(
