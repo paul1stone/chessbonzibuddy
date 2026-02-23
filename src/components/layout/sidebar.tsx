@@ -62,14 +62,19 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
   const username = chessComUsername || lichessUsername;
 
   useEffect(() => {
+    if (!username) {
+      setGames([]);
+      setIsLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchGames() {
       try {
-        const url = username
-          ? `/api/games?username=${encodeURIComponent(username)}`
-          : "/api/games";
-        const res = await fetch(url);
+        const res = await fetch(
+          `/api/games?username=${encodeURIComponent(username)}`
+        );
         if (!res.ok) {
           throw new Error("Failed to fetch games");
         }
@@ -169,6 +174,14 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
             <p className="px-2 py-8 text-center text-sm text-red-400">
               {fetchError}
             </p>
+          ) : !username ? (
+            <div className="flex flex-col items-center gap-3 px-2 py-8">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/coolmonkey.gif" alt="" className="h-16 w-16" />
+              <p className="text-center text-sm text-zinc-500">
+                Connect your Chess.com or Lichess account to view games
+              </p>
+            </div>
           ) : games.length === 0 ? (
             <p className="px-2 py-8 text-center text-sm text-zinc-500">
               No games analyzed yet

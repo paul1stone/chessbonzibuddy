@@ -12,10 +12,13 @@ import {
 } from "@/lib/analysis-utils";
 import type { MoveAnalysis, GameAnalysis } from "@/lib/engine";
 
+// Allow up to 60s for analysis (Hobby plan max is 60s with streaming)
+export const maxDuration = 60;
+
 /**
  * POST /api/games/[id]/analyze
  *
- * Run Stockfish analysis server-side using the native binary.
+ * Run Stockfish WASM analysis server-side.
  * Streams progress via Server-Sent Events.
  */
 export async function POST(
@@ -69,7 +72,7 @@ export async function POST(
         try {
           const analysis: MoveAnalysis[] = [];
           const replay = new Chess();
-          const depth = 18;
+          const depth = 12;
 
           // Evaluate starting position — this gives us evalBefore AND
           // bestMove for the first move. We reuse each afterResult as

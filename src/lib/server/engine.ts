@@ -1,9 +1,10 @@
 /**
- * Server-side Stockfish engine using the native binary via child_process.
- * Much faster than the browser WASM build.
+ * Server-side Stockfish engine using the WASM build via Node.js subprocess.
+ * Falls back from native binary to WASM so it works on Vercel serverless.
  */
 
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
+import { createRequire } from "module";
 
 export interface ServerEngineEvaluation {
   eval: number;
@@ -19,7 +20,13 @@ export class ServerStockfishEngine {
   private lineResolvers: Array<(line: string) => void> = [];
 
   async init(): Promise<void> {
-    this.process = spawn("stockfish", [], {
+    // Resolve the WASM stockfish JS entry point from the npm package
+    const require2 = createRequire(import.meta.url);
+    const stockfishPath = require2.resolve(
+      "stockfish/bin/stockfish-18-single.js"
+    );
+
+    this.process = spawn(process.execPath, [stockfishPath], {
       stdio: ["pipe", "pipe", "pipe"],
     });
 
@@ -40,16 +47,13 @@ export class ServerStockfishEngine {
     });
 
     this.process.on("error", (err) => {
-      throw new Error(
-        `Failed to start Stockfish. Is it installed? (brew install stockfish)\n${err.message}`
-      );
+      throw new Error(`Failed to start Stockfish WASM: ${err.message}`);
     });
 
     // UCI handshake
     await this.sendAndWaitFor("uci", "uciok");
-    // Use multiple threads for speed
-    this.send("setoption name Threads value 4");
-    this.send("setoption name Hash value 256");
+    // WASM build is single-threaded, skip Threads option
+    this.send("setoption name Hash value 64");
     await this.sendAndWaitFor("isready", "readyok");
   }
 
