@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGameStore } from "@/stores/game-store";
+import { useProfileStore } from "@/stores/profile-store";
 import { ProfileSettings } from "./profile-settings";
 import type { Game } from "@/db/schema";
 
@@ -50,17 +51,25 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
   const setGames = useGameStore((s) => s.setGames);
   const removeGame = useGameStore((s) => s.removeGame);
 
+  const chessComUsername = useProfileStore((s) => s.chessComUsername);
+  const lichessUsername = useProfileStore((s) => s.lichessUsername);
+
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Fetch games from API on mount
+  // Fetch games from API, filtered by linked username
+  const username = chessComUsername || lichessUsername;
+
   useEffect(() => {
     let cancelled = false;
 
     async function fetchGames() {
       try {
-        const res = await fetch("/api/games");
+        const url = username
+          ? `/api/games?username=${encodeURIComponent(username)}`
+          : "/api/games";
+        const res = await fetch(url);
         if (!res.ok) {
           throw new Error("Failed to fetch games");
         }
@@ -84,7 +93,7 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
     return () => {
       cancelled = true;
     };
-  }, [setGames]);
+  }, [setGames, username]);
 
   // Delete game handler
   async function handleDelete(e: React.MouseEvent, gameId: string) {

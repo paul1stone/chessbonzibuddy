@@ -131,15 +131,6 @@ export function RecentGames({ onImport }: RecentGamesProps) {
     setSelected(new Set());
   }, [games, selected, onImport]);
 
-  if (!hasAccount) {
-    return (
-      <div className="py-8 text-center text-sm text-zinc-500">
-        Link your Chess.com or Lichess account in the sidebar to import recent
-        games.
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-8">

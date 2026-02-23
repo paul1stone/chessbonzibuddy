@@ -15,8 +15,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Crown, Loader2, ArrowUp } from "lucide-react";
+import { Crown, Loader2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useProfileStore } from "@/stores/profile-store";
+import { fetchChessComRatings, fetchLichessRatings } from "@/lib/ratings";
 import type { GameAnalysis } from "@/lib/engine";
 import type { Game } from "@/db/schema";
 
@@ -29,6 +31,270 @@ interface RecentGameData {
   timeControl: string;
   playedAt: string;
   pgn: string;
+}
+
+// ---- Login screen (no account linked) ----
+function LoginScreen({
+  url,
+  setUrl,
+  isLoading,
+  error,
+  handleSubmit,
+}: {
+  url: string;
+  setUrl: (v: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
+}) {
+  const setChessComUsername = useProfileStore((s) => s.setChessComUsername);
+  const setLichessUsername = useProfileStore((s) => s.setLichessUsername);
+  const setChessComRatings = useProfileStore((s) => s.setChessComRatings);
+  const setLichessRatings = useProfileStore((s) => s.setLichessRatings);
+
+  const [chessComInput, setChessComInput] = useState("");
+  const [lichessInput, setLichessInput] = useState("");
+  const [connecting, setConnecting] = useState<"chesscom" | "lichess" | null>(null);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const [showUrlForm, setShowUrlForm] = useState(false);
+
+  async function handleConnect(platform: "chesscom" | "lichess") {
+    const username = platform === "chesscom" ? chessComInput.trim() : lichessInput.trim();
+    if (!username) return;
+
+    setConnecting(platform);
+    setConnectError(null);
+
+    try {
+      if (platform === "chesscom") {
+        const ratings = await fetchChessComRatings(username);
+        setChessComUsername(username);
+        setChessComRatings(ratings);
+        toast.success(`Connected to Chess.com as ${username}`);
+      } else {
+        const ratings = await fetchLichessRatings(username);
+        setLichessUsername(username);
+        setLichessRatings(ratings);
+        toast.success(`Connected to Lichess as ${username}`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Connection failed";
+      setConnectError(msg);
+      toast.error(msg);
+    } finally {
+      setConnecting(null);
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex flex-col items-center gap-8 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-amber-500/10">
+            <Crown className="h-10 w-10 text-amber-500" />
+          </div>
+          <h2 className="text-3xl font-bold text-zinc-50">Chess Analyzer</h2>
+          <p className="max-w-md text-zinc-400">
+            Connect your account to import and analyze your recent games.
+          </p>
+        </div>
+
+        <Card className="w-full max-w-lg">
+          <CardContent className="flex flex-col gap-6 pt-6">
+            {/* Chess.com */}
+            <div className="flex flex-col gap-2">
+              <label className="text-left text-xs font-medium text-zinc-400">
+                Chess.com username
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="username"
+                  value={chessComInput}
+                  onChange={(e) => setChessComInput(e.target.value)}
+                  disabled={connecting !== null}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleConnect("chesscom");
+                    }
+                  }}
+                />
+                <Button
+                  onClick={() => handleConnect("chesscom")}
+                  disabled={!chessComInput.trim() || connecting !== null}
+                  className="shrink-0"
+                >
+                  {connecting === "chesscom" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Connect"
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Lichess */}
+            <div className="flex flex-col gap-2">
+              <label className="text-left text-xs font-medium text-zinc-400">
+                Lichess username
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="username"
+                  value={lichessInput}
+                  onChange={(e) => setLichessInput(e.target.value)}
+                  disabled={connecting !== null}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleConnect("lichess");
+                    }
+                  }}
+                />
+                <Button
+                  onClick={() => handleConnect("lichess")}
+                  disabled={!lichessInput.trim() || connecting !== null}
+                  className="shrink-0"
+                >
+                  {connecting === "lichess" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Connect"
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {connectError && (
+              <p className="text-sm text-red-500">{connectError}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Paste URL fallback */}
+        {!showUrlForm ? (
+          <button
+            onClick={() => setShowUrlForm(true)}
+            className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+          >
+            <LinkIcon className="h-3 w-3" />
+            or paste a game URL directly
+          </button>
+        ) : (
+          <Card className="w-full max-w-lg">
+            <CardContent className="pt-6">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <Input
+                  placeholder="https://www.chess.com/game/live/..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  disabled={isLoading}
+                />
+                {error && <p className="text-sm text-red-500">{error}</p>}
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    "Import & Analyze"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---- Import view (account linked) ----
+function ImportView({
+  url,
+  setUrl,
+  isLoading,
+  error,
+  handleSubmit,
+  handleBulkImport,
+}: {
+  url: string;
+  setUrl: (v: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  handleBulkImport: (games: RecentGameData[]) => Promise<void>;
+}) {
+  const chessComUsername = useProfileStore((s) => s.chessComUsername);
+  const lichessUsername = useProfileStore((s) => s.lichessUsername);
+  const hasAccount = Boolean(chessComUsername || lichessUsername);
+
+  if (!hasAccount) {
+    return (
+      <LoginScreen
+        url={url}
+        setUrl={setUrl}
+        isLoading={isLoading}
+        error={error}
+        handleSubmit={handleSubmit}
+      />
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <Card className="w-full max-w-lg">
+        <CardHeader>
+          <CardTitle>Import a Game</CardTitle>
+          <CardDescription>
+            Select from your recent games or paste a link
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="recent" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="recent" className="flex-1 text-xs">
+                Recent Games
+              </TabsTrigger>
+              <TabsTrigger value="url" className="flex-1 text-xs">
+                Paste URL
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="recent">
+              <RecentGames onImport={handleBulkImport} />
+            </TabsContent>
+            <TabsContent value="url">
+              <form
+                onSubmit={handleSubmit}
+                className="flex flex-col gap-4"
+              >
+                <Input
+                  placeholder="https://www.chess.com/game/live/..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  disabled={isLoading}
+                />
+                {error && (
+                  <p className="text-sm text-red-500">{error}</p>
+                )}
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    "Analyze"
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -239,128 +505,7 @@ export default function Home() {
 
   // ---- Import view ----
   if (view === "import" || !activeGame) {
-    const hasGames = games.length > 0;
-
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {hasGames ? (
-          <Card className="w-full max-w-lg">
-            <CardHeader>
-              <CardTitle>Analyze a Game</CardTitle>
-              <CardDescription>
-                Paste a game link or import from your account
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="url" className="w-full">
-                <TabsList className="w-full">
-                  <TabsTrigger value="url" className="flex-1 text-xs">
-                    Paste URL
-                  </TabsTrigger>
-                  <TabsTrigger value="recent" className="flex-1 text-xs">
-                    Recent Games
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="url">
-                  <form
-                    onSubmit={handleSubmit}
-                    className="flex flex-col gap-4"
-                  >
-                    <Input
-                      placeholder="https://www.chess.com/game/live/..."
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      disabled={isLoading}
-                    />
-                    {error && (
-                      <p className="text-sm text-red-500">{error}</p>
-                    )}
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Importing...
-                        </>
-                      ) : (
-                        "Analyze"
-                      )}
-                    </Button>
-                  </form>
-                </TabsContent>
-                <TabsContent value="recent">
-                  <RecentGames onImport={handleBulkImport} />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        ) : (
-          // Welcome empty state
-          <div className="flex flex-col items-center gap-8 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-amber-500/10">
-                <Crown className="h-10 w-10 text-amber-500" />
-              </div>
-              <h2 className="text-3xl font-bold text-zinc-50">
-                Welcome to Chess Analyzer
-              </h2>
-              <p className="max-w-md text-zinc-400">
-                Import your first game to get started. Paste a Chess.com game
-                URL below and we&apos;ll analyze every move.
-              </p>
-            </div>
-
-            <Card className="w-full max-w-lg">
-              <CardContent className="pt-6">
-                <Tabs defaultValue="url" className="w-full">
-                  <TabsList className="w-full">
-                    <TabsTrigger value="url" className="flex-1 text-xs">
-                      Paste URL
-                    </TabsTrigger>
-                    <TabsTrigger value="recent" className="flex-1 text-xs">
-                      Recent Games
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="url">
-                    <form
-                      onSubmit={handleSubmit}
-                      className="flex flex-col gap-4"
-                    >
-                      <div className="relative">
-                        <Input
-                          placeholder="https://www.chess.com/game/live/..."
-                          value={url}
-                          onChange={(e) => setUrl(e.target.value)}
-                          disabled={isLoading}
-                        />
-                        <div className="pointer-events-none absolute -top-8 right-4 flex flex-col items-center text-zinc-500">
-                          <ArrowUp className="h-5 w-5 animate-bounce" />
-                        </div>
-                      </div>
-                      {error && (
-                        <p className="text-sm text-red-500">{error}</p>
-                      )}
-                      <Button type="submit" disabled={isLoading}>
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Importing...
-                          </>
-                        ) : (
-                          "Import & Analyze"
-                        )}
-                      </Button>
-                    </form>
-                  </TabsContent>
-                  <TabsContent value="recent">
-                    <RecentGames onImport={handleBulkImport} />
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-    );
+    return <ImportView url={url} setUrl={setUrl} isLoading={isLoading} error={error} handleSubmit={handleSubmit} handleBulkImport={handleBulkImport} />;
   }
 
   // ---- Practice view ----

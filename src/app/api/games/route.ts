@@ -1,17 +1,20 @@
-import { NextResponse } from "next/server";
-import { desc } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
+import { desc, or, ilike } from "drizzle-orm";
 import { db } from "@/db";
 import { games } from "@/db/schema";
 
 /**
- * GET /api/games
+ * GET /api/games?username=ppstone47
  *
- * Returns all games ordered by creation date (newest first).
- * Only includes the fields needed for the sidebar listing.
+ * Returns games ordered by creation date (newest first).
+ * When `username` is provided, only returns games where
+ * whitePlayer or blackPlayer matches (case-insensitive).
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const allGames = await db
+    const username = request.nextUrl.searchParams.get("username");
+
+    const query = db
       .select({
         id: games.id,
         whitePlayer: games.whitePlayer,
@@ -21,8 +24,18 @@ export async function GET() {
         blackAccuracy: games.blackAccuracy,
         createdAt: games.createdAt,
       })
-      .from(games)
-      .orderBy(desc(games.createdAt));
+      .from(games);
+
+    const allGames = username
+      ? await query
+          .where(
+            or(
+              ilike(games.whitePlayer, username),
+              ilike(games.blackPlayer, username)
+            )
+          )
+          .orderBy(desc(games.createdAt))
+      : await query.orderBy(desc(games.createdAt));
 
     return NextResponse.json(allGames);
   } catch (error) {
