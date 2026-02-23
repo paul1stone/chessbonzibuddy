@@ -26,7 +26,7 @@ interface RecentGamesProps {
 function resultColor(result: string) {
   if (result === "1-0") return "bg-green-500";
   if (result === "0-1") return "bg-red-500";
-  return "bg-zinc-500";
+  return "bg-purple-500";
 }
 
 function timeAgo(dateStr: string): string {
@@ -136,7 +136,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
       <div className="flex flex-col items-center justify-center gap-2 py-8">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/coolmonkey.gif" alt="Loading" className="h-16 w-16" />
-        <span className="text-sm text-zinc-400">
+        <span className="text-sm text-purple-300">
           Fetching recent games...
         </span>
       </div>
@@ -145,7 +145,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
 
   if (games.length === 0) {
     return (
-      <div className="py-8 text-center text-sm text-zinc-500">
+      <div className="py-8 text-center text-sm text-purple-400">
         No recent games found.
       </div>
     );
@@ -156,7 +156,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
       {/* Search + action bar */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-purple-400" />
           <Input
             placeholder="Search by player, time control..."
             value={search}
@@ -177,7 +177,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
 
       {/* Count + import button */}
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-zinc-500">
+        <span className="text-[10px] text-purple-400">
           {filteredGames.length} game{filteredGames.length !== 1 ? "s" : ""}
           {search && ` matching "${search}"`}
         </span>
@@ -190,7 +190,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
       </div>
 
       {/* Scrollable game list — fixed height */}
-      <div className="h-[300px] overflow-y-auto rounded-md border border-zinc-800">
+      <div className="h-[300px] overflow-y-auto rounded-md border border-purple-800">
         <div className="flex flex-col">
           {filteredGames.map((game) => {
             const isImported = imported.has(game.id);
@@ -201,12 +201,12 @@ export function RecentGames({ onImport }: RecentGamesProps) {
                 key={game.id}
                 onClick={() => !isImported && toggleSelect(game.id)}
                 disabled={isImported}
-                className={`flex w-full items-center gap-3 border-b border-zinc-800/50 px-3 py-2 text-left transition-colors last:border-b-0 ${
+                className={`flex w-full items-center gap-3 border-b border-purple-800/50 px-3 py-2 text-left transition-colors last:border-b-0 ${
                   isImported
                     ? "opacity-40"
                     : isSelected
                       ? "bg-blue-500/10"
-                      : "hover:bg-zinc-800/40"
+                      : "hover:bg-purple-800/40"
                 }`}
               >
                 {isImported ? (
@@ -216,20 +216,20 @@ export function RecentGames({ onImport }: RecentGamesProps) {
                     className={`h-3.5 w-3.5 shrink-0 rounded-sm border transition-colors ${
                       isSelected
                         ? "border-blue-500 bg-blue-500"
-                        : "border-zinc-600"
+                        : "border-purple-600"
                     }`}
                   />
                 )}
 
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-xs font-medium text-zinc-200">
+                  <span className="truncate text-xs font-medium text-purple-100">
                     {game.white} vs {game.black}
                   </span>
                   <div className="flex items-center gap-1.5">
                     <span
                       className={`inline-block h-1.5 w-1.5 rounded-full ${resultColor(game.result)}`}
                     />
-                    <span className="text-[10px] text-zinc-500">
+                    <span className="text-[10px] text-purple-400">
                       {game.result}
                     </span>
                     <Badge
@@ -238,7 +238,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
                     >
                       {game.timeControl}
                     </Badge>
-                    <span className="ml-auto text-[10px] text-zinc-600">
+                    <span className="ml-auto text-[10px] text-purple-500">
                       {timeAgo(game.playedAt)}
                     </span>
                   </div>
@@ -248,7 +248,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
           })}
 
           {filteredGames.length === 0 && (
-            <div className="py-8 text-center text-xs text-zinc-500">
+            <div className="py-8 text-center text-xs text-purple-400">
               No games match &ldquo;{search}&rdquo;
             </div>
           )}

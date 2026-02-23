@@ -70,6 +70,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
   const [userMoveSan, setUserMoveSan] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [displayFen, setDisplayFen] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
   // Current mistake data
@@ -105,6 +106,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
     setUserMoveSan(null);
     setIsCorrect(null);
     setShowAnswer(false);
+    setDisplayFen(null);
   }, []);
 
   const goToMistake = useCallback(
@@ -151,6 +153,8 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
         return false;
       }
 
+      // Show the piece on its new square
+      setDisplayFen(game.fen());
       setUserMove(uci);
       setUserMoveSan(sanMove);
 
@@ -191,13 +195,13 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
   if (mistakes.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
-        <p className="text-lg text-zinc-400">
+        <p className="text-lg text-purple-300">
           No mistakes or blunders found in this game.
         </p>
         <Button
           variant="outline"
           onClick={onExit}
-          className="border-zinc-700 text-zinc-400 hover:text-zinc-100"
+          className="border-purple-700 text-purple-300 hover:text-purple-100"
         >
           Back to Review
         </Button>
@@ -213,10 +217,10 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-zinc-100">
+          <h2 className="text-lg font-semibold text-purple-100">
             Practice Mode
           </h2>
-          <span className="rounded-md bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-400">
+          <span className="rounded-md bg-purple-800 px-2.5 py-1 text-xs font-medium text-purple-300">
             Mistake {currentMistakeIndex + 1} of {mistakes.length}
           </span>
         </div>
@@ -224,7 +228,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
           variant="ghost"
           size="sm"
           onClick={onExit}
-          className="text-zinc-400 hover:text-zinc-100"
+          className="text-purple-300 hover:text-purple-100"
         >
           <X className="h-4 w-4" />
           Exit
@@ -236,7 +240,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
         {/* Board — constrained to a max size */}
         <div className="w-[min(480px,50vh)] shrink-0">
           <Board
-            position={positionFen}
+            position={displayFen ?? positionFen}
             interactive={isCorrect === null && !showAnswer}
             onPieceDrop={handlePieceDrop}
             boardOrientation={boardOrientation}
@@ -259,11 +263,11 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
           />
 
           {/* Mistake context info */}
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3">
-            <p className="text-xs text-zinc-500">
+          <div className="rounded-lg border border-purple-800 bg-purple-900/50 px-4 py-3">
+            <p className="text-xs text-purple-400">
               Move {currentMistake?.moveNumber}.
               {currentMistake?.color === "b" ? ".." : ""}{" "}
-              <span className="text-zinc-300">{currentMistake?.san}</span>{" "}
+              <span className="text-purple-200">{currentMistake?.san}</span>{" "}
               was played (
               <span
                 className={
@@ -287,7 +291,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
           size="sm"
           onClick={handlePrevMistake}
           disabled={currentMistakeIndex === 0}
-          className="text-zinc-400 hover:text-zinc-100"
+          className="text-purple-300 hover:text-purple-100"
         >
           <ChevronLeft className="h-4 w-4" />
           Previous
@@ -297,7 +301,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
           size="sm"
           onClick={handleNextMistake}
           disabled={currentMistakeIndex >= mistakes.length - 1}
-          className="text-zinc-400 hover:text-zinc-100"
+          className="text-purple-300 hover:text-purple-100"
         >
           Next
           <ChevronRight className="h-4 w-4" />

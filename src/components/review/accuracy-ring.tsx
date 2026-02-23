@@ -3,7 +3,7 @@
 interface AccuracyRingProps {
   accuracy: number; // 0-100
   label: string; // "White" or "Black"
-  color: string; // ring color class (e.g. "stroke-white" for white, "stroke-zinc-400" for black)
+  color: string; // ring color class (e.g. "stroke-white" for white, "stroke-purple-300" for black)
   size?: number; // diameter in px, default 100
 }
 
@@ -36,7 +36,7 @@ export function AccuracyRing({
           cy={center}
           r={radius}
           fill="none"
-          className="stroke-zinc-800"
+          className="stroke-purple-800"
           strokeWidth={strokeWidth}
         />
         {/* Foreground progress ring */}
@@ -58,7 +58,7 @@ export function AccuracyRing({
       {/* Center text */}
       <div className="flex flex-col items-center justify-center">
         <span
-          className="font-bold text-zinc-100"
+          className="font-bold text-purple-100"
           style={{ fontSize: size * 0.26 }}
         >
           {accuracy.toFixed(1)}

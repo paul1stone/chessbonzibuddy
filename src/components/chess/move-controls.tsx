@@ -36,14 +36,14 @@ export function MoveControls({
 
   return (
     <div className="flex flex-col items-center gap-2 py-3">
-      <div className="flex items-center gap-1 rounded-lg bg-zinc-900/50 p-1">
+      <div className="flex items-center gap-1 rounded-lg bg-purple-900/50 p-1">
         <Button
           variant="ghost"
           size="icon"
           onClick={onFirst}
           disabled={atStart || isPlaying}
           aria-label="First move"
-          className="text-zinc-400 hover:text-zinc-100"
+          className="text-purple-300 hover:text-purple-100"
         >
           <ChevronsLeft className="h-4 w-4" />
         </Button>
@@ -54,7 +54,7 @@ export function MoveControls({
           onClick={onPrevious}
           disabled={atStart || isPlaying}
           aria-label="Previous move"
-          className="text-zinc-400 hover:text-zinc-100"
+          className="text-purple-300 hover:text-purple-100"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -69,7 +69,7 @@ export function MoveControls({
             className={
               isPlaying
                 ? "text-blue-400 hover:text-blue-300"
-                : "text-zinc-400 hover:text-zinc-100"
+                : "text-purple-300 hover:text-purple-100"
             }
           >
             {isPlaying ? (
@@ -86,7 +86,7 @@ export function MoveControls({
           onClick={onNext}
           disabled={atEnd || isPlaying}
           aria-label="Next move"
-          className="text-zinc-400 hover:text-zinc-100"
+          className="text-purple-300 hover:text-purple-100"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -97,13 +97,13 @@ export function MoveControls({
           onClick={onLast}
           disabled={atEnd || isPlaying}
           aria-label="Last move"
-          className="text-zinc-400 hover:text-zinc-100"
+          className="text-purple-300 hover:text-purple-100"
         >
           <ChevronsRight className="h-4 w-4" />
         </Button>
       </div>
 
-      <span className="text-xs text-zinc-500">
+      <span className="text-xs text-purple-400">
         Move {currentMove} of {totalMoves}
       </span>
     </div>

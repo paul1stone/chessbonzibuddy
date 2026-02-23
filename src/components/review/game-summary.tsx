@@ -26,7 +26,7 @@ const classificationColors: Record<
   brilliant: { bg: "bg-cyan-500/20", text: "text-cyan-400", label: "Brilliant" },
   great: { bg: "bg-green-500/20", text: "text-green-400", label: "Great" },
   best: { bg: "bg-green-500/20", text: "text-green-400", label: "Best" },
-  good: { bg: "bg-zinc-500/20", text: "text-zinc-400", label: "Good" },
+  good: { bg: "bg-purple-500/20", text: "text-purple-300", label: "Good" },
   book: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Book" },
   inaccuracy: { bg: "bg-yellow-500/20", text: "text-yellow-400", label: "Inaccuracy" },
   mistake: { bg: "bg-orange-500/20", text: "text-orange-400", label: "Mistake" },
@@ -73,9 +73,9 @@ export function GameSummary({
   return (
     <div className="flex flex-col gap-6">
       {/* Accuracy section */}
-      <Card className="border-zinc-800 bg-zinc-900/50">
+      <Card className="border-purple-800 bg-purple-900/50">
         <CardHeader className="pb-0">
-          <CardTitle className="text-sm text-zinc-400">Accuracy</CardTitle>
+          <CardTitle className="text-sm text-purple-300">Accuracy</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center gap-8">
@@ -83,11 +83,11 @@ export function GameSummary({
               <AccuracyRing
                 accuracy={whiteAccuracy}
                 label="White"
-                color="stroke-zinc-100"
+                color="stroke-purple-100"
                 size={100}
               />
               {whiteRating != null && (
-                <span className="mt-1 rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
+                <span className="mt-1 rounded-md bg-purple-800 px-2 py-0.5 text-[10px] font-medium text-purple-200">
                   Played like ~{whiteRating}
                 </span>
               )}
@@ -96,11 +96,11 @@ export function GameSummary({
               <AccuracyRing
                 accuracy={blackAccuracy}
                 label="Black"
-                color="stroke-zinc-400"
+                color="stroke-purple-300"
                 size={100}
               />
               {blackRating != null && (
-                <span className="mt-1 rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
+                <span className="mt-1 rounded-md bg-purple-800 px-2 py-0.5 text-[10px] font-medium text-purple-200">
                   Played like ~{blackRating}
                 </span>
               )}
@@ -110,9 +110,9 @@ export function GameSummary({
       </Card>
 
       {/* Move classification counts */}
-      <Card className="border-zinc-800 bg-zinc-900/50">
+      <Card className="border-purple-800 bg-purple-900/50">
         <CardHeader className="pb-0">
-          <CardTitle className="text-sm text-zinc-400">
+          <CardTitle className="text-sm text-purple-300">
             Move Classifications
           </CardTitle>
         </CardHeader>
@@ -120,7 +120,7 @@ export function GameSummary({
           <div className="grid grid-cols-2 gap-4">
             {/* White */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-zinc-300">White</p>
+              <p className="text-xs font-medium text-purple-200">White</p>
               <div className="flex flex-wrap gap-1.5">
                 {whiteCounts.map((c) => (
                   <ClassificationBadge
@@ -138,7 +138,7 @@ export function GameSummary({
             </div>
             {/* Black */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-zinc-300">Black</p>
+              <p className="text-xs font-medium text-purple-200">Black</p>
               <div className="flex flex-wrap gap-1.5">
                 {blackCounts.map((c) => (
                   <ClassificationBadge
@@ -159,9 +159,9 @@ export function GameSummary({
       </Card>
 
       {/* Eval chart */}
-      <Card className="border-zinc-800 bg-zinc-900/50">
+      <Card className="border-purple-800 bg-purple-900/50">
         <CardHeader className="pb-0">
-          <CardTitle className="text-sm text-zinc-400">
+          <CardTitle className="text-sm text-purple-300">
             Evaluation Chart
           </CardTitle>
         </CardHeader>
@@ -176,9 +176,9 @@ export function GameSummary({
 
       {/* Key moments */}
       {keyMoments.length > 0 && (
-        <Card className="border-zinc-800 bg-zinc-900/50">
+        <Card className="border-purple-800 bg-purple-900/50">
           <CardHeader className="pb-0">
-            <CardTitle className="text-sm text-zinc-400">
+            <CardTitle className="text-sm text-purple-300">
               Key Moments
             </CardTitle>
           </CardHeader>
@@ -189,14 +189,14 @@ export function GameSummary({
                   key={moment.index}
                   type="button"
                   onClick={() => onMoveClick(moment.index)}
-                  className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-zinc-800"
+                  className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-purple-800"
                 >
                   <span className="min-w-[3rem] text-xs text-muted-foreground">
                     {moment.move.color === "w"
                       ? `${moment.move.moveNumber}.`
                       : `${moment.move.moveNumber}...`}
                   </span>
-                  <span className="min-w-[3.5rem] text-sm font-medium text-zinc-200">
+                  <span className="min-w-[3.5rem] text-sm font-medium text-purple-100">
                     {moment.move.san}
                   </span>
                   <span className="text-xs text-muted-foreground">

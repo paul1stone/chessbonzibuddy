@@ -35,22 +35,22 @@ export function ReviewPanel({
 
   return (
     <Tabs defaultValue="moves" className="flex h-full flex-col">
-      <TabsList className="w-full shrink-0 bg-zinc-900">
+      <TabsList className="w-full shrink-0 bg-purple-900">
         <TabsTrigger
           value="moves"
-          className="text-xs data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+          className="text-xs data-[state=active]:bg-purple-800 data-[state=active]:text-purple-100"
         >
           Moves
         </TabsTrigger>
         <TabsTrigger
           value="summary"
-          className="text-xs data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+          className="text-xs data-[state=active]:bg-purple-800 data-[state=active]:text-purple-100"
         >
           Summary
         </TabsTrigger>
         <TabsTrigger
           value="engine"
-          className="text-xs data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+          className="text-xs data-[state=active]:bg-purple-800 data-[state=active]:text-purple-100"
         >
           Engine
         </TabsTrigger>

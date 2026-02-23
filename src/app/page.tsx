@@ -90,11 +90,11 @@ function LoginScreen({
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="flex flex-col items-center gap-8 text-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-amber-500/10">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-purple-500/10">
             <Crown className="h-10 w-10 text-amber-500" />
           </div>
-          <h2 className="text-3xl font-bold text-zinc-50">Chess Analyzer</h2>
-          <p className="max-w-md text-zinc-400">
+          <h2 className="text-3xl font-bold text-purple-50">Chess Analyzer</h2>
+          <p className="max-w-md text-purple-300">
             Connect your account to import and analyze your recent games.
           </p>
         </div>
@@ -103,7 +103,7 @@ function LoginScreen({
           <CardContent className="flex flex-col gap-6 pt-6">
             {/* Chess.com */}
             <div className="flex flex-col gap-2">
-              <label className="text-left text-xs font-medium text-zinc-400">
+              <label className="text-left text-xs font-medium text-purple-300">
                 Chess.com username
               </label>
               <div className="flex gap-2">
@@ -135,7 +135,7 @@ function LoginScreen({
 
             {/* Lichess */}
             <div className="flex flex-col gap-2">
-              <label className="text-left text-xs font-medium text-zinc-400">
+              <label className="text-left text-xs font-medium text-purple-300">
                 Lichess username
               </label>
               <div className="flex gap-2">
@@ -175,7 +175,7 @@ function LoginScreen({
         {!showUrlForm ? (
           <button
             onClick={() => setShowUrlForm(true)}
-            className="flex items-center gap-1.5 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+            className="flex items-center gap-1.5 text-xs text-purple-400 transition-colors hover:text-purple-200"
           >
             <LinkIcon className="h-3 w-3" />
             or paste a game URL directly
@@ -526,16 +526,16 @@ export default function Home() {
     <div className="flex h-screen flex-col">
       {/* Top bar with Analyze button when no analysis exists */}
       {!analysis && !isAnalyzing && (
-        <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 py-3 sm:px-6">
-          <div className="text-sm text-zinc-400">
-            <span className="font-medium text-zinc-200">
+        <div className="flex items-center justify-between border-b border-purple-800 bg-purple-950 px-4 py-3 sm:px-6">
+          <div className="text-sm text-purple-300">
+            <span className="font-medium text-purple-100">
               {activeGame.whitePlayer}
             </span>{" "}
             vs{" "}
-            <span className="font-medium text-zinc-200">
+            <span className="font-medium text-purple-100">
               {activeGame.blackPlayer}
             </span>
-            <span className="ml-2 text-zinc-500">{activeGame.result}</span>
+            <span className="ml-2 text-purple-400">{activeGame.result}</span>
           </div>
           <Button onClick={handleAnalyze} size="sm">
             Analyze Game
@@ -545,20 +545,20 @@ export default function Home() {
 
       {/* Top bar with progress during analysis */}
       {isAnalyzing && (
-        <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 py-3 sm:px-6">
-          <div className="text-sm text-zinc-400">
-            <span className="font-medium text-zinc-200">
+        <div className="flex items-center justify-between border-b border-purple-800 bg-purple-950 px-4 py-3 sm:px-6">
+          <div className="text-sm text-purple-300">
+            <span className="font-medium text-purple-100">
               {activeGame.whitePlayer}
             </span>{" "}
             vs{" "}
-            <span className="font-medium text-zinc-200">
+            <span className="font-medium text-purple-100">
               {activeGame.blackPlayer}
             </span>
-            <span className="ml-2 text-zinc-500">{activeGame.result}</span>
+            <span className="ml-2 text-purple-400">{activeGame.result}</span>
           </div>
           <div className="flex items-center gap-2">
             {analysisQueue.length > 0 && (
-              <span className="text-[10px] text-zinc-500">
+              <span className="text-[10px] text-purple-400">
                 +{analysisQueue.length} queued
               </span>
             )}
@@ -575,16 +575,16 @@ export default function Home() {
 
       {/* Top bar with Practice Mistakes button when analysis exists */}
       {analysis && !isAnalyzing && (
-        <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 py-3 sm:px-6">
-          <div className="text-sm text-zinc-400">
-            <span className="font-medium text-zinc-200">
+        <div className="flex items-center justify-between border-b border-purple-800 bg-purple-950 px-4 py-3 sm:px-6">
+          <div className="text-sm text-purple-300">
+            <span className="font-medium text-purple-100">
               {activeGame.whitePlayer}
             </span>{" "}
             vs{" "}
-            <span className="font-medium text-zinc-200">
+            <span className="font-medium text-purple-100">
               {activeGame.blackPlayer}
             </span>
-            <span className="ml-2 text-zinc-500">{activeGame.result}</span>
+            <span className="ml-2 text-purple-400">{activeGame.result}</span>
           </div>
           <Button
             variant="outline"

@@ -235,11 +235,11 @@ export function BoardPanel({
 
       {/* Move info bar: shows played vs best move with classification */}
       {currentMoveAnalysis && (
-        <div className="mt-2 flex w-[90%] max-w-[calc(100vh-14rem)] items-center justify-center gap-3 rounded-lg bg-zinc-900/70 px-4 py-2">
+        <div className="mt-2 flex w-[90%] max-w-[calc(100vh-14rem)] items-center justify-center gap-3 rounded-lg bg-purple-900/70 px-4 py-2">
           {/* Played move */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500">Played</span>
-            <span className="font-mono text-sm font-semibold text-zinc-200">
+            <span className="text-xs text-purple-400">Played</span>
+            <span className="font-mono text-sm font-semibold text-purple-100">
               {currentMoveAnalysis.san}
             </span>
             <MoveBadge classification={currentMoveAnalysis.classification} />
@@ -248,9 +248,9 @@ export function BoardPanel({
           {/* Separator + arrow */}
           {currentMoveAnalysis.bestMove !== currentMoveAnalysis.uci && currentMoveAnalysis.bestMoveSan && (
             <>
-              <ArrowRight className="h-3 w-3 text-zinc-600" />
+              <ArrowRight className="h-3 w-3 text-purple-500" />
               <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-500">Best</span>
+                <span className="text-xs text-purple-400">Best</span>
                 <span className="font-mono text-sm font-semibold text-green-400">
                   {currentMoveAnalysis.bestMoveSan}
                 </span>

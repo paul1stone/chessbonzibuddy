@@ -44,7 +44,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+          className="fixed inset-0 z-30 bg-purple-950/80 lg:hidden"
           onClick={closeSidebar}
           aria-hidden="true"
         />
@@ -65,7 +65,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto bg-zinc-950">{children}</main>
+      <main className="flex-1 overflow-auto bg-purple-950">{children}</main>
     </div>
   );
 }

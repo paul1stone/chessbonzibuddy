@@ -55,7 +55,7 @@ export function MoveList({ moves, currentMove, onMoveClick }: MoveListProps) {
     <ScrollArea className="h-full">
       <div className="text-sm">
         {/* Header */}
-        <div className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_1fr] gap-0 border-b border-zinc-800 bg-zinc-950 px-2 py-1.5 text-xs font-medium text-zinc-500">
+        <div className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_1fr] gap-0 border-b border-purple-800 bg-purple-950 px-2 py-1.5 text-xs font-medium text-purple-400">
           <span>#</span>
           <span>White</span>
           <span>Black</span>
@@ -68,7 +68,7 @@ export function MoveList({ moves, currentMove, onMoveClick }: MoveListProps) {
             className="grid grid-cols-[2.5rem_1fr_1fr] gap-0"
           >
             {/* Move number */}
-            <span className="flex items-center px-2 py-1 text-xs text-zinc-600">
+            <span className="flex items-center px-2 py-1 text-xs text-purple-500">
               {row.moveNumber}.
             </span>
 
@@ -86,16 +86,16 @@ export function MoveList({ moves, currentMove, onMoveClick }: MoveListProps) {
                   }
                 }}
                 className={cn(
-                  "flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 font-mono text-sm text-zinc-300 hover:bg-zinc-800/60",
+                  "flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 font-mono text-sm text-purple-200 hover:bg-purple-800/60",
                   row.white.index === currentMove &&
-                    "border-l-2 border-blue-500 bg-zinc-800"
+                    "border-l-2 border-blue-500 bg-purple-800"
                 )}
               >
                 <span>{row.white.move.san}</span>
                 <MoveBadge classification={row.white.move.classification} />
               </div>
             ) : (
-              <div className="px-2 py-1 text-zinc-600">&hellip;</div>
+              <div className="px-2 py-1 text-purple-500">&hellip;</div>
             )}
 
             {/* Black move */}
@@ -112,9 +112,9 @@ export function MoveList({ moves, currentMove, onMoveClick }: MoveListProps) {
                   }
                 }}
                 className={cn(
-                  "flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 font-mono text-sm text-zinc-300 hover:bg-zinc-800/60",
+                  "flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 font-mono text-sm text-purple-200 hover:bg-purple-800/60",
                   row.black.index === currentMove &&
-                    "border-l-2 border-blue-500 bg-zinc-800"
+                    "border-l-2 border-blue-500 bg-purple-800"
                 )}
               >
                 <span>{row.black.move.san}</span>

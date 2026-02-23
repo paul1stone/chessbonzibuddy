@@ -11,7 +11,7 @@ import { toast } from "sonner";
 function RatingBadge({ label, value }: { label: string; value?: number }) {
   if (value == null) return null;
   return (
-    <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-300">
+    <span className="rounded bg-purple-800 px-1.5 py-0.5 text-[10px] text-purple-200">
       {label}: {value}
     </span>
   );
@@ -86,12 +86,12 @@ export function ProfileSettings() {
     return (
       <button
         onClick={() => setIsExpanded(true)}
-        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-zinc-800/50"
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-purple-800/50"
       >
-        <User className="h-4 w-4 text-zinc-500" />
+        <User className="h-4 w-4 text-purple-400" />
         {hasLinkedAccount ? (
           <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-medium text-zinc-300">
+            <span className="text-xs font-medium text-purple-200">
               {chessComUsername || lichessUsername}
             </span>
             <div className="flex gap-1.5">
@@ -122,7 +122,7 @@ export function ProfileSettings() {
             </div>
           </div>
         ) : (
-          <span className="text-xs text-zinc-500">Link your account</span>
+          <span className="text-xs text-purple-400">Link your account</span>
         )}
       </button>
     );
@@ -131,12 +131,12 @@ export function ProfileSettings() {
   return (
     <div className="space-y-3 px-3 py-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-zinc-400">
+        <span className="text-xs font-medium text-purple-300">
           Linked Accounts
         </span>
         <button
           onClick={() => setIsExpanded(false)}
-          className="text-[10px] text-zinc-500 hover:text-zinc-300"
+          className="text-[10px] text-purple-400 hover:text-purple-200"
         >
           Done
         </button>
@@ -144,7 +144,7 @@ export function ProfileSettings() {
 
       {/* Chess.com */}
       <div className="space-y-1.5">
-        <label className="text-[10px] font-medium text-zinc-500">
+        <label className="text-[10px] font-medium text-purple-400">
           Chess.com
         </label>
         <div className="flex gap-1.5">
@@ -183,7 +183,7 @@ export function ProfileSettings() {
 
       {/* Lichess */}
       <div className="space-y-1.5">
-        <label className="text-[10px] font-medium text-zinc-500">
+        <label className="text-[10px] font-medium text-purple-400">
           Lichess
         </label>
         <div className="flex gap-1.5">

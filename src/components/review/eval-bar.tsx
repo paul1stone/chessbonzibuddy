@@ -54,7 +54,7 @@ export function EvalBar({ eval: evaluation, mate, height = 400 }: EvalBarProps) 
     >
       {/* Black section (top) */}
       <div
-        className="absolute top-0 left-0 right-0 bg-zinc-800 transition-all duration-300"
+        className="absolute top-0 left-0 right-0 bg-purple-800 transition-all duration-300"
         style={{ height: `${blackPercent}%` }}
       >
         {!showTextOnWhite && (
@@ -73,14 +73,14 @@ export function EvalBar({ eval: evaluation, mate, height = 400 }: EvalBarProps) 
 
       {/* White section (bottom) */}
       <div
-        className="absolute bottom-0 left-0 right-0 bg-zinc-100 transition-all duration-300"
+        className="absolute bottom-0 left-0 right-0 bg-purple-100 transition-all duration-300"
         style={{ height: `${whitePercent}%` }}
       >
         {showTextOnWhite && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span
               className={cn(
-                "text-[10px] font-bold leading-none text-zinc-800",
+                "text-[10px] font-bold leading-none text-purple-900",
                 "writing-mode-vertical [writing-mode:vertical-rl] rotate-180"
               )}
             >

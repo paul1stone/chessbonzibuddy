@@ -20,7 +20,7 @@ const classificationColors: Record<
   brilliant: { bg: "bg-cyan-500/20", text: "text-cyan-400", label: "Brilliant" },
   great: { bg: "bg-green-500/20", text: "text-green-400", label: "Great" },
   best: { bg: "bg-green-500/20", text: "text-green-400", label: "Best" },
-  good: { bg: "bg-zinc-500/20", text: "text-zinc-400", label: "Good" },
+  good: { bg: "bg-purple-500/20", text: "text-purple-300", label: "Good" },
   book: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Book" },
   inaccuracy: { bg: "bg-yellow-500/20", text: "text-yellow-400", label: "Inaccuracy" },
   mistake: { bg: "bg-orange-500/20", text: "text-orange-400", label: "Mistake" },
