@@ -19,6 +19,7 @@ import { Crown, Loader2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useProfileStore } from "@/stores/profile-store";
 import { fetchChessComRatings, fetchLichessRatings } from "@/lib/ratings";
+import { PlayView } from "@/components/play/play-view";
 import type { GameAnalysis } from "@/lib/engine";
 import type { Game } from "@/db/schema";
 
@@ -502,6 +503,15 @@ export default function Home() {
     },
     [addGame, setActiveGame, enqueueAnalysis]
   );
+
+  // ---- Play Bonzi Buddy view ----
+  if (view === "play-bonzi") {
+    return (
+      <PlayView
+        onExit={() => setView(activeGame ? "review" : "import")}
+      />
+    );
+  }
 
   // ---- Import view ----
   if (view === "import" || !activeGame) {

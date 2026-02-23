@@ -142,6 +142,43 @@ export class StockfishEngine {
     return this.parseEvaluation(lines);
   }
 
+  /**
+   * Send a UCI option command.
+   */
+  setOption(name: string, value: string | number): void {
+    this.assertReady();
+    this.sendCommand(`setoption name ${name} value ${value}`);
+  }
+
+  /**
+   * Evaluate a position given as a sequence of UCI moves from the start position.
+   * Uses `position startpos moves ...` for better hash table reuse during play.
+   */
+  async evaluateFromMoves(
+    moves: string[],
+    depth = 24,
+    moveTimeMs?: number
+  ): Promise<EngineEvaluation> {
+    this.assertReady();
+
+    this.sendCommand("setoption name MultiPV value 1");
+
+    if (moves.length === 0) {
+      this.sendCommand("position startpos");
+    } else {
+      this.sendCommand("position startpos moves " + moves.join(" "));
+    }
+
+    if (moveTimeMs !== undefined) {
+      this.sendCommand(`go movetime ${moveTimeMs}`);
+    } else {
+      this.sendCommand(`go depth ${depth}`);
+    }
+
+    const lines = await this.waitFor("bestmove");
+    return this.parseEvaluation(lines);
+  }
+
   /** Send the UCI `stop` command. */
   stop(): void {
     this.sendCommand("stop");

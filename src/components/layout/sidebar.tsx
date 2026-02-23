@@ -51,6 +51,8 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
   const setGames = useGameStore((s) => s.setGames);
   const removeGame = useGameStore((s) => s.removeGame);
 
+  const setView = useGameStore((s) => s.setView);
+
   const chessComUsername = useProfileStore((s) => s.chessComUsername);
   const lichessUsername = useProfileStore((s) => s.lichessUsername);
 
@@ -160,6 +162,29 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
         >
           <Plus className="mr-2 h-4 w-4" />
           New Analysis
+        </Button>
+      </div>
+
+      {/* Play Bonzi Buddy button */}
+      <div className="px-4 pb-4">
+        <Button
+          variant="outline"
+          className="w-full border-purple-700 bg-purple-900/50 text-purple-200 hover:bg-purple-800 hover:text-purple-100"
+          onClick={() => {
+            setView("play-bonzi");
+            onGameSelect?.();
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/bonzi/peek.gif"
+            alt=""
+            className="mr-2 h-5 w-5"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/coolmonkey.gif";
+            }}
+          />
+          Play Bonzi Buddy
         </Button>
       </div>
 

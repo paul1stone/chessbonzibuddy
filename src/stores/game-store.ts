@@ -8,7 +8,7 @@ interface GameState {
   isAnalyzing: boolean;
   analysisProgress: number;
   analysisQueue: Game[];
-  view: "import" | "review" | "practice";
+  view: "import" | "review" | "practice" | "play-bonzi";
 }
 
 interface GameActions {
