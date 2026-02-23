@@ -5,13 +5,13 @@ import { Chess } from "chess.js";
 import { Board } from "@/components/chess/board";
 import { BonziAvatar } from "@/components/bonzi/bonzi-avatar";
 import { ChessClock } from "./chess-clock";
+import { GameLog } from "./game-log";
 import { GameOverOverlay } from "./game-over-overlay";
 import { PlaySetup } from "./play-setup";
 import { useBonziPlayStore } from "@/stores/bonzi-play-store";
 import { getBonziReaction } from "@/lib/bonzi/bonzi-engine";
 import { StockfishEngine } from "@/lib/engine";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { BonziEvent } from "@/lib/bonzi/types";
 import type { PlayerColor } from "@/stores/bonzi-play-store";
 
@@ -29,8 +29,6 @@ export function PlayView({ onExit }: PlayViewProps) {
   const playerColor = useBonziPlayStore((s) => s.playerColor);
   const timeControl = useBonziPlayStore((s) => s.timeControl);
   const fen = useBonziPlayStore((s) => s.fen);
-  const moveHistory = useBonziPlayStore((s) => s.moveHistory);
-  const uciHistory = useBonziPlayStore((s) => s.uciHistory);
   const bonziGif = useBonziPlayStore((s) => s.bonziGif);
   const bonziQuip = useBonziPlayStore((s) => s.bonziQuip);
   const engineThinking = useBonziPlayStore((s) => s.engineThinking);
@@ -44,6 +42,7 @@ export function PlayView({ onExit }: PlayViewProps) {
   const setGameOver = useBonziPlayStore((s) => s.setGameOver);
   const setBonziReaction = useBonziPlayStore((s) => s.setBonziReaction);
   const setEngineThinking = useBonziPlayStore((s) => s.setEngineThinking);
+  const addLogEntry = useBonziPlayStore((s) => s.addLogEntry);
   const resetGame = useBonziPlayStore((s) => s.resetGame);
 
   const engineRef = useRef<StockfishEngine | null>(null);
@@ -86,51 +85,66 @@ export function PlayView({ onExit }: PlayViewProps) {
       const reaction = getBonziReaction(event);
       setBonziReaction(reaction.gif, reaction.quip);
 
+      if (reaction.quip) {
+        addLogEntry({ type: "bonzi", event, gif: reaction.gif, quip: reaction.quip });
+      }
+
       bonziTimerRef.current = setTimeout(() => {
         setBonziReaction("idle", undefined);
       }, reaction.duration);
     },
-    [setBonziReaction]
+    [setBonziReaction, addLogEntry]
   );
 
   // Detect game-ending conditions
   const checkGameOver = useCallback(
     (chess: Chess): boolean => {
+      let reason: string | null = null;
+      let winner: PlayerColor | "draw" | null = null;
+
       if (chess.isCheckmate()) {
         const loser: PlayerColor = chess.turn() === "w" ? "w" : "b";
-        const winner: PlayerColor = loser === "w" ? "b" : "w";
+        winner = loser === "w" ? "b" : "w";
+        reason = "checkmate";
         setGameOver("checkmate", winner);
-
         if (winner === playerColor) {
           fireBonziReaction("player_checkmate");
         } else {
           fireBonziReaction("bonzi_checkmate");
         }
-        return true;
-      }
-      if (chess.isStalemate()) {
+      } else if (chess.isStalemate()) {
+        reason = "stalemate";
+        winner = "draw";
         setGameOver("stalemate", "draw");
         fireBonziReaction("game_over_draw");
-        return true;
-      }
-      if (chess.isInsufficientMaterial()) {
+      } else if (chess.isInsufficientMaterial()) {
+        reason = "insufficient material";
+        winner = "draw";
         setGameOver("insufficient", "draw");
         fireBonziReaction("game_over_draw");
-        return true;
-      }
-      if (chess.isThreefoldRepetition()) {
+      } else if (chess.isThreefoldRepetition()) {
+        reason = "threefold repetition";
+        winner = "draw";
         setGameOver("threefold", "draw");
         fireBonziReaction("game_over_draw");
-        return true;
-      }
-      if (chess.isDraw()) {
+      } else if (chess.isDraw()) {
+        reason = "fifty-move rule";
+        winner = "draw";
         setGameOver("fifty_moves", "draw");
         fireBonziReaction("game_over_draw");
+      }
+
+      if (reason) {
+        const result = winner === "draw" ? "Draw" : winner === "w" ? "White wins" : "Black wins";
+        addLogEntry({ type: "game", message: `Game over — ${result} by ${reason}` });
+        const pgn = chess.pgn();
+        addLogEntry({ type: "game", message: `PGN: ${pgn}` });
+        console.log("[Game PGN]", pgn);
         return true;
       }
       return false;
     },
-    [setGameOver, fireBonziReaction, playerColor]
+    [setGameOver, fireBonziReaction, playerColor, addLogEntry]
   );
 
   // Engine move
@@ -151,17 +165,29 @@ export function PlayView({ onExit }: PlayViewProps) {
         timeControl.incrementMs
       );
 
+      const thinkStart = performance.now();
       const result = await engine.evaluateFromMoves(
         state.uciHistory,
         15,
         thinkTime
       );
+      const thinkTimeMs = Math.round(performance.now() - thinkStart);
 
       // Check if game is still in playing state
       if (useBonziPlayStore.getState().phase !== "playing") return;
 
       const bestMove = result.bestMove;
       if (!bestMove || bestMove === "(none)") return;
+
+      // Log engine evaluation
+      addLogEntry({
+        type: "engine",
+        eval: result.eval,
+        mate: result.mate,
+        depth: result.depth,
+        thinkTimeMs,
+        bestMove,
+      });
 
       const chess = gameRef.current;
       const from = bestMove.slice(0, 2);
@@ -175,6 +201,17 @@ export function PlayView({ onExit }: PlayViewProps) {
       makeMove(moveResult.san, bestMove);
       applyIncrement(bonziColor);
       switchClock();
+
+      // Log engine's move (state.moveHistory is pre-makeMove snapshot)
+      const moveNum = Math.floor(state.moveHistory.length / 2) + 1;
+      addLogEntry({
+        type: "move",
+        color: bonziColor,
+        san: moveResult.san,
+        uci: bestMove,
+        moveNum,
+        isEngine: true,
+      });
 
       // Detect events for Bonzi reaction
       if (chess.isCheckmate()) {
@@ -209,12 +246,16 @@ export function PlayView({ onExit }: PlayViewProps) {
     switchClock,
     checkGameOver,
     setBonziReaction,
+    addLogEntry,
   ]);
 
   // Handle game start
   const handleStart = useCallback(() => {
     gameRef.current = new Chess();
     startGame();
+
+    const colorLabel = playerColor === "w" ? "white" : "black";
+    addLogEntry({ type: "game", message: `Game started — Player: ${colorLabel}, Time: ${timeControl.label}` });
     fireBonziReaction("game_start");
 
     // If player is black, engine moves first
@@ -222,7 +263,7 @@ export function PlayView({ onExit }: PlayViewProps) {
       // Small delay for UX
       setTimeout(() => doEngineMove(), 500);
     }
-  }, [startGame, fireBonziReaction, playerColor, doEngineMove]);
+  }, [startGame, fireBonziReaction, playerColor, doEngineMove, addLogEntry, timeControl.label]);
 
   // Handle player move
   const handlePieceDrop = useCallback(
@@ -247,6 +288,18 @@ export function PlayView({ onExit }: PlayViewProps) {
       applyIncrement(playerColor);
       switchClock();
 
+      // Log player's move
+      const state = useBonziPlayStore.getState();
+      const moveNum = Math.ceil(state.moveHistory.length / 2);
+      addLogEntry({
+        type: "move",
+        color: playerColor,
+        san: moveResult.san,
+        uci,
+        moveNum,
+        isEngine: false,
+      });
+
       if (checkGameOver(chess)) return true;
 
       // Trigger engine move
@@ -263,6 +316,7 @@ export function PlayView({ onExit }: PlayViewProps) {
       switchClock,
       checkGameOver,
       doEngineMove,
+      addLogEntry,
     ]
   );
 
@@ -270,8 +324,13 @@ export function PlayView({ onExit }: PlayViewProps) {
   const handleResign = useCallback(() => {
     const winner: PlayerColor = playerColor === "w" ? "b" : "w";
     setGameOver("resign", winner);
+    const result = winner === "w" ? "White wins" : "Black wins";
+    addLogEntry({ type: "game", message: `Game over — ${result} by resignation` });
+    const pgn = gameRef.current.pgn();
+    addLogEntry({ type: "game", message: `PGN: ${pgn}` });
+    console.log("[Game PGN]", pgn);
     fireBonziReaction("player_resign");
-  }, [playerColor, setGameOver, fireBonziReaction]);
+  }, [playerColor, setGameOver, fireBonziReaction, addLogEntry]);
 
   // Handle play again
   const handlePlayAgain = useCallback(() => {
@@ -283,13 +342,18 @@ export function PlayView({ onExit }: PlayViewProps) {
   useEffect(() => {
     if (phase === "game_over" && gameOverReason === "timeout") {
       const state = useBonziPlayStore.getState();
+      const result = state.gameOverWinner === "w" ? "White wins" : "Black wins";
+      addLogEntry({ type: "game", message: `Game over — ${result} on time` });
+      const pgn = gameRef.current.pgn();
+      addLogEntry({ type: "game", message: `PGN: ${pgn}` });
+      console.log("[Game PGN]", pgn);
       if (state.gameOverWinner === playerColor) {
         fireBonziReaction("game_over_lose");
       } else {
         fireBonziReaction("game_over_win");
       }
     }
-  }, [phase, gameOverReason, playerColor, fireBonziReaction]);
+  }, [phase, gameOverReason, playerColor, fireBonziReaction, addLogEntry]);
 
   // Cleanup bonzi timer
   useEffect(() => {
@@ -301,16 +365,6 @@ export function PlayView({ onExit }: PlayViewProps) {
   // Setup screen
   if (phase === "setup") {
     return <PlaySetup onStart={handleStart} onBack={onExit} />;
-  }
-
-  // Format move history into pairs
-  const movePairs: Array<{ num: number; white: string; black?: string }> = [];
-  for (let i = 0; i < moveHistory.length; i += 2) {
-    movePairs.push({
-      num: Math.floor(i / 2) + 1,
-      white: moveHistory[i],
-      black: moveHistory[i + 1],
-    });
   }
 
   const boardOrientation = playerColor === "w" ? "white" : "black";
@@ -366,21 +420,8 @@ export function PlayView({ onExit }: PlayViewProps) {
           {/* Clocks */}
           <ChessClock playerColor={playerColor} />
 
-          {/* Move history */}
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="space-y-0.5 font-mono text-xs">
-              {movePairs.map((pair) => (
-                <div
-                  key={pair.num}
-                  className="grid grid-cols-[2rem_1fr_1fr] gap-1 px-1"
-                >
-                  <span className="text-purple-500">{pair.num}.</span>
-                  <span className="text-purple-200">{pair.white}</span>
-                  <span className="text-purple-200">{pair.black ?? ""}</span>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
+          {/* Game log */}
+          <GameLog />
         </div>
       </div>
     </div>

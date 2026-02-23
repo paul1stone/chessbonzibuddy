@@ -3,6 +3,12 @@ import type { BonziGifState } from "@/lib/bonzi/types";
 
 export type PlayPhase = "setup" | "playing" | "game_over";
 export type PlayerColor = "w" | "b";
+
+export type LogEntry =
+  | { type: "move"; color: "w" | "b"; san: string; uci: string; moveNum: number; isEngine: boolean }
+  | { type: "engine"; eval: number; mate: number | null; depth: number; thinkTimeMs: number; bestMove: string }
+  | { type: "bonzi"; event: string; gif: string; quip: string }
+  | { type: "game"; message: string };
 export type TimeControl = {
   label: string;
   initialMs: number;
@@ -46,6 +52,7 @@ interface BonziPlayState {
   bonziGif: BonziGifState;
   bonziQuip: string | undefined;
   engineThinking: boolean;
+  gameLog: LogEntry[];
 }
 
 interface BonziPlayActions {
@@ -62,6 +69,7 @@ interface BonziPlayActions {
   setGameOver: (reason: GameOverReason, winner: PlayerColor | "draw") => void;
   setBonziReaction: (gif: BonziGifState, quip?: string) => void;
   setEngineThinking: (val: boolean) => void;
+  addLogEntry: (entry: LogEntry) => void;
   resetGame: () => void;
   flagTimeout: (color: PlayerColor) => void;
 }
@@ -87,6 +95,7 @@ export const useBonziPlayStore = create<BonziPlayState & BonziPlayActions>(
     bonziGif: "idle",
     bonziQuip: undefined,
     engineThinking: false,
+    gameLog: [],
 
     setPhase: (phase) => set({ phase }),
     setPlayerColor: (color) => set({ playerColor: color }),
@@ -109,6 +118,7 @@ export const useBonziPlayStore = create<BonziPlayState & BonziPlayActions>(
         bonziGif: "idle",
         bonziQuip: undefined,
         engineThinking: false,
+        gameLog: [],
       });
     },
 
@@ -169,6 +179,9 @@ export const useBonziPlayStore = create<BonziPlayState & BonziPlayActions>(
 
     setEngineThinking: (val) => set({ engineThinking: val }),
 
+    addLogEntry: (entry) =>
+      set((s) => ({ gameLog: [...s.gameLog, entry] })),
+
     resetGame: () => {
       const tc = get().timeControl;
       set({
@@ -185,6 +198,7 @@ export const useBonziPlayStore = create<BonziPlayState & BonziPlayActions>(
         bonziGif: "idle",
         bonziQuip: undefined,
         engineThinking: false,
+        gameLog: [],
       });
     },
 
