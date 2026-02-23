@@ -57,6 +57,10 @@ export interface GameAnalysis {
   moves: MoveAnalysis[];
   whiteAccuracy: number;
   blackAccuracy: number;
+  /** Estimated rating White "played like" based on accuracy */
+  whiteRating: number;
+  /** Estimated rating Black "played like" based on accuracy */
+  blackRating: number;
 }
 
 // ---------------------------------------------------------------------------

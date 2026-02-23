@@ -7,6 +7,7 @@ interface GameState {
   activeMove: number;
   isAnalyzing: boolean;
   analysisProgress: number;
+  analysisQueue: Game[];
   view: "import" | "review" | "practice";
 }
 
@@ -19,14 +20,17 @@ interface GameActions {
   setIsAnalyzing: (val: boolean) => void;
   setAnalysisProgress: (progress: number) => void;
   setView: (view: GameState["view"]) => void;
+  enqueueAnalysis: (games: Game[]) => void;
+  dequeueAnalysis: () => Game | undefined;
 }
 
-export const useGameStore = create<GameState & GameActions>((set) => ({
+export const useGameStore = create<GameState & GameActions>((set, get) => ({
   games: [],
   activeGame: null,
   activeMove: 0,
   isAnalyzing: false,
   analysisProgress: 0,
+  analysisQueue: [],
   view: "import",
   setGames: (games) => set({ games }),
   setActiveGame: (game) =>
@@ -42,4 +46,15 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
   setIsAnalyzing: (val) => set({ isAnalyzing: val }),
   setAnalysisProgress: (progress) => set({ analysisProgress: progress }),
   setView: (view) => set({ view }),
+  enqueueAnalysis: (games) =>
+    set((state) => ({
+      analysisQueue: [...state.analysisQueue, ...games],
+    })),
+  dequeueAnalysis: () => {
+    const queue = get().analysisQueue;
+    if (queue.length === 0) return undefined;
+    const [next, ...rest] = queue;
+    set({ analysisQueue: rest });
+    return next;
+  },
 }));

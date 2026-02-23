@@ -12,6 +12,8 @@ interface GameSummaryProps {
   moves: MoveAnalysis[];
   whiteAccuracy: number;
   blackAccuracy: number;
+  whiteRating?: number;
+  blackRating?: number;
   currentMove: number;
   onMoveClick: (moveIndex: number) => void;
 }
@@ -56,6 +58,8 @@ export function GameSummary({
   moves,
   whiteAccuracy,
   blackAccuracy,
+  whiteRating,
+  blackRating,
   currentMove,
   onMoveClick,
 }: GameSummaryProps) {
@@ -75,18 +79,32 @@ export function GameSummary({
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center gap-8">
-            <AccuracyRing
-              accuracy={whiteAccuracy}
-              label="White"
-              color="stroke-zinc-100"
-              size={100}
-            />
-            <AccuracyRing
-              accuracy={blackAccuracy}
-              label="Black"
-              color="stroke-zinc-400"
-              size={100}
-            />
+            <div className="flex flex-col items-center gap-1">
+              <AccuracyRing
+                accuracy={whiteAccuracy}
+                label="White"
+                color="stroke-zinc-100"
+                size={100}
+              />
+              {whiteRating != null && (
+                <span className="mt-1 rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
+                  Played like ~{whiteRating}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <AccuracyRing
+                accuracy={blackAccuracy}
+                label="Black"
+                color="stroke-zinc-400"
+                size={100}
+              />
+              {blackRating != null && (
+                <span className="mt-1 rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
+                  Played like ~{blackRating}
+                </span>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

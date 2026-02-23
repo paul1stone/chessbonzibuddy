@@ -26,6 +26,8 @@ export function ReviewView({
   const moves = analysis?.moves ?? [];
   const whiteAccuracy = analysis?.whiteAccuracy ?? 0;
   const blackAccuracy = analysis?.blackAccuracy ?? 0;
+  const whiteRating = analysis?.whiteRating;
+  const blackRating = analysis?.blackRating;
 
   // Compute total number of moves from the PGN for the progress overlay
   const totalMoves = useMemo(() => {
@@ -81,6 +83,8 @@ export function ReviewView({
             onMoveClick={handleMoveClick}
             whiteAccuracy={whiteAccuracy}
             blackAccuracy={blackAccuracy}
+            whiteRating={whiteRating}
+            blackRating={blackRating}
             currentMoveAnalysis={currentMoveAnalysis}
           />
         ) : !isAnalyzing ? (
@@ -95,6 +99,12 @@ export function ReviewView({
         {isAnalyzing && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-zinc-950/80">
             <div className="flex flex-col items-center gap-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/coolmonkey.gif"
+                alt="Loading"
+                className="h-24 w-24"
+              />
               <p className="animate-pulse text-lg font-semibold text-zinc-200">
                 Analyzing...
               </p>

@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGameStore } from "@/stores/game-store";
+import { ProfileSettings } from "./profile-settings";
 import type { Game } from "@/db/schema";
 
 function resultColor(result: string) {
@@ -227,6 +228,10 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
           )}
         </div>
       </ScrollArea>
+
+      {/* Profile section at bottom */}
+      <Separator className="bg-zinc-800" />
+      <ProfileSettings />
     </div>
   );
 }

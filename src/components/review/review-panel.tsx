@@ -13,6 +13,8 @@ interface ReviewPanelProps {
   onMoveClick: (moveIndex: number) => void;
   whiteAccuracy: number;
   blackAccuracy: number;
+  whiteRating?: number;
+  blackRating?: number;
   currentMoveAnalysis: MoveAnalysis | null;
 }
 
@@ -22,6 +24,8 @@ export function ReviewPanel({
   onMoveClick,
   whiteAccuracy,
   blackAccuracy,
+  whiteRating,
+  blackRating,
   currentMoveAnalysis,
 }: ReviewPanelProps) {
   // Compute eval and mate for the EnginePanel from the current move analysis
@@ -67,6 +71,8 @@ export function ReviewPanel({
               moves={moves}
               whiteAccuracy={whiteAccuracy}
               blackAccuracy={blackAccuracy}
+              whiteRating={whiteRating}
+              blackRating={blackRating}
               currentMove={currentMove}
               onMoveClick={onMoveClick}
             />
