@@ -420,7 +420,8 @@ export function PlayView({ onExit }: PlayViewProps) {
           {/* Clocks */}
           <ChessClock playerColor={playerColor} />
 
-          {/* Game log */}
+          {/* Move list */}
+          <div className="text-xs font-bold uppercase tracking-wider text-purple-400">Moves</div>
           <GameLog />
         </div>
       </div>
