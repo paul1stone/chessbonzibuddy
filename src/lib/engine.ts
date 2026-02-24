@@ -179,6 +179,41 @@ export class StockfishEngine {
     return this.parseEvaluation(lines);
   }
 
+  /**
+   * Evaluate using Stockfish's built-in time management.
+   * Passes actual clock state so Stockfish allocates time optimally.
+   */
+  async evaluateWithClock(
+    moves: string[],
+    whiteTimeMs: number,
+    blackTimeMs: number,
+    whiteIncMs = 0,
+    blackIncMs = 0
+  ): Promise<EngineEvaluation> {
+    this.assertReady();
+
+    this.sendCommand("setoption name MultiPV value 1");
+
+    if (moves.length === 0) {
+      this.sendCommand("position startpos");
+    } else {
+      this.sendCommand("position startpos moves " + moves.join(" "));
+    }
+
+    const wtime = Math.max(1, Math.round(whiteTimeMs));
+    const btime = Math.max(1, Math.round(blackTimeMs));
+    const winc = Math.round(whiteIncMs);
+    const binc = Math.round(blackIncMs);
+
+    this.sendCommand(`go wtime ${wtime} btime ${btime} winc ${winc} binc ${binc}`);
+
+    // Safety timeout: engine's remaining time + generous buffer
+    const engineTime = moves.length % 2 === 0 ? wtime : btime;
+    const safetyMs = Math.min(engineTime + 10_000, 30_000);
+    const lines = await this.waitFor("bestmove", safetyMs);
+    return this.parseEvaluation(lines);
+  }
+
   /** Send the UCI `stop` command. */
   stop(): void {
     this.sendCommand("stop");

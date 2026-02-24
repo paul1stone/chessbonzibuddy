@@ -15,11 +15,6 @@ import { Button } from "@/components/ui/button";
 import type { BonziEvent } from "@/lib/bonzi/types";
 import type { PlayerColor } from "@/stores/bonzi-play-store";
 
-function computeEngineThinkTime(remainingMs: number, incrementMs: number): number {
-  const time = Math.min(remainingMs * 0.02 + incrementMs * 0.8, 3000);
-  return Math.max(300, Math.round(time));
-}
-
 interface PlayViewProps {
   onExit: () => void;
 }
@@ -62,6 +57,8 @@ export function PlayView({ onExit }: PlayViewProps) {
       // Configure for max strength
       engine.setOption("Skill Level", 20);
       engine.setOption("Hash", 128);
+      // Account for browser Web Worker message-passing overhead
+      engine.setOption("Move Overhead", 150);
       engineRef.current = engine;
     }).catch((err) => {
       // Suppress init errors from strict-mode double-mount (engine was quit mid-init)
@@ -158,18 +155,14 @@ export function PlayView({ onExit }: PlayViewProps) {
     try {
       const state = useBonziPlayStore.getState();
       const bonziColor = playerColor === "w" ? "b" : "w";
-      const remainingMs =
-        bonziColor === "w" ? state.whiteTimeMs : state.blackTimeMs;
-      const thinkTime = computeEngineThinkTime(
-        remainingMs,
-        timeControl.incrementMs
-      );
 
       const thinkStart = performance.now();
-      const result = await engine.evaluateFromMoves(
+      const result = await engine.evaluateWithClock(
         state.uciHistory,
-        15,
-        thinkTime
+        state.whiteTimeMs,
+        state.blackTimeMs,
+        timeControl.incrementMs,
+        timeControl.incrementMs
       );
       const thinkTimeMs = Math.round(performance.now() - thinkStart);
 
