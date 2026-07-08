@@ -16,6 +16,8 @@ interface BoardProps {
   interactive?: boolean;
   boardOrientation?: "white" | "black";
   customArrows?: Array<[string, string, string?]>; // [from, to, color?]
+  /** Squares of the most recent move, highlighted in gold */
+  lastMove?: { from: string; to: string } | null;
 }
 
 export function Board({
@@ -25,6 +27,7 @@ export function Board({
   interactive = true,
   boardOrientation = "white",
   customArrows,
+  lastMove,
 }: BoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
 
@@ -44,13 +47,19 @@ export function Board({
     }
   }, [selectedSquare, interactive, position]);
 
-  // Build square styles for selected piece + legal move dots
+  // Build square styles for last move + selected piece + legal move dots
   const clickMoveStyles = useMemo(() => {
-    if (!interactive || !selectedSquare) return {};
     const styles: Record<string, React.CSSProperties> = {};
 
-    // Highlight selected square
-    styles[selectedSquare] = { backgroundColor: "rgba(255, 255, 0, 0.4)" };
+    if (lastMove) {
+      styles[lastMove.from] = { backgroundColor: "rgba(246, 197, 77, 0.28)" };
+      styles[lastMove.to] = { backgroundColor: "rgba(246, 197, 77, 0.4)" };
+    }
+
+    if (!interactive || !selectedSquare) return styles;
+
+    // Highlight selected square (warm gold, matches the app's primary)
+    styles[selectedSquare] = { backgroundColor: "rgba(246, 197, 77, 0.45)" };
 
     for (const move of legalMoves) {
       if (move.captured) {
@@ -71,7 +80,7 @@ export function Board({
     }
 
     return styles;
-  }, [interactive, selectedSquare, legalMoves]);
+  }, [interactive, selectedSquare, legalMoves, lastMove]);
 
   const handleSquareClick = useCallback(
     ({ piece, square }: { piece: { pieceType: string } | null; square: string }) => {
@@ -110,18 +119,20 @@ export function Board({
   );
 
   return (
-    <div className="rounded-lg overflow-hidden shadow-xl">
+    <div className="rounded-lg overflow-hidden shadow-2xl shadow-black/40 ring-1 ring-border">
       <Chessboard
         options={{
           position: position ?? "start",
           boardOrientation,
-          animationDurationInMs: 200,
+          animationDurationInMs: 250,
           allowDragging: interactive,
           arrows,
           squareStyles: clickMoveStyles,
-          lightSquareStyle: { backgroundColor: "#e8dab2" },
-          darkSquareStyle: { backgroundColor: "#4a7c59" },
-          dropSquareStyle: { boxShadow: "inset 0 0 1px 6px rgba(0,0,0,.1)" },
+          lightSquareStyle: { backgroundColor: "#ebecd0" },
+          darkSquareStyle: { backgroundColor: "#739552" },
+          dropSquareStyle: {
+            boxShadow: "inset 0 0 0 3px rgba(246, 197, 77, 0.65)",
+          },
           boardStyle: {
             ...(boardWidth ? { width: boardWidth } : {}),
           },

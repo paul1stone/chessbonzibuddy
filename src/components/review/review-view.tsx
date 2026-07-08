@@ -64,7 +64,7 @@ export function ReviewView({
   return (
     <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
       {/* Left column: Board */}
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center animate-scale-in">
         <BoardPanel
           pgn={pgn}
           currentMove={currentMove}
@@ -74,7 +74,7 @@ export function ReviewView({
       </div>
 
       {/* Right column: Review panel with optional overlay */}
-      <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-purple-800 bg-purple-950">
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card animate-slide-in-right">
         {/* Review panel content */}
         {analysis ? (
           <ReviewPanel
@@ -89,7 +89,7 @@ export function ReviewView({
           />
         ) : !isAnalyzing ? (
           <div className="flex h-full flex-1 items-center justify-center p-8">
-            <p className="text-center text-sm text-purple-400">
+            <p className="text-center text-sm text-muted-foreground">
               Run analysis to see move evaluations
             </p>
           </div>
@@ -97,7 +97,7 @@ export function ReviewView({
 
         {/* Analysis progress overlay */}
         {isAnalyzing && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-purple-950/80">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in-soft">
             <div className="flex flex-col items-center gap-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -105,19 +105,19 @@ export function ReviewView({
                 alt="Loading"
                 className="h-24 w-24"
               />
-              <p className="animate-pulse text-lg font-semibold text-purple-100">
+              <p className="animate-pulse text-lg font-semibold text-foreground">
                 Analyzing...
               </p>
 
               {/* Progress bar */}
-              <div className="h-2 w-64 overflow-hidden rounded-full bg-purple-800">
+              <div className="h-2 w-64 overflow-hidden rounded-full bg-secondary">
                 <div
-                  className="h-full rounded-full bg-blue-500 transition-all duration-300 ease-out"
+                  className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
                   style={{ width: `${analysisProgress}%` }}
                 />
               </div>
 
-              <p className="text-sm text-purple-300">
+              <p className="text-sm text-muted-foreground">
                 Move {currentAnalysisMove} of {totalMoves}
               </p>
             </div>

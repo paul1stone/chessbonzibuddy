@@ -36,14 +36,14 @@ export function MoveControls({
 
   return (
     <div className="flex flex-col items-center gap-2 py-3">
-      <div className="flex items-center gap-1 rounded-lg bg-purple-900/50 p-1">
+      <div className="flex items-center gap-1 rounded-lg bg-card/60 p-1">
         <Button
           variant="ghost"
           size="icon"
           onClick={onFirst}
           disabled={atStart || isPlaying}
           aria-label="First move"
-          className="text-purple-300 hover:text-purple-100"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronsLeft className="h-4 w-4" />
         </Button>
@@ -54,7 +54,7 @@ export function MoveControls({
           onClick={onPrevious}
           disabled={atStart || isPlaying}
           aria-label="Previous move"
-          className="text-purple-300 hover:text-purple-100"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -68,8 +68,8 @@ export function MoveControls({
             aria-label={isPlaying ? "Pause" : "Play"}
             className={
               isPlaying
-                ? "text-blue-400 hover:text-blue-300"
-                : "text-purple-300 hover:text-purple-100"
+                ? "text-primary hover:text-primary/80"
+                : "text-muted-foreground hover:text-foreground"
             }
           >
             {isPlaying ? (
@@ -86,7 +86,7 @@ export function MoveControls({
           onClick={onNext}
           disabled={atEnd || isPlaying}
           aria-label="Next move"
-          className="text-purple-300 hover:text-purple-100"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -97,13 +97,13 @@ export function MoveControls({
           onClick={onLast}
           disabled={atEnd || isPlaying}
           aria-label="Last move"
-          className="text-purple-300 hover:text-purple-100"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronsRight className="h-4 w-4" />
         </Button>
       </div>
 
-      <span className="text-xs text-purple-400">
+      <span className="text-xs text-muted-foreground">
         Move {currentMove} of {totalMoves}
       </span>
     </div>

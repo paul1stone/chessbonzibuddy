@@ -47,24 +47,28 @@ export function GameOverOverlay({ onPlayAgain, onExit }: GameOverOverlayProps) {
   }
 
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-purple-950/90">
-      <div className="flex flex-col items-center gap-4 rounded-xl border border-purple-700 bg-purple-900 p-8 shadow-xl">
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/85 backdrop-blur-sm animate-fade-in-soft">
+      <div className="animate-overlay-card flex flex-col items-center gap-4 rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/50">
         <BonziAvatar gif={displayGif} quip={bonziQuip} size="lg" />
 
         <h2
           className={`text-2xl font-bold ${
             playerWon
-              ? "text-green-400"
+              ? "text-success"
               : isDraw
-                ? "text-purple-300"
-                : "text-red-400"
+                ? "text-muted-foreground"
+                : "text-destructive"
           }`}
         >
           {resultText}
         </h2>
 
         <div className="flex gap-3 pt-2">
-          <Button onClick={onPlayAgain} variant="default">
+          <Button
+            onClick={onPlayAgain}
+            variant="default"
+            className="transition-transform duration-200 hover:scale-105 active:scale-95"
+          >
             Play Again
           </Button>
           <Button onClick={onExit} variant="outline">

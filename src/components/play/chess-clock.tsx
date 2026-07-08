@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useBonziPlayStore } from "@/stores/bonzi-play-store";
 import type { PlayerColor } from "@/stores/bonzi-play-store";
 
-function formatTime(ms: number): string {
+export function formatTime(ms: number): string {
   if (ms <= 0) return "0:00";
 
   const totalSeconds = Math.floor(ms / 1000);
@@ -27,24 +27,26 @@ interface ClockDisplayProps {
   label: string;
 }
 
-function ClockDisplay({ timeMs, isActive, label }: ClockDisplayProps) {
+export function ClockDisplay({ timeMs, isActive, label }: ClockDisplayProps) {
   const isLow = timeMs < 30_000 && timeMs > 0;
   const isCritical = timeMs < 10_000 && timeMs > 0;
 
   return (
     <div
-      className={`flex items-center justify-between rounded-md px-3 py-2 font-mono text-lg transition-colors ${
+      className={`flex items-center justify-between rounded-md px-3 py-2 font-mono text-lg transition-all duration-300 ${
         isActive
           ? isCritical
-            ? "bg-red-900/60 text-red-300"
+            ? "animate-clock-urgent bg-destructive/25 text-destructive"
             : isLow
-              ? "bg-yellow-900/40 text-yellow-300"
-              : "bg-purple-800 text-purple-100"
-          : "bg-purple-950 text-purple-500"
+              ? "bg-warning/20 text-warning"
+              : "bg-secondary text-foreground ring-1 ring-primary/50"
+          : "bg-background text-muted-foreground/70"
       }`}
     >
       <span className="text-xs font-sans">{label}</span>
-      <span className={`tabular-nums ${isCritical && isActive ? "animate-pulse" : ""}`}>
+      <span
+        className={`tabular-nums ${isCritical && isActive ? "animate-pulse" : ""}`}
+      >
         {formatTime(timeMs)}
       </span>
     </div>

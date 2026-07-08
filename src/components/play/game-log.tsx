@@ -38,25 +38,32 @@ export function GameLog() {
   return (
     <ScrollArea className="min-h-0 flex-1">
       <div className="px-1 py-1">
-        <div className="mb-1 grid grid-cols-[2rem_1fr_1fr] gap-x-1 border-b border-purple-800 pb-1 text-[10px] font-bold uppercase tracking-wider text-purple-500">
+        <div className="mb-1 grid grid-cols-[2rem_1fr_1fr] gap-x-1 border-b border-border pb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
           <span>#</span>
           <span>White</span>
           <span>Black</span>
         </div>
-        {rows.map((row) => (
-          <div
-            key={row.moveNum}
-            className="grid grid-cols-[2rem_1fr_1fr] gap-x-1 py-0.5 font-mono text-xs"
-          >
-            <span className="text-purple-600">{row.moveNum}.</span>
-            <span className={row.white?.isEngine ? "text-purple-400" : "text-purple-100"}>
-              {row.white?.san ?? ""}
-            </span>
-            <span className={row.black?.isEngine ? "text-purple-400" : "text-purple-100"}>
-              {row.black?.san ?? ""}
-            </span>
-          </div>
-        ))}
+        {rows.map((row, i) => {
+          const isLastRow = i === rows.length - 1;
+          return (
+            <div
+              key={row.moveNum}
+              className="grid grid-cols-[2rem_1fr_1fr] gap-x-1 rounded py-0.5 font-mono text-xs transition-colors hover:bg-secondary/40"
+            >
+              <span className="text-muted-foreground/60">{row.moveNum}.</span>
+              <span
+                className={`${row.white?.isEngine ? "text-muted-foreground" : "text-foreground"} ${isLastRow && !row.black ? "animate-pop-move" : ""}`}
+              >
+                {row.white?.san ?? ""}
+              </span>
+              <span
+                className={`${row.black?.isEngine ? "text-muted-foreground" : "text-foreground"} ${isLastRow && row.black ? "animate-pop-move" : ""}`}
+              >
+                {row.black?.san ?? ""}
+              </span>
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
     </ScrollArea>

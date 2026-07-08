@@ -195,13 +195,13 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
   if (mistakes.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
-        <p className="text-lg text-purple-300">
+        <p className="text-lg text-muted-foreground">
           No mistakes or blunders found in this game.
         </p>
         <Button
           variant="outline"
           onClick={onExit}
-          className="border-purple-700 text-purple-300 hover:text-purple-100"
+          className="border-border text-muted-foreground hover:text-foreground"
         >
           Back to Review
         </Button>
@@ -217,10 +217,10 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-purple-100">
+          <h2 className="text-lg font-semibold text-foreground">
             Practice Mode
           </h2>
-          <span className="rounded-md bg-purple-800 px-2.5 py-1 text-xs font-medium text-purple-300">
+          <span className="rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-muted-foreground">
             Mistake {currentMistakeIndex + 1} of {mistakes.length}
           </span>
         </div>
@@ -228,7 +228,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
           variant="ghost"
           size="sm"
           onClick={onExit}
-          className="text-purple-300 hover:text-purple-100"
+          className="text-muted-foreground hover:text-foreground"
         >
           <X className="h-4 w-4" />
           Exit
@@ -263,11 +263,11 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
           />
 
           {/* Mistake context info */}
-          <div className="rounded-lg border border-purple-800 bg-purple-900/50 px-4 py-3">
-            <p className="text-xs text-purple-400">
+          <div className="rounded-lg border border-border bg-card/60 px-4 py-3">
+            <p className="text-xs text-muted-foreground">
               Move {currentMistake?.moveNumber}.
               {currentMistake?.color === "b" ? ".." : ""}{" "}
-              <span className="text-purple-200">{currentMistake?.san}</span>{" "}
+              <span className="text-foreground/90">{currentMistake?.san}</span>{" "}
               was played (
               <span
                 className={
@@ -291,7 +291,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
           size="sm"
           onClick={handlePrevMistake}
           disabled={currentMistakeIndex === 0}
-          className="text-purple-300 hover:text-purple-100"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" />
           Previous
@@ -301,7 +301,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
           size="sm"
           onClick={handleNextMistake}
           disabled={currentMistakeIndex >= mistakes.length - 1}
-          className="text-purple-300 hover:text-purple-100"
+          className="text-muted-foreground hover:text-foreground"
         >
           Next
           <ChevronRight className="h-4 w-4" />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Crown, Plus, X } from "lucide-react";
+import { Crown, Plus, Swords, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -14,17 +14,17 @@ import type { Game } from "@/db/schema";
 
 function resultColor(result: string) {
   if (result === "1-0" || result === "0-1") {
-    return "text-purple-300";
+    return "text-muted-foreground";
   }
-  if (result === "1/2-1/2") return "text-purple-400";
-  return "text-purple-300";
+  if (result === "1/2-1/2") return "text-muted-foreground";
+  return "text-muted-foreground";
 }
 
 function resultIndicator(result: string) {
-  if (result === "1-0") return "bg-green-500";
-  if (result === "0-1") return "bg-red-500";
-  if (result === "1/2-1/2") return "bg-purple-500";
-  return "bg-purple-500";
+  if (result === "1-0") return "bg-success";
+  if (result === "0-1") return "bg-destructive";
+  if (result === "1/2-1/2") return "bg-muted-foreground";
+  return "bg-muted-foreground";
 }
 
 function SkeletonRows() {
@@ -143,11 +143,11 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
   }
 
   return (
-    <div className="flex h-full w-72 flex-col border-r border-purple-800 bg-purple-950">
+    <div className="flex h-full w-72 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Header */}
-      <div className="flex items-center gap-2 px-5 py-5">
-        <Crown className="h-5 w-5 text-amber-500" />
-        <h1 className="text-lg font-bold text-purple-50">Chess Analyzer</h1>
+      <div className="flex items-center gap-2 px-5 py-5 animate-fade-in-soft">
+        <Crown className="h-5 w-5 text-primary" />
+        <h1 className="text-lg font-bold text-shimmer-gold">Chess Analyzer</h1>
       </div>
 
       {/* New Analysis button */}
@@ -169,7 +169,7 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
       <div className="px-4 pb-4">
         <Button
           variant="outline"
-          className="w-full border-purple-700 bg-purple-900/50 text-purple-200 hover:bg-purple-800 hover:text-purple-100"
+          className="w-full border-border bg-card/60 text-foreground/90 transition-all duration-200 hover:border-primary/50 hover:bg-secondary hover:text-foreground"
           onClick={() => {
             setView("play-bonzi");
             onGameSelect?.();
@@ -188,7 +188,22 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
         </Button>
       </div>
 
-      <Separator className="bg-purple-800" />
+      {/* 1v1 a friend button */}
+      <div className="px-4 pb-4">
+        <Button
+          variant="outline"
+          className="w-full border-border bg-card/60 text-foreground/90 transition-all duration-200 hover:border-primary/50 hover:bg-secondary hover:text-foreground"
+          onClick={() => {
+            setView("play-1v1");
+            onGameSelect?.();
+          }}
+        >
+          <Swords className="mr-2 h-4 w-4 text-primary" />
+          1v1 a Friend
+        </Button>
+      </div>
+
+      <Separator className="bg-secondary" />
 
       {/* Game list */}
       <ScrollArea className="flex-1">
@@ -196,29 +211,31 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
           {isLoading ? (
             <SkeletonRows />
           ) : fetchError ? (
-            <p className="px-2 py-8 text-center text-sm text-red-400">
+            <p className="px-2 py-8 text-center text-sm text-destructive">
               {fetchError}
             </p>
           ) : !username ? (
             <div className="flex flex-col items-center gap-3 px-2 py-8">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/coolmonkey.gif" alt="" className="h-16 w-16" />
-              <p className="text-center text-sm text-purple-400">
+              <p className="text-center text-sm text-muted-foreground">
                 Connect your Chess.com or Lichess account to view games
               </p>
             </div>
           ) : games.length === 0 ? (
-            <p className="px-2 py-8 text-center text-sm text-purple-400">
+            <p className="px-2 py-8 text-center text-sm text-muted-foreground">
               No games analyzed yet
             </p>
           ) : (
-            <div className="flex flex-col gap-1">
+            <div className="stagger-children flex flex-col gap-1">
               {games.map((game) => (
                 <button
                   key={game.id}
                   onClick={() => handleGameClick(game)}
-                  className={`group relative flex w-full flex-col gap-1 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-purple-800/50 ${
-                    activeGame?.id === game.id ? "bg-purple-800/50" : ""
+                  className={`group relative flex w-full flex-col gap-1 rounded-md px-3 py-2.5 text-left transition-all duration-200 hover:translate-x-1 hover:bg-secondary/60 ${
+                    activeGame?.id === game.id
+                      ? "bg-secondary/60 shadow-[inset_2px_0_0_0_var(--primary)]"
+                      : ""
                   }`}
                 >
                   {/* Delete button (visible on hover) */}
@@ -234,7 +251,7 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
                         );
                       }
                     }}
-                    className={`absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded text-purple-400 transition-opacity hover:bg-purple-700 hover:text-purple-200 ${
+                    className={`absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-all duration-150 hover:bg-destructive/20 hover:text-destructive ${
                       deletingId === game.id
                         ? "opacity-50"
                         : "opacity-0 group-hover:opacity-100"
@@ -243,7 +260,7 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
                     <X className="h-3 w-3" />
                   </span>
 
-                  <span className="pr-5 text-sm font-medium text-purple-100">
+                  <span className="pr-5 text-sm font-medium text-foreground">
                     {game.whitePlayer} vs {game.blackPlayer}
                   </span>
                   <div className="flex items-center gap-2">
@@ -277,7 +294,7 @@ export function Sidebar({ onGameSelect }: SidebarProps) {
       </ScrollArea>
 
       {/* Profile section at bottom */}
-      <Separator className="bg-purple-800" />
+      <Separator className="bg-secondary" />
       <ProfileSettings />
     </div>
   );

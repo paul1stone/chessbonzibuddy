@@ -24,6 +24,7 @@ export function PlayView({ onExit }: PlayViewProps) {
   const playerColor = useBonziPlayStore((s) => s.playerColor);
   const timeControl = useBonziPlayStore((s) => s.timeControl);
   const fen = useBonziPlayStore((s) => s.fen);
+  const uciHistory = useBonziPlayStore((s) => s.uciHistory);
   const bonziGif = useBonziPlayStore((s) => s.bonziGif);
   const bonziQuip = useBonziPlayStore((s) => s.bonziQuip);
   const engineThinking = useBonziPlayStore((s) => s.engineThinking);
@@ -272,7 +273,12 @@ export function PlayView({ onExit }: PlayViewProps) {
         ? (target[1] === "8" || target[1] === "1" ? "q" : undefined)
         : undefined;
 
-      const moveResult = chess.move({ from: source, to: target, promotion });
+      let moveResult;
+      try {
+        moveResult = chess.move({ from: source, to: target, promotion });
+      } catch {
+        return false;
+      }
       if (!moveResult) return false;
 
       const uci = source + target + (promotion ?? "");
@@ -362,15 +368,22 @@ export function PlayView({ onExit }: PlayViewProps) {
 
   const boardOrientation = playerColor === "w" ? "white" : "black";
 
+  // Highlight the most recent move on the board
+  const lastUci = uciHistory[uciHistory.length - 1];
+  const lastMove =
+    lastUci && lastUci.length >= 4
+      ? { from: lastUci.slice(0, 2), to: lastUci.slice(2, 4) }
+      : null;
+
   return (
     <div className="flex h-screen flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-purple-800 bg-purple-950 px-4 py-2">
-        <span className="text-sm font-medium text-purple-100">
+      <div className="flex items-center justify-between border-b border-border bg-card/50 px-4 py-2 animate-fade-in-soft">
+        <span className="text-sm font-medium text-foreground">
           Play vs Bonzi Buddy
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-purple-400">
+          <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
             {timeControl.label}
           </span>
           {phase === "playing" && (
@@ -385,12 +398,13 @@ export function PlayView({ onExit }: PlayViewProps) {
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-2 sm:p-4 lg:grid-cols-[1fr_320px]">
         {/* Board */}
         <div className="relative flex items-center justify-center">
-          <div className="w-[90%] max-w-[calc(100vh-14rem)]">
+          <div className="w-[90%] max-w-[calc(100vh-14rem)] animate-scale-in">
             <Board
               position={fen}
               interactive={phase === "playing" && !engineThinking}
               onPieceDrop={handlePieceDrop}
               boardOrientation={boardOrientation}
+              lastMove={lastMove}
             />
           </div>
 
@@ -404,17 +418,31 @@ export function PlayView({ onExit }: PlayViewProps) {
         </div>
 
         {/* Side panel */}
-        <div className="flex flex-col gap-3 overflow-hidden rounded-lg border border-purple-800 bg-purple-950 p-3">
+        <div className="flex flex-col gap-3 overflow-hidden rounded-lg border border-border bg-card p-3 animate-slide-in-right">
           {/* Bonzi avatar */}
           <div className="flex justify-center">
             <BonziAvatar gif={bonziGif} quip={bonziQuip} size="md" />
           </div>
 
+          {/* Thinking indicator */}
+          {engineThinking && (
+            <div className="flex items-center justify-center gap-1.5 animate-fade-in-soft">
+              <span className="text-xs text-muted-foreground">
+                Bonzi is thinking
+              </span>
+              <span className="flex gap-0.5">
+                <span className="thinking-dot inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+                <span className="thinking-dot inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+                <span className="thinking-dot inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+              </span>
+            </div>
+          )}
+
           {/* Clocks */}
           <ChessClock playerColor={playerColor} />
 
           {/* Move list */}
-          <div className="text-xs font-bold uppercase tracking-wider text-purple-400">Moves</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Moves</div>
           <GameLog />
         </div>
       </div>

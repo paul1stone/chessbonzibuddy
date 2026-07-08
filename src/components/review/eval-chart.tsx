@@ -129,8 +129,8 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
             const point = payload[0]?.payload as ChartDataPoint | undefined;
             if (!point) return null;
             return (
-              <div className="rounded-md border border-purple-700 bg-purple-900 px-3 py-2 text-xs shadow-lg">
-                <p className="font-medium text-purple-100">
+              <div className="rounded-md border border-border bg-card px-3 py-2 text-xs shadow-lg">
+                <p className="font-medium text-foreground">
                   {point.moveLabel} {point.san}
                 </p>
                 <p className="text-muted-foreground">

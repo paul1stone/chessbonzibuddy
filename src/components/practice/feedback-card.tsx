@@ -37,22 +37,22 @@ export function FeedbackCard({
   // Before attempt
   if (isCorrect === null && playedMoveSan === null) {
     return (
-      <Card className="border-purple-800 bg-purple-900">
+      <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-purple-100">Find the best move</CardTitle>
-          <CardDescription className="text-purple-300">
+          <CardTitle className="text-foreground">Find the best move</CardTitle>
+          <CardDescription className="text-muted-foreground">
             {sideToMove === "w" ? "White" : "Black"} to move. Drag a piece to
             make your move.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 rounded-lg bg-purple-800/50 px-4 py-3">
+          <div className="flex items-center gap-2 rounded-lg bg-secondary/60 px-4 py-3">
             <div
               className={`h-4 w-4 rounded-full ${
-                sideToMove === "w" ? "bg-white" : "bg-purple-700 border border-purple-500"
+                sideToMove === "w" ? "bg-white" : "bg-zinc-800 border border-zinc-600"
               }`}
             />
-            <span className="text-sm text-purple-200">
+            <span className="text-sm text-foreground/90">
               {sideToMove === "w" ? "White" : "Black"} to play
             </span>
           </div>
@@ -62,7 +62,7 @@ export function FeedbackCard({
             variant="outline"
             size="sm"
             onClick={onShowAnswer}
-            className="border-purple-700 text-purple-300 hover:text-purple-100"
+            className="border-border text-muted-foreground hover:text-foreground"
           >
             <Eye className="h-4 w-4" />
             Show Answer
@@ -72,7 +72,7 @@ export function FeedbackCard({
               variant="ghost"
               size="sm"
               onClick={onNextMistake}
-              className="text-purple-300 hover:text-purple-100"
+              className="text-muted-foreground hover:text-foreground"
             >
               Skip
               <ArrowRight className="h-4 w-4" />
@@ -86,7 +86,7 @@ export function FeedbackCard({
   // Correct
   if (isCorrect === true) {
     return (
-      <Card className="border-green-800/50 bg-purple-900">
+      <Card className="border-green-800/50 bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-400">
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/20">
@@ -94,7 +94,7 @@ export function FeedbackCard({
             </div>
             Correct!
           </CardTitle>
-          <CardDescription className="text-purple-300">
+          <CardDescription className="text-muted-foreground">
             You found the best move: <span className="font-semibold text-green-400">{bestMoveSan}</span>
           </CardDescription>
         </CardHeader>
@@ -109,7 +109,7 @@ export function FeedbackCard({
               <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
-            <span className="text-sm text-purple-400">
+            <span className="text-sm text-muted-foreground">
               All mistakes reviewed!
             </span>
           )}
@@ -120,7 +120,7 @@ export function FeedbackCard({
 
   // Incorrect
   return (
-    <Card className="border-orange-800/50 bg-purple-900">
+    <Card className="border-orange-800/50 bg-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-orange-400">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500/20">
@@ -128,10 +128,10 @@ export function FeedbackCard({
           </div>
           Not quite
         </CardTitle>
-        <CardDescription className="text-purple-300">
+        <CardDescription className="text-muted-foreground">
           {playedMoveSan && (
             <span>
-              You played <span className="font-semibold text-purple-200">{playedMoveSan}</span>.{" "}
+              You played <span className="font-semibold text-foreground/90">{playedMoveSan}</span>.{" "}
             </span>
           )}
           The best move was:{" "}
@@ -140,8 +140,8 @@ export function FeedbackCard({
       </CardHeader>
       <CardContent>
         {evalDiff > 0 && (
-          <div className="rounded-lg bg-purple-800/50 px-4 py-3">
-            <p className="text-sm text-purple-300">
+          <div className="rounded-lg bg-secondary/60 px-4 py-3">
+            <p className="text-sm text-muted-foreground">
               The best move is{" "}
               <span className="font-semibold text-orange-400">
                 +{evalDiff.toFixed(1)} pawns
@@ -156,17 +156,13 @@ export function FeedbackCard({
           variant="outline"
           size="sm"
           onClick={onTryAgain}
-          className="border-purple-700 text-purple-300 hover:text-purple-100"
+          className="border-border text-muted-foreground hover:text-foreground"
         >
           <RotateCcw className="h-4 w-4" />
           Try Again
         </Button>
         {hasNextMistake && (
-          <Button
-            size="sm"
-            onClick={onNextMistake}
-            className="bg-purple-700 text-purple-100 hover:bg-purple-600"
-          >
+          <Button size="sm" onClick={onNextMistake}>
             Next Mistake
             <ArrowRight className="h-4 w-4" />
           </Button>
