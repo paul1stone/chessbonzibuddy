@@ -193,7 +193,7 @@ The user reviews both pages before deploy; they are real copy, not placeholders.
 
 ## 12. Risks and notes
 
-- BonziBuddy trademark: Bonzi Software is defunct; trademark status unverified. The footer disclaims affiliation. The user decides whether to keep the name.
+- BonziBuddy name and art (verified 2026-08-28, not legal advice): the BONZIBUDDY US word mark (Reg. 2447561) was cancelled in 2008 and cannot be revived; Bonzi Software, Inc. is out of business. Copyright in the original gorilla artwork technically subsists with whoever holds the defunct company's assets; no rights-holder is visible and no enforcement has occurred in 20+ years of memes and fan sites. The repo already ships the original sprites, so this work adds no new exposure. The footer disclaims affiliation. The user decides whether to keep the name and sprites; the safest long-term path is an original purple-gorilla drawing.
 - WebGL unavailable or context lost: `HeroCanvas` catches creation failure and shows the poster.
 - Safari: `image-rendering: pixelated` is supported; `requestIdleCallback` is polyfilled with `setTimeout`.
 - Three.js in vitest runs under node without WebGL for geometry-only tests; no jsdom needed.
