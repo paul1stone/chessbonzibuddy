@@ -39,7 +39,7 @@ function Shot({ item }: { item: (typeof ITEMS)[number] }) {
     );
   }
   return (
-    <div className="r-bevel-in r-body flex aspect-[16/10] items-center justify-center bg-[var(--r-face)] p-6 text-center text-[var(--r-disabled)]">
+    <div className="r-bevel-in r-body flex h-[120px] items-center justify-center bg-[var(--r-face)] p-6 text-center">
       Screenshot pending. This screen is being redesigned in part 2.
     </div>
   );

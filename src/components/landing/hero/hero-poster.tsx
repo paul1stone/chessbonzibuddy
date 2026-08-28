@@ -11,8 +11,8 @@ export function HeroPoster() {
       src="/screenshots/hero-poster.webp"
       alt="Pixelated 3D chessboard after Scholar's mate, the white queen on f7"
       className="hero-poster"
-      width={1440}
-      height={900}
+      width={400}
+      height={250}
       loading="eager"
       fetchPriority="low"
       decoding="async"

@@ -17,6 +17,8 @@ type Status = "poster" | "canvas" | "failed";
 export function HeroCanvasLoader({ progressRef, stageRef, poster }: HeroCanvasLoaderProps) {
   const [status, setStatus] = useState<Status>("poster");
   const [inView, setInView] = useState(true);
+  // NOTE: never reset on context loss; "failed" is terminal. If a retry path is ever
+  // added, ready must reset too or the poster unmounts before the new renderer is live.
   const [ready, setReady] = useState(false);
 
   useEffect(() => {

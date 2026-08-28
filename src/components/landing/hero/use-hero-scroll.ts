@@ -1,11 +1,7 @@
 "use client";
 
-import type { RefObject } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
-
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+import { useEffect, type RefObject } from "react";
+import { prefersReducedMotion } from "@/lib/motion";
 
 interface HeroScrollRefs {
   sectionRef: RefObject<HTMLElement | null>;
@@ -14,10 +10,21 @@ interface HeroScrollRefs {
   progressRef: RefObject<number>;
 }
 
-// Scrubs hero progress into a ref (read by the canvas each frame) and choreographs the DOM window/dialog.
+// Scrubs hero progress into a ref (read by the canvas each frame) and choreographs
+// the DOM window/dialog. GSAP is dynamically imported so its ~52 KB gzip stays out
+// of the initial bundle; reduced-motion visitors never load it at all.
 export function useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef }: HeroScrollRefs) {
-  useGSAP(
-    () => {
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
+
+    Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(([gsapMod, stMod]) => {
+      if (cancelled) return;
+      const gsap = gsapMod.gsap ?? gsapMod.default;
+      const ScrollTrigger = stMod.ScrollTrigger ?? stMod.default;
+      gsap.registerPlugin(ScrollTrigger);
+
       const section = sectionRef.current;
       const win = windowRef.current;
       const dialog = dialogRef.current;
@@ -78,8 +85,12 @@ export function useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef }:
         };
       });
 
-      return () => mm.revert();
-    },
-    { scope: sectionRef }
-  );
+      cleanup = () => mm.revert();
+    });
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [sectionRef, windowRef, dialogRef, progressRef]);
 }
