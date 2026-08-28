@@ -1690,7 +1690,7 @@ export default function CanvasSmoke() {
 
 Run `npm run dev`, open `http://localhost:3000/canvas-smoke`. Expected: within ~1 s a pixelated board with 32 flat-shaded pieces appears; dragging the slider plays Scholar's mate (e-pawn, e-pawn, queen to h5, knight, bishop, knight, queen takes f7, pawn tumbles off); camera swoops from above to a low angle; visible dither pattern in shaded areas; the scene gently sways. Check DevTools console: no errors, no "Multiple instances of Three.js" warning. Screenshot at slider ~85% to the scratchpad for the reviewer. Then `rm -r "src/app/(marketing)/canvas-smoke"`.
 
-- [ ] **Step 6: Verify and commit**
+- [ ] **Step 7: Verify and commit**
 
 Run: `npm run typecheck && npx eslint src/components/landing`
 Expected: clean.
@@ -2395,7 +2395,7 @@ export default function LandingPage() {
 7. 375px: window fills 92vw, headline wraps at 33px, buttons wrap, no horizontal scrollbar, taskbar visible.
 Screenshot desktop at top and at ~85% scroll to the scratchpad for the reviewer.
 
-- [ ] **Step 7: Verify and commit**
+- [ ] **Step 6: Verify and commit**
 
 Run: `npm run typecheck && npx eslint src/components/landing "src/app/(marketing)"`
 Expected: clean.
