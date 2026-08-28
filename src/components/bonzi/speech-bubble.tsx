@@ -8,15 +8,13 @@ interface SpeechBubbleProps {
 }
 
 export function SpeechBubble({ text, visible }: SpeechBubbleProps) {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(visible);
+  if (visible && !show) setShow(true);
 
   useEffect(() => {
-    if (visible) {
-      setShow(true);
-    } else {
-      const timer = setTimeout(() => setShow(false), 400);
-      return () => clearTimeout(timer);
-    }
+    if (visible) return;
+    const timer = setTimeout(() => setShow(false), 400);
+    return () => clearTimeout(timer);
   }, [visible]);
 
   if (!show && !visible) return null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { SpeechBubble } from "./speech-bubble";
 import { getBonziGifUrl, FALLBACK_GIF } from "@/lib/bonzi/bonzi-engine";
 import type { BonziGifState } from "@/lib/bonzi/types";
@@ -25,15 +25,13 @@ export function BonziAvatar({
   showBubble = true,
 }: BonziAvatarProps) {
   const [imgError, setImgError] = useState(false);
-  // Counter increments on every gif change to force a fresh <img> mount,
-  // which restarts the gif animation and resets error state.
-  const seqRef = useRef(0);
-  const prevGifRef = useRef(gif);
-
-  if (gif !== prevGifRef.current) {
-    prevGifRef.current = gif;
-    seqRef.current += 1;
-    if (imgError) setImgError(false);
+  // Remount the <img> on every gif change so the animation restarts from frame 0.
+  const [seq, setSeq] = useState(0);
+  const [prevGif, setPrevGif] = useState(gif);
+  if (gif !== prevGif) {
+    setPrevGif(gif);
+    setSeq((s) => s + 1);
+    setImgError(false);
   }
 
   const src = imgError ? FALLBACK_GIF : getBonziGifUrl(gif);
@@ -49,7 +47,7 @@ export function BonziAvatar({
         alt="Bonzi Buddy"
         className={SIZES[size]}
         onError={() => setImgError(true)}
-        key={`${gif}-${seqRef.current}`}
+        key={`${gif}-${seq}`}
       />
     </div>
   );

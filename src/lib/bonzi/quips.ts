@@ -5,7 +5,7 @@ interface QuipEntry {
   quips: string[];
 }
 
-const QUIP_MAP: Record<BonziEvent, QuipEntry> = {
+export const QUIP_MAP: Record<BonziEvent, QuipEntry> = {
   game_start: {
     gif: "wave",
     quips: [
