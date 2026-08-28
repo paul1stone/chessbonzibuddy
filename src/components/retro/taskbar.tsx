@@ -22,7 +22,7 @@ function Clock() {
   }, []);
   return (
     <time className="tabular-nums" suppressHydrationWarning>
-      {time ?? " "}
+      {time ?? " "}
     </time>
   );
 }
