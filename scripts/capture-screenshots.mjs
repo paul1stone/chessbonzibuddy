@@ -94,6 +94,13 @@ try {
   await captureAnalyzer();
 } finally {
   await browser.close();
+  // Never regress a flag to false when the file it points at is still on disk
+  // (a botched run must not silently swap the landing hero back to the placeholder).
+  const { existsSync } = await import("node:fs");
+  manifest.hero ||= existsSync(path.join(OUT, "hero-poster.webp"));
+  for (const key of ["import", "review", "practice"]) {
+    manifest[key] ||= existsSync(path.join(OUT, `${key}.png`));
+  }
   await writeFile(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
   console.log("manifest", manifest);
 }
