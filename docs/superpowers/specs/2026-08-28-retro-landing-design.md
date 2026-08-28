@@ -160,7 +160,7 @@ Tests (vitest): `boardAt(0)` equals the initial position; at the midpoint of ply
 ## 8. Legal pages
 
 `/privacy` and `/terms`, each a `RetroWindow` with an `<article>` in body type. Content is written from what the code actually does (verified in `src/db/schema.ts`, `src/stores/profile-store.ts`, `src/app/api/*`):
-- Stored in the browser (`localStorage` key `chess-analyzer-profile`): Chess.com and Lichess usernames and cached ratings. Cleared by "clear profile" in the app.
+- Stored in the browser (`localStorage` key `chess-analyzer-profile`): Chess.com and Lichess usernames and cached ratings. Cleared by clearing site data in the browser (the store's clearProfile action has no UI; do not claim one).
 - Stored in the database (Neon Postgres, hosted in the US): for each imported game, the source URL, PGN, player names, result, date, and Stockfish analysis. Users delete games from the sidebar; deletion is immediate and permanent.
 - Third parties: public Chess.com and Lichess APIs are called with the username you enter; Vercel hosts the site and keeps standard request logs. No analytics scripts, no advertising, no cookies set by the app.
 - Requests: via GitHub issues at the repo URL.

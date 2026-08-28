@@ -12,12 +12,12 @@ export default function PrivacyPage() {
 
       <h2>What stays in your browser</h2>
       <p>
-        When you link a Chess.com or Lichess account, the site keeps the username you typed and your cached ratings in your browser&apos;s local storage under the key <code>chess-analyzer-profile</code>. Nothing else identifies you. You can remove it at any time with the clear profile control in the app, or by clearing site data in your browser.
+        When you link a Chess.com or Lichess account, the site keeps the username you typed and your cached ratings in your browser&apos;s local storage under the key <code>chess-analyzer-profile</code>. Nothing else identifies you. You can remove it at any time by clearing this site's data in your browser.
       </p>
 
       <h2>What is stored on the server</h2>
       <p>
-        When you import a game, the site stores that game in a Postgres database hosted by Neon in the United States: the source URL, the PGN, both player names, the result, the date played, and the Stockfish analysis once it runs. Games are listed for whoever enters the same username; they are not private. You can delete any game from the sidebar. Deletion is immediate and permanent.
+        When you import a game, the site stores that game in a Postgres database hosted by Neon in the United States: the source URL, the PGN, both player names, the result, the date played, and the Stockfish analysis with per-side accuracy scores once it runs. Imported games are not private: anyone using the site can view them. You can delete any game from the sidebar. Deletion is immediate and permanent.
       </p>
 
       <h2>Third parties</h2>
