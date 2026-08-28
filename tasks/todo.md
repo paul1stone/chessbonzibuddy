@@ -18,9 +18,9 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 - [ ] User check-in on final plan
 
 ## Phase 3: Build (Opus implementers, Opus step reviews)
-- [ ] Wave 1: Task 0 tooling
-- [ ] Wave 2: Task 1 route split, Task 2 design system, Task 3 timeline + geometry
-- [ ] Wave 3: Task 4 hero canvas, Task 5 sections, Task 6 legal pages
+- [x] Wave 1: Task 0 tooling — c36fd33, review PASS (pins fixed in 5c8733f)
+- [x] Wave 2: Task 1 aa60aff (PASS; color-scheme fix 40d4e3d), Task 2 bb135ab (PASS; nbsp fix efee671, focus-contrast fix 469510d), Task 3 ccaa8fa (PASS, 13/13 tests)
+- [ ] Wave 3: Task 4 dd0ec9c (review in flight), Task 5 implementing, Task 6 8fa0287 (review in flight)
 - [ ] Wave 4: Task 7 hero section + page
 - [ ] Wave 5: Task 8 screenshots + poster
 - [ ] Wave 6: Task 9 e2e + build verification
