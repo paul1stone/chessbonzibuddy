@@ -21,12 +21,12 @@ Out of scope for part 1: restyling the app screens (play, import, review, practi
 src/app/
   layout.tsx                      html/body/globals.css only (no fonts, no theme, no shell)
   (marketing)/
-    layout.tsx                    retro fonts, `.retro` scope, Lenis, Taskbar
+    layout.tsx                    retro fonts, `.retro` scope, Taskbar
     page.tsx                      landing: Hero, BonziShowcase, AnalyzerWalkthrough, Footer
     privacy/page.tsx              privacy policy in a RetroWindow
     terms/page.tsx                terms in a RetroWindow
   (app)/
-    layout.tsx                    Geist fonts, ThemeProvider(dark), DashboardLayout, Toaster
+    layout.tsx                    Geist fonts, `.dark` wrapper (next-themes dropped; Toaster hardcoded dark), DashboardLayout, Toaster
     app/page.tsx                  the existing src/app/page.tsx moved verbatim + `?view=` support
   api/...                         unchanged
 src/components/
@@ -41,10 +41,10 @@ e2e/                              Playwright specs
 
 Routing:
 - `/` landing (static). `/privacy`, `/terms` (static). `/app` the existing app. `/app?view=play-bonzi` opens the play view directly (the app page reads `view` from `useSearchParams` on mount and calls `setView`).
-- Root layout no longer forces `class="dark"` on `<html>`; the `(app)` layout wraps its children in `<div className="dark">` and owns `ThemeProvider` + `Toaster`, so marketing pages never pick up shadcn dark tokens or a theme flash.
+- Root layout no longer forces `class="dark"` on `<html>`; the `(app)` layout wraps its children in `<div className="dark">` and owns the `Toaster` (next-themes is dropped entirely — its forcedTheme would write the class onto `<html>` and leak into marketing pages on client-side navigation), so marketing pages never pick up shadcn dark tokens or a theme flash.
 
 New dependencies (exact versions verified on npm 2026-08-28):
-`three@0.185.1`, `@react-three/fiber@9.7.0`, `postprocessing@6.39.4`, `@react-three/postprocessing@3.1.1`, `gsap@3.15.0`, `@gsap/react@2.1.2`, `lenis@1.3.26`. Dev: `@playwright/test@1.62.1`, `vitest` (4.x), `@types/three`, `sharp`. No drei: nothing from it is needed.
+`three@0.185.1`, `@react-three/fiber@9.7.0`, `postprocessing@6.39.4`, `@react-three/postprocessing@3.1.1`, `gsap@3.15.0`, `@gsap/react@2.1.2`. No Lenis: native scrolling with ScrollTrigger `scrub: 0.3` for smoothing (avoids wheel hijack on legal pages and a class of mount-order bugs; decided in plan review). Dev: `@playwright/test@1.62.1`, `vitest` (4.x), `@types/three`, `sharp`. No drei: nothing from it is needed.
 No GLB/GLTF assets: pieces are procedural geometry (section 6).
 
 ## 4. Design system ("retro")
@@ -106,10 +106,10 @@ Scroll choreography (progress `p` in [0,1] over the 300vh):
 Rendering (approach A):
 - `HeroCanvas` is loaded with `next/dynamic(..., { ssr: false })` from a client file, mounted on `requestIdleCallback` (fallback `setTimeout 200`) after hydration. Until then, and permanently under `prefers-reduced-motion: reduce` or when WebGL is unavailable, `HeroPoster` renders `public/screenshots/hero-poster.webp` (a captured frame of the scene at `p=0.85`) as a plain `<img>` with alt text "Pixelated 3D chessboard after Scholar's mate".
 - Internal render resolution: width 400px (height by aspect), achieved with `<Canvas dpr={400 / viewportWidth}>` clamped to [0.15, 1]; canvas element CSS `image-rendering: pixelated`, `width/height: 100%`.
-- Materials: `MeshLambertMaterial` with `flatShading: true`. One `DirectionalLight` (warm, from upper-left) + `AmbientLight` 0.35. No shadows, no antialiasing (`gl={{ antialias: false }}`).
-- Post-processing: `EffectComposer` with one custom `DitherEffect` (4x4 Bayer ordered dither, quantize each channel to 6 levels). ~30 lines of GLSL.
+- Materials: `MeshLambertMaterial` with `flatShading: true`. One `DirectionalLight` (warm, from upper-left) + `AmbientLight` 0.7. No shadows, no antialiasing (`gl={{ antialias: false }}`).
+- Post-processing: `EffectComposer` with one custom `DitherEffect` (4x4 Bayer ordered dither, quantizing each channel with levels = 6). ~30 lines of GLSL.
 - Frame loop: `frameloop="always"` only while the hero is in the viewport and `document.visibilityState === "visible"`; otherwise `frameloop="never"`. Target: under 2 ms GPU per frame on a 2020 phone at 400px internal width.
-- Scroll input: GSAP `ScrollTrigger` on the hero section (`start: "top top"`, `end: "bottom bottom"`, `scrub: true`) writes `progress` to a `useRef` read by the R3F `useFrame`; a second scrubbed GSAP timeline animates the DOM window's transform/opacity and the dialog opacity. Lenis provides smoothed scrolling with `lenis.on("scroll", ScrollTrigger.update)` and `gsap.ticker.add(t => lenis.raf(t * 1000))`. All of this is wrapped in `gsap.matchMedia()` with a `reduceMotion` query; under reduced motion there is no Lenis, no ScrollTrigger, no canvas: the hero renders the poster, the window at full size, and the dialog directly below the window in normal flow.
+- Scroll input: one GSAP `ScrollTrigger` timeline on the hero section (`start: "top top"`, `end: "bottom bottom"`, `scrub: 0.3`): a full-length linear proxy tween publishes smoothed progress to a `useRef` read by the R3F `useFrame`, and the same timeline animates the DOM window's transform/autoAlpha and the dialog's autoAlpha (autoAlpha keeps invisible elements out of the tab order). Wrapped in `gsap.matchMedia()`; under reduced motion there is no ScrollTrigger and no canvas: the hero renders the poster, the window at full size, and the dialog directly below the window in normal flow.
 
 Colors in the scene: board light `#D9C9A3`, dark `#6E4B2A`, rim `#3A2A1A`; white pieces `#F0E6D2`; black pieces `#2B2B2B`; background transparent over the teal desktop.
 
@@ -121,7 +121,7 @@ Behavior (`BonziShowcase`, client): when the window enters the viewport (Interse
 
 ### 5.3 Analyzer walkthrough
 
-Heading (h2): "Then find out what went wrong." Three `RetroWindow`s laid out as a diagonal cascade (each offset 24px right/down from the previous, overlapping, like stacked Win98 windows; on screens under 768px they stack vertically with no offset). This is a deliberate alternative to the three-cards-in-a-row default.
+Heading (h2): "Then find out what went wrong." Three `RetroWindow`s laid out as a static diagonal cascade (each stepped 48px right of the previous, fully visible, no overlap — copy stays readable at rest; on screens under 768px they stack vertically with no offset). This is a deliberate alternative to the three-cards-in-a-row default.
 
 | Window title | Copy | Image |
 |---|---|---|
@@ -129,7 +129,7 @@ Heading (h2): "Then find out what went wrong." Three `RetroWindow`s laid out as 
 | Review | Stockfish 18 grades every move from best to blunder, scores accuracy for both sides, and estimates the rating you played at. | `public/screenshots/review.png` |
 | Practice | Every mistake becomes a puzzle. Find the move you should have played. | `public/screenshots/practice.png` |
 
-Screenshots: captured by `scripts/capture-screenshots.ts` (Playwright) from the running app. The play screen is capturable without a database. Import/Review/Practice require `DATABASE_URL`; when it is absent the script writes nothing for those three and the component renders a sunken grey frame with the visible text "Screenshot pending. This screen is being redesigned in part 2." in place of the image. The component checks for file presence at build time via a small generated manifest `src/components/landing/screenshots.json` (written by the script; `{ hero: boolean, play: boolean, import: boolean, review: boolean, practice: boolean }`; `hero` false makes `HeroPoster` render a plain teal panel instead of a broken image). No fake UI is ever rendered.
+Screenshots: captured by `scripts/capture-screenshots.ts` (Playwright) from the running app. Import/Review/Practice require `DATABASE_URL` and a real game URL; when it is absent the script writes nothing for those three and the component renders a sunken grey frame with the visible text "Screenshot pending. This screen is being redesigned in part 2." in place of the image. The component checks for file presence at build time via a small generated manifest `src/components/landing/screenshots.json` (written by the script; `{ hero: boolean, import: boolean, review: boolean, practice: boolean }`; `hero` false makes `HeroPoster` render a plain teal panel instead of a broken image). No fake UI is ever rendered.
 
 ### 5.4 Footer
 
@@ -139,12 +139,12 @@ A grey face strip with a raised bevel: "Chess Bonzi Buddy is a hobby project. No
 
 `src/components/landing/hero/piece-geometry.ts` exports `createPieceGeometry(type: PieceType): THREE.BufferGeometry` where `PieceType = "p" | "n" | "b" | "r" | "q" | "k"`.
 
-- p, r, b, q, k: `THREE.LatheGeometry(points, 10)` from a hard-coded 2D profile per piece (radius, height pairs, 8 to 14 points each, heights: p 0.55, b 0.8, n 0.75, r 0.7, q 0.95, k 1.05 in board-square units). Ten segments keeps facets visible under flat shading, which is the look.
+- p, r, b, q, k: `THREE.LatheGeometry(points, 10)` from a hard-coded 2D profile per piece (radius, height pairs, 8 to 14 points each, heights: p 0.55, b 0.8, n 0.75, r 0.7, q 0.98, k 1.12 in board-square units). Ten segments keeps facets visible under flat shading, which is the look.
 - n: `THREE.ExtrudeGeometry` of a hard-coded 12-point knight silhouette `THREE.Shape` (base 0.5 wide, height 0.75), depth 0.3, no bevel, centered. The silhouette is our own polyline, not traced from a licensed set.
-- Rook gets four crenellations by subtracting nothing: instead the top profile includes a small notch ring; queen/king add a small sphere/cross via merged geometry using `BufferGeometryUtils.mergeGeometries`.
+- Rook's lathe profile ends in a recessed cup rim (reads as the crenellated top at the render resolution); queen/king add a small sphere/cross via merged geometry using `BufferGeometryUtils.mergeGeometries`.
 - All geometries call `computeVertexNormals()`; flat shading comes from the material.
 
-Board: 64 `BoxGeometry(1, 0.1, 1)` instanced via `InstancedMesh` with per-instance color, plus a rim box. Total scene under 6k triangles.
+Board: 64 `BoxGeometry(1, 0.1, 1)` instanced via `InstancedMesh` with per-instance color, plus a rim box. Total scene about 6k triangles.
 
 ## 7. Hero timeline (pure logic, unit-tested)
 
@@ -152,7 +152,7 @@ Board: 64 `BoxGeometry(1, 0.1, 1)` instanced via `InstancedMesh` with per-instan
 - `SCHOLARS_MATE: Ply[]` where `Ply = { from: Square; to: Square; captures?: Square }` and `Square` is algebraic (`"e2"`).
 - `INITIAL_PIECES: PieceState[]`, `PieceState = { id: string; type: PieceType; color: "w" | "b"; square: Square }`.
 - `boardAt(progress: number): RenderPiece[]`, `RenderPiece = { id, type, color, x, z, y, yaw, captured: boolean }` with x/z in board coordinates (file 0..7, rank 0..7 centered), y the lift (0 on the board, max 0.6 mid-travel using a sine ease), and the captured pawn's y/x/yaw following a tumble arc after its capture ply.
-- `cameraAt(progress: number): { position: [x,y,z]; target: [x,y,z] }` interpolating between `TOP = position [0, 11, 2]` and `LOW = position [6, 3.2, 7]`, target always `[0, 0, 0]`, with `easeInOutCubic`.
+- `cameraAt(progress: number): { position: [x,y,z]; target: [x,y,z] }` interpolating between `TOP = position [0, 11, 2.5]` and `LOW = position [6, 3.2, 7]`, target always `[0, 0, 0]`, with `easeInOutCubic`.
 - Move slices: `MOVE_START = 0.10`, `MOVE_END = 0.85`, seven equal slices; inside a slice `t` eases with `easeInOutQuad`.
 
 Tests (vitest): `boardAt(0)` equals the initial position; at the midpoint of ply 1 the e2 pawn has `y > 0` and `z` between e2 and e4; at `progress = 1` the white queen is on f7, the black f7 pawn is `captured: true` with `y < 0`, every other piece is where Scholar's mate leaves it; `cameraAt(0)` and `cameraAt(1)` equal the endpoints; progress is clamped to [0,1].

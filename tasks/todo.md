@@ -12,8 +12,8 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 
 ## Phase 2: Plan review (Fable, 3 lenses)
 - [ ] Correctness + missed call sites
-- [ ] Regression risk
-- [ ] Simpler alternatives + brief compliance
+- [x] Regression risk — accepted: playwright install chromium (blocking), drop next-themes + Toaster theme=dark, remove marketing metadata title, ViewParamSync in (app) layout w/ useLayoutEffect, gzip budget, eslint coverage ignore. COOP/COEP + portals confirmed non-issues
+- [x] Simpler alternatives + brief compliance — 12 findings; accepted: drop Lenis (remount bug + redundant), static stagger for WindowStack, move lib/motion.ts to wave 2, cut visibilitychange, token/comment nits, spec wording (rook rim, non-overlap cascade)
 - [ ] Triage findings, revise plan, re-review if needed
 - [ ] User check-in on final plan
 

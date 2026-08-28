@@ -4,9 +4,9 @@
 
 **Goal:** Replace the app-first `/` with a static Windows-98-styled landing page whose hero is a scroll-driven, pixelated, flat-shaded 3D chess game (Scholar's mate, Bonzi as White), add a small reusable retro design system, legal pages, and keep the existing app fully working at `/app`.
 
-**Architecture:** Route groups split marketing (`(marketing)`: `/`, `/privacy`, `/terms`, static) from the app (`(app)`: `/app`, the existing page moved verbatim). The hero is DOM window chrome over a lazily mounted React Three Fiber canvas rendered at 400px internal width with a Bayer dither post pass; GSAP ScrollTrigger + Lenis drive both the canvas (via a progress ref) and the DOM choreography; everything degrades to a static poster under `prefers-reduced-motion`. Pieces are procedural Three.js geometry (no model downloads).
+**Architecture:** Route groups split marketing (`(marketing)`: `/`, `/privacy`, `/terms`, static) from the app (`(app)`: `/app`, the existing page moved verbatim). The hero is DOM window chrome over a lazily mounted React Three Fiber canvas rendered at 400px internal width with a Bayer dither post pass; one scrubbed GSAP ScrollTrigger timeline drives both the canvas (via a smoothed progress ref) and the DOM choreography; everything degrades to a static poster under `prefers-reduced-motion`. Pieces are procedural Three.js geometry (no model downloads).
 
-**Tech Stack:** Next.js 16.1.6 App Router, React 19.2, Tailwind v4, three 0.185, @react-three/fiber 9.7, postprocessing 6.39 + @react-three/postprocessing 3.1, gsap 3.15 + @gsap/react, lenis 1.3, vitest, @playwright/test 1.62, sharp (dev).
+**Tech Stack:** Next.js 16.1.6 App Router, React 19.2, Tailwind v4, three 0.185, @react-three/fiber 9.7, postprocessing 6.39 + @react-three/postprocessing 3.1, gsap 3.15 + @gsap/react, vitest, @playwright/test 1.62, sharp (dev).
 
 **Spec:** `docs/superpowers/specs/2026-08-28-retro-landing-design.md`
 
@@ -16,12 +16,12 @@
 - Copy: sentence case, active voice, no em-dashes in body copy, no emoji, no "It's not X, it's Y". Taunts only from `src/lib/bonzi/quips.ts`.
 - Marketing pages use no icon library (no `lucide-react` imports under `src/app/(marketing)` or `src/components/retro|landing`).
 - Radius is always 0 in retro UI. Colors only via the `--r-*` tokens in `src/styles/retro.css`; `--r-bonzi` only on Bonzi's speech bubble.
-- Reduced motion: no Lenis smoothing, no ScrollTrigger, no `<canvas>`; poster + normal-flow dialog instead.
+- Reduced motion: no ScrollTrigger choreography, no `<canvas>`; poster + normal-flow dialog instead.
 - Do not modify anything under `src/components/play`, `src/components/review`, `src/components/practice`, `src/components/import`, `src/components/chess`, `src/app/api`, `src/db`, `src/lib/engine.ts`, `src/lib/server`.
-- Exact dependency versions (verified 2026-08-28): `three@0.185.1 @react-three/fiber@9.7.0 postprocessing@6.39.4 @react-three/postprocessing@3.1.1 gsap@3.15.0 @gsap/react@2.1.2 lenis@1.3.26`; dev `@playwright/test@1.62.1 vitest@^4 @types/three@^0.185 sharp@^0.35`. Pin these; do not add `@react-three/drei`.
+- Exact dependency versions (verified 2026-08-28): `three@0.185.1 @react-three/fiber@9.7.0 postprocessing@6.39.4 @react-three/postprocessing@3.1.1 gsap@3.15.0 @gsap/react@2.1.2` (no Lenis: ScrollTrigger's `scrub: 0.3` provides the smoothing); dev `@playwright/test@1.62.1 vitest@^4 @types/three@^0.185 sharp@^0.35`. Pin these; do not add `@react-three/drei`.
 - Git: commit per task with a 3-5 word plain message (no prefixes, no colons, no Co-Authored-By). Never push.
 - Verification commands: `npm run typecheck`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm run build`. Lint may only report the two pre-existing errors in `src/components/chess/board.tsx` and `src/components/chess/board-panel.tsx`.
-- Node 24.17, npm 11. ffmpeg is at `/opt/homebrew/bin/ffmpeg`. Playwright chromium 1194 is already in `~/Library/Caches/ms-playwright`.
+- Node 24.17, npm 11. ffmpeg is at `/opt/homebrew/bin/ffmpeg`. Task 0 installs the Playwright chromium build; do not assume one is cached (the cache holds revision 1194, but @playwright/test 1.62.1 needs 1234).
 
 ---
 
@@ -40,11 +40,12 @@
 - [ ] **Step 1: Install runtime and dev dependencies at pinned versions**
 
 ```bash
-npm install three@0.185.1 @react-three/fiber@9.7.0 postprocessing@6.39.4 @react-three/postprocessing@3.1.1 gsap@3.15.0 @gsap/react@2.1.2 lenis@1.3.26
+npm install three@0.185.1 @react-three/fiber@9.7.0 postprocessing@6.39.4 @react-three/postprocessing@3.1.1 gsap@3.15.0 @gsap/react@2.1.2
 npm install -D @playwright/test@1.62.1 vitest@^4 @types/three@^0.185 sharp@^0.35
+npx playwright install chromium
 ```
 
-Expected: no peer-dependency errors (fiber 9.7 wants `react >=19 <19.3`; repo has 19.2.3).
+Expected: no peer-dependency errors (fiber 9.7 wants `react >=19 <19.3`; repo has 19.2.3). The playwright install downloads chromium revision 1234 into `~/Library/Caches/ms-playwright` (the cached 1194 is for an older Playwright and will not be used).
 
 - [ ] **Step 2: Add scripts to `package.json`**
 
@@ -71,6 +72,7 @@ Replace the `globalIgnores([...])` array in `eslint.config.mjs` with:
     ".stockfish/**",
     "playwright-report/**",
     "test-results/**",
+    "coverage/**",
   ]),
 ```
 
@@ -141,8 +143,9 @@ git commit -m "add 3d scroll and test tooling"
 **Files:**
 - Modify: `src/app/layout.tsx` (rewrite)
 - Create: `src/app/(app)/layout.tsx`
-- Move: `src/app/page.tsx` → `src/app/(app)/app/page.tsx` (git mv, then small edit)
+- Move: `src/app/page.tsx` → `src/app/(app)/app/page.tsx` (git mv, NO edits — the page moves verbatim)
 - Create: `src/app/(app)/app/view-param-sync.tsx`
+- Modify: `src/components/ui/sonner.tsx` (hardcode dark theme)
 
 **Interfaces:**
 - Produces: URL `/app` serves the existing app; `/app?view=play-bonzi` opens the play view. Root layout renders only `<html><body>` with `globals.css`; nothing else depends on it.
@@ -184,10 +187,11 @@ export default function RootLayout({
 - [ ] **Step 3: Create `src/app/(app)/layout.tsx`**
 
 ```tsx
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Toaster } from "@/components/ui/sonner";
+import { ViewParamSync } from "./app/view-param-sync";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -195,23 +199,24 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={`dark ${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
-      <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" disableTransitionOnChange>
-        <DashboardLayout>{children}</DashboardLayout>
-        <Toaster richColors position="bottom-right" />
-      </ThemeProvider>
+      <Suspense fallback={null}>
+        <ViewParamSync />
+      </Suspense>
+      <DashboardLayout>{children}</DashboardLayout>
+      <Toaster richColors position="bottom-right" />
     </div>
   );
 }
 ```
 
-Note: `forcedTheme="dark"` keeps next-themes from writing a class on `<html>` that would leak into marketing pages; the `.dark` wrapper div is what activates shadcn's `@custom-variant dark (&:is(.dark *))`.
+next-themes is dropped entirely: nothing in the app calls `setTheme`, the app is permanently dark, and next-themes' `forcedTheme` would write `class="dark"` onto `<html>` at runtime and never remove it, leaking dark tokens into the marketing pages on client-side navigation. The `.dark` wrapper div is what activates shadcn's `@custom-variant dark (&:is(.dark *))`. Leave `src/components/theme-provider.tsx` in place but unimported.
 
 - [ ] **Step 4: Create `src/app/(app)/app/view-param-sync.tsx`**
 
 ```tsx
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useGameStore } from "@/stores/game-store";
 
@@ -221,7 +226,7 @@ export function ViewParamSync() {
   const setView = useGameStore((s) => s.setView);
   const view = params.get("view");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (view === "play-bonzi") setView("play-bonzi");
   }, [view, setView]);
 
@@ -229,50 +234,15 @@ export function ViewParamSync() {
 }
 ```
 
-- [ ] **Step 5: Mount it in the moved page**
+Mounted once in the layout (Step 3), so the deep link works from every in-session state, not just the states a fresh visitor lands in. `useLayoutEffect` lands the view switch before paint on client-side navigations; the one-frame flash of the prerendered import view on a cold load of `/app?view=play-bonzi` is inherent to a static client page and accepted. (`setView` is a Zustand setter, not a React state setter, so the `set-state-in-effect` lint rule does not apply.) `Suspense` is required by Next for `useSearchParams`.
 
-In `src/app/(app)/app/page.tsx`, add imports after line 22 (`import { PlayView } ...`):
+- [ ] **Step 5: Hardcode the dark theme in `src/components/ui/sonner.tsx`**
 
-```tsx
-import { Suspense } from "react";
-import { ViewParamSync } from "./view-param-sync";
-```
-
-Then in `export default function Home()`, change the `play-bonzi` branch (originally at lines 507-513) to:
-
-```tsx
-  if (view === "play-bonzi") {
-    return (
-      <>
-        <Suspense fallback={null}>
-          <ViewParamSync />
-        </Suspense>
-        <PlayView onExit={() => setView(activeGame ? "review" : "import")} />
-      </>
-    );
-  }
-```
-
-and wrap the import-view return (originally line 518) the same way:
-
-```tsx
-  if (view === "import" || !activeGame) {
-    return (
-      <>
-        <Suspense fallback={null}>
-          <ViewParamSync />
-        </Suspense>
-        <ImportView url={url} setUrl={setUrl} isLoading={isLoading} error={error} handleSubmit={handleSubmit} handleBulkImport={handleBulkImport} />
-      </>
-    );
-  }
-```
-
-(The sync only needs to be mounted on the two states a fresh visitor can land in. `Suspense` is required by Next for `useSearchParams` in a client page.)
+With no ThemeProvider, `useTheme()` would report `"system"` and the toasts would flip light. Read the file; replace the `useTheme()` usage so the `<Sonner>` element receives `theme="dark"` as a literal, and remove the `next-themes` import. Change nothing else in the file.
 
 - [ ] **Step 6: Verify manually**
 
-Run: `npm run dev` then open `http://localhost:3000/app` (sidebar + login card render, dark purple theme intact) and `http://localhost:3000/app?view=play-bonzi` (the "Play Bonzi Buddy" setup with the waving gif renders, no sidebar login card). `http://localhost:3000/` now 404s; that is expected until Task 7.
+Run: `npm run dev` then open `http://localhost:3000/app` (sidebar + login card render, dark purple theme intact; trigger a toast by linking a bogus username and confirm it renders dark) and `http://localhost:3000/app?view=play-bonzi` (the "Play Bonzi Buddy" setup with the waving gif renders). Inspect `<html>`: no `dark` class and no inline `color-scheme` style. `http://localhost:3000/` now 404s; that is expected until Task 7.
 Run: `npm run typecheck && npx eslint src/app`
 Expected: clean.
 
@@ -297,11 +267,11 @@ git commit -m "move app under app route"
 
 **Interfaces:**
 - Produces:
-  - `RetroWindow(props: { title: string; children: ReactNode; className?: string; style?: CSSProperties; statusBar?: ReactNode; active?: boolean; onActivate?: () => void; ref?: Ref<HTMLElement>; id?: string; "aria-labelledby"?: string })`
+  - `RetroWindow(props: { title: string; children: ReactNode; className?: string; style?: CSSProperties; statusBar?: ReactNode; ref?: Ref<HTMLElement>; id?: string; "aria-labelledby"?: string })` (server-compatible; no event handlers)
   - `RetroButton(props: { href?: string; variant?: "normal" | "default"; size?: "md" | "lg"; className?: string; children: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>)`
   - `RetroDialog(props: { title: string; children: ReactNode; actions: ReactNode; className?: string; ref?: Ref<HTMLElement> })`
   - `Taskbar()` client component; `msSans`, `vt323` font objects exposing `.variable`.
-  - CSS classes: `.retro`, `.r-face`, `.r-bevel-out`, `.r-bevel-in`, `.r-title`, `.r-title--inactive`, `.r-btn`, `.r-btn--default`, `.r-btn--lg`, `.r-body`, `.r-term`, `.r-paper`.
+  - CSS classes: `.retro`, `.r-face`, `.r-bevel-out`, `.r-bevel-in`, `.r-title`, `.r-btn`, `.r-btn--default`, `.r-btn--lg`, `.r-body`, `.r-term`, `.r-paper`, `.r-sep`.
 
 - [ ] **Step 1: Copy the pixel font and its license out of the 98.css package**
 
@@ -311,7 +281,7 @@ npm pack 98.css@0.1.21 --silent && tar -xzf 98.css-0.1.21.tgz
 mkdir -p /Users/fv_123/chessbonzibuddy/src/fonts
 cp package/dist/ms_sans_serif.woff2 package/dist/ms_sans_serif_bold.woff2 /Users/fv_123/chessbonzibuddy/src/fonts/
 cp "package/fonts/src/ms-sans-serif/license.txt" /Users/fv_123/chessbonzibuddy/src/fonts/MS-SANS-SERIF-LICENSE.txt
-ls -la src/fonts
+ls -la /Users/fv_123/chessbonzibuddy/src/fonts
 ```
 
 Expected: two woff2 files (6.5 KB and ~7 KB) and the CC BY-SA 3.0 license text naming "lou" and fontstruct.com.
@@ -413,15 +383,6 @@ export const vt323 = VT323({
   color: var(--r-title-text);
   font-weight: 700;
   user-select: none;
-}
-.r-title--inactive {
-  background: linear-gradient(90deg, var(--r-shadow), #b5b5b5);
-}
-button.r-title {
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
 }
 .r-title-glyph {
   display: inline-flex;
@@ -537,23 +498,9 @@ interface RetroWindowProps {
   className?: string;
   style?: CSSProperties;
   statusBar?: ReactNode;
-  /** Inactive windows get the grey title bar, like an unfocused Win98 window. */
-  active?: boolean;
-  /** When set, the title bar becomes a button (used by WindowStack to bring a window to front). */
-  onActivate?: () => void;
   ref?: Ref<HTMLElement>;
   id?: string;
   "aria-labelledby"?: string;
-}
-
-function TitleGlyphs() {
-  return (
-    <span className="ml-auto flex gap-[2px]" aria-hidden="true">
-      <span className="r-title-glyph">_</span>
-      <span className="r-title-glyph">□</span>
-      <span className="r-title-glyph">×</span>
-    </span>
-  );
 }
 
 export function RetroWindow({
@@ -562,13 +509,10 @@ export function RetroWindow({
   className,
   style,
   statusBar,
-  active = true,
-  onActivate,
   ref,
   id,
   "aria-labelledby": labelledBy,
 }: RetroWindowProps) {
-  const titleClass = cn("r-title", !active && "r-title--inactive");
   return (
     <section
       ref={ref}
@@ -578,17 +522,14 @@ export function RetroWindow({
       aria-labelledby={labelledBy}
       className={cn("r-face r-bevel-out p-[3px]", className)}
     >
-      {onActivate ? (
-        <button type="button" className={titleClass} onClick={onActivate} aria-pressed={active}>
-          <span className="truncate">{title}</span>
-          <TitleGlyphs />
-        </button>
-      ) : (
-        <div className={titleClass}>
-          <span className="truncate">{title}</span>
-          <TitleGlyphs />
-        </div>
-      )}
+      <div className="r-title">
+        <span className="truncate">{title}</span>
+        <span className="ml-auto flex gap-[2px]" aria-hidden="true">
+          <span className="r-title-glyph">_</span>
+          <span className="r-title-glyph">□</span>
+          <span className="r-title-glyph">×</span>
+        </span>
+      </div>
       <div className="p-3">{children}</div>
       {statusBar !== undefined && (
         <div className="r-bevel-in mx-[1px] mb-[1px] px-2 py-[3px] text-[11px]">{statusBar}</div>
@@ -750,6 +691,7 @@ export function Taskbar() {
           aria-label="Start menu"
           className="r-face r-bevel-out absolute bottom-[var(--r-taskbar-h)] left-0 flex w-[220px] p-[3px]"
         >
+          {/* Period-accurate Win98 Start-menu sidebar stripe */}
           <div
             className="flex w-[24px] items-end justify-center bg-[var(--r-title-a)] py-2 text-[14px] font-bold text-[var(--r-title-text)] [writing-mode:vertical-rl] rotate-180"
             aria-hidden="true"
@@ -802,14 +744,11 @@ export { Taskbar } from "./taskbar";
 
 - [ ] **Step 11: Create `src/app/(marketing)/layout.tsx`**
 
+No `metadata` export: the root layout's default already yields the title "Chess Bonzi Buddy", and a plain string here would combine with the root template into "Chess Bonzi Buddy | Chess Bonzi Buddy".
+
 ```tsx
-import type { Metadata } from "next";
 import { msSans, vt323 } from "@/fonts/retro-fonts";
 import { Taskbar } from "@/components/retro";
-
-export const metadata: Metadata = {
-  title: "Chess Bonzi Buddy",
-};
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -840,9 +779,6 @@ export default function Smoke() {
           <RetroButton size="lg">Analyze my games</RetroButton>
         </div>
       </RetroWindow>
-      <RetroWindow title="Inactive window" active={false} onActivate={() => {}}>
-        <p className="r-body">Grey title bar.</p>
-      </RetroWindow>
       <RetroDialog title="Chess Bonzi Buddy" actions={<RetroButton variant="default">OK</RetroButton>}>
         Checkmate. Bonzi wins in four moves.
       </RetroDialog>
@@ -851,7 +787,7 @@ export default function Smoke() {
 }
 ```
 
-Run `npm run dev`, open `http://localhost:3000/retro-smoke`, and confirm: teal desktop, grey beveled windows, navy gradient title bars with three glyphs, pixel font (crisp, not smoothed) at 11px, headline chunky at 33px, buttons sunken while pressed, dotted focus rect when tabbing, Start menu opens/closes with click and Escape, clock shows the time. Screenshot for the reviewer with Playwright: `npx playwright screenshot --viewport-size=1200,900 http://localhost:3000/retro-smoke /private/tmp/claude-501/-Users-fv-123-chessbonzibuddy/223a078e-2ce5-43ae-9163-0cb984f48029/scratchpad/retro-smoke.png`.
+Run `npm run dev`, open `http://localhost:3000/retro-smoke`, and confirm: teal desktop, grey beveled windows, navy gradient title bars with three glyphs, pixel font (crisp, not smoothed) at 11px, headline chunky at 33px, buttons sunken while pressed, dotted focus rect when tabbing, Start menu opens/closes with click and Escape, clock shows the time. The page is a Server Component and must render without error (RetroWindow takes no event handlers). Screenshot for the reviewer with Playwright: `npx playwright screenshot --viewport-size=1200,900 http://localhost:3000/retro-smoke /private/tmp/claude-501/-Users-fv-123-chessbonzibuddy/223a078e-2ce5-43ae-9163-0cb984f48029/scratchpad/retro-smoke.png`.
 
 Then delete the smoke page: `rm -r "src/app/(marketing)/retro-smoke"`.
 
@@ -874,6 +810,7 @@ git commit -m "add retro design system"
 - Create: `src/components/landing/hero/hero-timeline.test.ts`
 - Create: `src/components/landing/hero/piece-geometry.ts`
 - Create: `src/components/landing/hero/piece-geometry.test.ts`
+- Create: `src/lib/motion.ts`
 
 **Interfaces:**
 - Produces (consumed by Task 4):
@@ -884,6 +821,7 @@ git commit -m "add retro design system"
   - `squareToXZ(square: Square): [number, number]`
   - `createPieceGeometry(type: PieceType): THREE.BufferGeometry`
   - Constants `MOVE_START = 0.1`, `MOVE_END = 0.85`, `HIDE_BELOW_Y = -1.5`
+  - From `src/lib/motion.ts`: `prefersReducedMotion(): boolean` (SSR-safe, false on server), `supportsWebGL(): boolean`, `usePrefersReducedMotion(): boolean` (React hook, `useSyncExternalStore`-based, live-updates on media-query change)
 
 - [ ] **Step 1: Write the failing timeline tests**
 
@@ -1285,37 +1223,13 @@ export function createPieceGeometry(type: PieceType): BufferGeometry {
 Run: `npx vitest run src/components/landing/hero/piece-geometry.test.ts`
 Expected: PASS. If the `three/examples/jsm/...` import fails under vitest, add `"three/examples/jsm/utils/BufferGeometryUtils.js"` to `test.server.deps.inline` in `vitest.config.ts` and rerun. If a height assertion is off by more than 0.05, adjust `PIECE_HEIGHTS` to the geometry (heights are k 1.12 = 0.9 body + 0.22 post centered at 1.01 → top 1.12; q 0.98 = sphere top at 0.9 + 0.08).
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 9: Create `src/lib/motion.ts`**
 
-```bash
-git add src/components/landing/hero
-git commit -m "add hero timeline and pieces"
-```
-
----
-
-### Task 4: Hero canvas, dither pass, scroll hook, smooth scroll
-
-**Files:**
-- Create: `src/components/landing/hero/dither-effect.ts`
-- Create: `src/components/landing/hero/chess-scene.tsx`
-- Create: `src/components/landing/hero/hero-canvas.tsx`
-- Create: `src/components/landing/hero/hero-canvas-loader.tsx`
-- Create: `src/components/landing/hero/use-hero-scroll.ts`
-- Create: `src/components/landing/smooth-scroll.tsx`
-- Create: `src/lib/motion.ts`
-
-**Interfaces:**
-- Consumes (Task 3): `boardAt`, `cameraAt`, `INITIAL_PIECES`, `createPieceGeometry`, `HIDE_BELOW_Y`.
-- Produces (Task 7):
-  - `HeroCanvasLoader(props: { progressRef: RefObject<number>; stageRef: RefObject<HTMLElement | null>; poster: ReactNode })` — always renders `poster`; mounts the canvas above it after idle when motion is allowed and WebGL works.
-  - `useHeroScroll(refs: { sectionRef: RefObject<HTMLElement | null>; windowRef: RefObject<HTMLElement | null>; dialogRef: RefObject<HTMLElement | null>; progressRef: RefObject<number> }): void` — adds class `hero--motion` to the section when motion is enabled.
-  - `SmoothScroll({ children })` client wrapper for the marketing layout.
-  - `prefersReducedMotion(): boolean` (safe on server, returns false).
-
-- [ ] **Step 1: Create `src/lib/motion.ts`**
+The hook exists because calling a `useState` setter directly in an effect body (`setReduced(prefersReducedMotion())`) is an error under `react-hooks/set-state-in-effect` in this repo's ESLint config; `useSyncExternalStore` is the lint-clean, tear-free way to read a media query.
 
 ```ts
+import { useSyncExternalStore } from "react";
+
 export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 export function prefersReducedMotion(): boolean {
@@ -1332,9 +1246,49 @@ export function supportsWebGL(): boolean {
     return false;
   }
 }
+
+function subscribe(callback: () => void) {
+  const mql = window.matchMedia(REDUCED_MOTION_QUERY);
+  mql.addEventListener("change", callback);
+  return () => mql.removeEventListener("change", callback);
+}
+
+// SSR snapshot is false: server markup assumes motion; the client corrects before paint.
+export function usePrefersReducedMotion(): boolean {
+  return useSyncExternalStore(subscribe, prefersReducedMotion, () => false);
+}
 ```
 
-- [ ] **Step 2: Create `src/components/landing/hero/dither-effect.ts`**
+- [ ] **Step 10: Verify and commit**
+
+Run: `npm run typecheck && npx eslint src/components/landing src/lib/motion.ts`
+Expected: clean.
+
+```bash
+git add src/components/landing/hero src/lib/motion.ts
+git commit -m "add hero timeline and pieces"
+```
+
+---
+
+### Task 4: Hero canvas, dither pass, scroll hook
+
+**Files:**
+- Create: `src/components/landing/hero/dither-effect.ts`
+- Create: `src/components/landing/hero/chess-scene.tsx`
+- Create: `src/components/landing/hero/hero-canvas.tsx`
+- Create: `src/components/landing/hero/hero-canvas-loader.tsx`
+- Create: `src/components/landing/hero/use-hero-scroll.ts`
+
+**Interfaces:**
+- Consumes (Task 3): `boardAt`, `cameraAt`, `INITIAL_PIECES`, `createPieceGeometry`, `HIDE_BELOW_Y`; `prefersReducedMotion`, `supportsWebGL` from `@/lib/motion`.
+- Produces (Task 7):
+  - `HeroCanvasLoader(props: { progressRef: RefObject<number>; stageRef: RefObject<HTMLElement | null>; poster: ReactNode })` — always renders `poster`; mounts the canvas above it after idle when motion is allowed and WebGL works; pauses the frame loop while the stage is out of the viewport.
+  - `useHeroScroll(refs: { sectionRef: RefObject<HTMLElement | null>; windowRef: RefObject<HTMLElement | null>; dialogRef: RefObject<HTMLElement | null>; progressRef: RefObject<number> }): void` — adds class `hero--motion` to the section while motion is enabled.
+
+There is no Lenis and no smooth-scroll wrapper: native scrolling everywhere, with ScrollTrigger's `scrub: 0.3` supplying the smoothing on the hero. This avoids wheel hijacking on the legal pages and a whole class of mount-order bugs.
+
+- [ ] **Step 1: Create `src/components/landing/hero/dither-effect.ts`**
 
 ```ts
 import { Effect } from "postprocessing";
@@ -1368,7 +1322,7 @@ export class DitherEffect extends Effect {
 }
 ```
 
-- [ ] **Step 3: Create `src/components/landing/hero/chess-scene.tsx`**
+- [ ] **Step 2: Create `src/components/landing/hero/chess-scene.tsx`**
 
 ```tsx
 "use client";
@@ -1489,7 +1443,7 @@ export function ChessScene({ progressRef }: { progressRef: RefObject<number> }) 
 }
 ```
 
-- [ ] **Step 4: Create `src/components/landing/hero/hero-canvas.tsx`**
+- [ ] **Step 3: Create `src/components/landing/hero/hero-canvas.tsx`**
 
 ```tsx
 "use client";
@@ -1547,7 +1501,9 @@ export function HeroCanvas({ progressRef, active, onContextLost }: HeroCanvasPro
 }
 ```
 
-- [ ] **Step 5: Create `src/components/landing/hero/hero-canvas-loader.tsx`**
+- [ ] **Step 4: Create `src/components/landing/hero/hero-canvas-loader.tsx`**
+
+No `visibilitychange` handling: the frame loop runs on requestAnimationFrame, which browsers already throttle or pause in hidden tabs. The IntersectionObserver stays because the idle camera orbit would otherwise render at 60fps forever after the user scrolls past the hero.
 
 ```tsx
 "use client";
@@ -1569,7 +1525,6 @@ type Status = "poster" | "canvas" | "failed";
 export function HeroCanvasLoader({ progressRef, stageRef, poster }: HeroCanvasLoaderProps) {
   const [status, setStatus] = useState<Status>("poster");
   const [inView, setInView] = useState(true);
-  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     if (prefersReducedMotion() || !supportsWebGL()) return;
@@ -1588,12 +1543,7 @@ export function HeroCanvasLoader({ progressRef, stageRef, poster }: HeroCanvasLo
     if (!el) return;
     const io = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0 });
     io.observe(el);
-    const onVis = () => setVisible(document.visibilityState === "visible");
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      io.disconnect();
-      document.removeEventListener("visibilitychange", onVis);
-    };
+    return () => io.disconnect();
   }, [stageRef]);
 
   return (
@@ -1601,7 +1551,7 @@ export function HeroCanvasLoader({ progressRef, stageRef, poster }: HeroCanvasLo
       {poster}
       {status === "canvas" && (
         <div className="absolute inset-0" aria-hidden="true" data-testid="hero-canvas">
-          <HeroCanvas progressRef={progressRef} active={inView && visible} onContextLost={() => setStatus("failed")} />
+          <HeroCanvas progressRef={progressRef} active={inView} onContextLost={() => setStatus("failed")} />
         </div>
       )}
     </>
@@ -1609,7 +1559,11 @@ export function HeroCanvasLoader({ progressRef, stageRef, poster }: HeroCanvasLo
 }
 ```
 
-- [ ] **Step 6: Create `src/components/landing/hero/use-hero-scroll.ts`**
+(The `setStatus` and `setInView` calls sit behind scheduled callbacks — an idle callback and an observer callback — which the `react-hooks/set-state-in-effect` rule accepts; only a bare setState in the effect body is an error.)
+
+- [ ] **Step 5: Create `src/components/landing/hero/use-hero-scroll.ts`**
+
+One timeline, one ScrollTrigger. The proxy tween is what smooths the canvas: with `scrub: 0.3` GSAP eases the playhead toward the scroll position every ticker frame, so `proxy.p` (and therefore the pieces) glides even when the wheel steps.
 
 ```ts
 "use client";
@@ -1640,29 +1594,36 @@ export function useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef }:
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         section.classList.add("hero--motion");
-        gsap.set(dialog, { xPercent: -50, yPercent: -50, opacity: 0, pointerEvents: "none" });
 
-        const progressTrigger = ScrollTrigger.create({
-          trigger: section,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: true,
-          onUpdate: (self) => {
-            progressRef.current = self.progress;
+        const proxy = { p: 0 };
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 0.3,
           },
         });
-
-        const tl = gsap.timeline({
-          scrollTrigger: { trigger: section, start: "top top", end: "bottom bottom", scrub: 0.3 },
-        });
-        // A 1-second dummy makes timeline positions equal scroll fractions.
-        tl.to({}, { duration: 1 }, 0);
+        // Full-length linear tween: timeline positions equal scroll fractions,
+        // and its onUpdate publishes smoothed progress to the canvas.
+        tl.to(
+          proxy,
+          {
+            p: 1,
+            duration: 1,
+            ease: "none",
+            onUpdate: () => {
+              progressRef.current = proxy.p;
+            },
+          },
+          0
+        );
         tl.fromTo(
           win,
-          { scale: 1, opacity: 1, x: 0, y: 0 },
+          { scale: 1, autoAlpha: 1, x: 0, y: 0 },
           {
             scale: 0.15,
-            opacity: 0,
+            autoAlpha: 0,
             x: () => -window.innerWidth * 0.42,
             y: () => window.innerHeight * 0.42,
             ease: "power2.in",
@@ -1670,10 +1631,14 @@ export function useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef }:
           },
           0.05
         );
-        tl.to(dialog, { opacity: 1, pointerEvents: "auto", duration: 0.08 }, 0.9);
+        tl.fromTo(
+          dialog,
+          { xPercent: -50, yPercent: -50, autoAlpha: 0 },
+          { autoAlpha: 1, duration: 0.08 },
+          0.9
+        );
 
         return () => {
-          progressTrigger.kill();
           tl.scrollTrigger?.kill();
           tl.kill();
           section.classList.remove("hero--motion");
@@ -1688,57 +1653,9 @@ export function useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef }:
 }
 ```
 
-- [ ] **Step 7: Create `src/components/landing/smooth-scroll.tsx`**
+`autoAlpha` (not `opacity`) drives `visibility: hidden` at 0, so the faded-out window and the not-yet-shown dialog drop out of the tab order instead of remaining invisible focus stops.
 
-First read `node_modules/lenis/dist/lenis-react.mjs` (or `.d.ts`) and confirm `ReactLenis` re-creates its Lenis instance when `options` change; if it does not, render `ReactLenis` only after `enabled` is known (see fallback below).
-
-```tsx
-"use client";
-
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ReactLenis, type LenisRef } from "lenis/react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { prefersReducedMotion } from "@/lib/motion";
-
-gsap.registerPlugin(ScrollTrigger);
-
-// Lenis drives smooth scrolling; GSAP's ticker drives Lenis so ScrollTrigger and Lenis share one clock.
-export function SmoothScroll({ children }: { children: ReactNode }) {
-  const lenisRef = useRef<LenisRef>(null);
-  const [enabled, setEnabled] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    setEnabled(!prefersReducedMotion());
-  }, []);
-
-  useEffect(() => {
-    if (!enabled) return;
-    const lenis = lenisRef.current?.lenis;
-    if (!lenis) return;
-    lenis.on("scroll", ScrollTrigger.update);
-    const tick = (time: number) => lenis.raf(time * 1000);
-    gsap.ticker.add(tick);
-    gsap.ticker.lagSmoothing(0);
-    return () => {
-      gsap.ticker.remove(tick);
-      lenis.off("scroll", ScrollTrigger.update);
-    };
-  }, [enabled]);
-
-  if (!enabled) return <>{children}</>;
-
-  return (
-    <ReactLenis root ref={lenisRef} options={{ autoRaf: false, smoothWheel: true, lerp: 0.12 }}>
-      {children}
-    </ReactLenis>
-  );
-}
-```
-
-`ReactLenis root` attaches to `window` and renders no wrapper element, so switching from `<>{children}</>` to `<ReactLenis root>` after mount does not change the DOM structure of the page; React reconciles the children in place. Verify by adding a temporary `console.log("mount")` in `BonziShowcase` (Task 5) and confirming it logs once.
-
-- [ ] **Step 8: Verify the canvas in isolation with a throwaway page**
+- [ ] **Step 6: Verify the canvas in isolation with a throwaway page**
 
 Create `src/app/(marketing)/canvas-smoke/page.tsx`:
 
@@ -1773,13 +1690,13 @@ export default function CanvasSmoke() {
 
 Run `npm run dev`, open `http://localhost:3000/canvas-smoke`. Expected: within ~1 s a pixelated board with 32 flat-shaded pieces appears; dragging the slider plays Scholar's mate (e-pawn, e-pawn, queen to h5, knight, bishop, knight, queen takes f7, pawn tumbles off); camera swoops from above to a low angle; visible dither pattern in shaded areas; the scene gently sways. Check DevTools console: no errors, no "Multiple instances of Three.js" warning. Screenshot at slider ~85% to the scratchpad for the reviewer. Then `rm -r "src/app/(marketing)/canvas-smoke"`.
 
-- [ ] **Step 9: Verify and commit**
+- [ ] **Step 6: Verify and commit**
 
-Run: `npm run typecheck && npx eslint src/components/landing src/lib/motion.ts`
+Run: `npm run typecheck && npx eslint src/components/landing`
 Expected: clean.
 
 ```bash
-git add src/components/landing src/lib/motion.ts
+git add src/components/landing
 git commit -m "add pixelated hero canvas"
 ```
 
@@ -1799,7 +1716,7 @@ git commit -m "add pixelated hero canvas"
 
 **Interfaces:**
 - Consumes (Task 2): `RetroWindow`, `RetroButton`; `BonziAvatar` (existing), `getBonziReaction` (existing).
-- Produces (Task 7): `BonziShowcase()`, `AnalyzerWalkthrough()`, `LandingFooter()`; `QUIP_MAP` export; manifest shape `{ hero: boolean; play: boolean; import: boolean; review: boolean; practice: boolean }`.
+- Produces (Task 7): `BonziShowcase()`, `AnalyzerWalkthrough()`, `LandingFooter()`; `QUIP_MAP` export; manifest shape `{ hero: boolean; import: boolean; review: boolean; practice: boolean }`.
 
 - [ ] **Step 1: Export the quip table**
 
@@ -1842,7 +1759,7 @@ Expected: no errors (warnings are fine).
 - [ ] **Step 2: Create the manifest `src/components/landing/screenshots.json`**
 
 ```json
-{ "hero": false, "play": false, "import": false, "review": false, "practice": false }
+{ "hero": false, "import": false, "review": false, "practice": false }
 ```
 
 - [ ] **Step 3: Create `src/components/landing/bonzi-showcase.tsx`**
@@ -1856,7 +1773,7 @@ import { RetroWindow } from "@/components/retro";
 import { getBonziReaction } from "@/lib/bonzi/bonzi-engine";
 import { QUIP_MAP } from "@/lib/bonzi/quips";
 import type { BonziEvent, BonziGifState } from "@/lib/bonzi/types";
-import { prefersReducedMotion } from "@/lib/motion";
+import { usePrefersReducedMotion } from "@/lib/motion";
 
 const SCRIPT: BonziEvent[] = ["game_start", "bonzi_capture", "bonzi_check", "bonzi_checkmate"];
 const STEP_MS = 2800;
@@ -1888,12 +1805,11 @@ const LABELS: Partial<Record<BonziEvent, string>> = {
 
 export function BonziShowcase() {
   const ref = useRef<HTMLElement>(null);
-  const [reduced, setReduced] = useState(false);
+  const reduced = usePrefersReducedMotion();
   const [inView, setInView] = useState(false);
   const [log, setLog] = useState<LogLine[]>([FIRST_LINE]);
 
   useEffect(() => {
-    setReduced(prefersReducedMotion());
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(([entry]) => setInView(entry.intersectionRatio >= 0.5), { threshold: 0.5 });
@@ -1954,10 +1870,10 @@ export function BonziShowcase() {
 
 - [ ] **Step 4: Create `src/components/landing/window-stack.tsx`**
 
-```tsx
-"use client";
+A static, non-overlapping diagonal cascade — the deliberate alternative to three cards in a row. No client JS, no z-order games: every window's copy is fully readable at rest.
 
-import { useState, type CSSProperties, type ReactNode } from "react";
+```tsx
+import type { CSSProperties, ReactNode } from "react";
 import { RetroWindow } from "@/components/retro";
 
 export interface StackItem {
@@ -1966,26 +1882,17 @@ export interface StackItem {
   content: ReactNode;
 }
 
-// Overlapping Win98 windows on md+ (clicking a title bar brings that window to the front);
-// a plain vertical stack below md.
+// Win98-style cascade: each window steps 48px right on md+; plain vertical stack below md.
 export function WindowStack({ items }: { items: StackItem[] }) {
-  const [order, setOrder] = useState(() => items.map((i) => i.key));
-  const front = order[order.length - 1];
-
-  const bringToFront = (key: string) => setOrder((o) => [...o.filter((k) => k !== key), key]);
-
   return (
-    <div className="grid gap-6 md:[grid-template-areas:'stack'] md:pb-[80px] md:pr-[96px]">
-      {items.map((item) => {
-        const depth = order.indexOf(item.key);
-        const style = { zIndex: depth + 1, "--depth": depth } as CSSProperties;
+    <div className="grid gap-6 md:pr-[96px]">
+      {items.map((item, i) => {
+        const style = { "--depth": i } as CSSProperties;
         return (
           <RetroWindow
             key={item.key}
             title={item.title}
-            active={item.key === front}
-            onActivate={() => bringToFront(item.key)}
-            className="w-full transition-[translate] duration-200 md:w-[560px] md:[grid-area:stack] md:[translate:calc(48px*var(--depth))_calc(40px*var(--depth))]"
+            className="w-full md:w-[560px] md:translate-x-[calc(48px*var(--depth))]"
             style={style}
           >
             {item.content}
@@ -1997,7 +1904,7 @@ export function WindowStack({ items }: { items: StackItem[] }) {
 }
 ```
 
-The `--depth` custom property drives the offset only on md+ through the arbitrary `translate` utility, so mobile stays stacked and untransformed. The container's right/bottom padding leaves room for the two offsets (2 × 48px, 2 × 40px).
+Server component (no "use client"). The `--depth` custom property drives the offset only through the md+ arbitrary `translate` utility, so mobile stays stacked and untransformed; the container's right padding leaves room for the two 48px steps.
 
 - [ ] **Step 5: Create `src/components/landing/analyzer-walkthrough.tsx`**
 
@@ -2012,7 +1919,7 @@ const ITEMS: { key: ShotKey; title: string; copy: string; alt: string }[] = [
   {
     key: "import",
     title: "Import",
-    copy: "Paste a Chess.com or Lichess link, or pull your last 50 games and pick the ones worth a look.",
+    copy: "Paste a Chess.com game link, or pull your last 50 games from Chess.com or Lichess and pick the ones worth a look.",
     alt: "Import screen listing recent games from Chess.com with checkboxes to select which to import",
   },
   {
@@ -2117,7 +2024,7 @@ export default function SectionsSmoke() {
 }
 ```
 
-Open `http://localhost:3000/sections-smoke`. Expected: showcase window with Bonzi waving and the first quip; after ~3 s the log appends a capture quip and the gif changes to laugh, then check, then a backflip on checkmate, then pauses and loops; three cascaded windows with "Screenshot pending" frames, clicking "Review" or "Practice" title bars brings that window to the front with the others' title bars still visible; footer links work. Emulate reduced motion in DevTools (Rendering > Emulate CSS media feature prefers-reduced-motion): the showcase shows the still image and four static lines. At 375px width the three windows stack vertically. Then `rm -r "src/app/(marketing)/sections-smoke"`.
+Open `http://localhost:3000/sections-smoke`. Expected: showcase window with Bonzi waving and the first quip; after ~3 s the log appends a capture quip and the gif changes to laugh, then check, then a backflip on checkmate, then pauses and loops; three cascaded windows with "Screenshot pending" frames, each stepped 48px right of the previous on desktop, all copy fully readable; footer links work. Emulate reduced motion in DevTools (Rendering > Emulate CSS media feature prefers-reduced-motion): the showcase shows the still image and four static lines. At 375px width the three windows stack vertically. Then `rm -r "src/app/(marketing)/sections-smoke"`.
 
 - [ ] **Step 8: Verify and commit**
 
@@ -2274,6 +2181,8 @@ git add "src/app/(marketing)/privacy" "src/app/(marketing)/terms" src/components
 git commit -m "add privacy and terms pages"
 ```
 
+Note for the final report: both pages must be listed for the user to read before any deploy — they are legal copy, and sign-off is theirs, not ours.
+
 ---
 
 ### Task 7: Hero section and landing page composition
@@ -2283,10 +2192,9 @@ git commit -m "add privacy and terms pages"
 - Create: `src/components/landing/hero/hero-poster.tsx`
 - Create: `src/components/landing/hero/hero-section.tsx`
 - Create: `src/app/(marketing)/page.tsx`
-- Modify: `src/app/(marketing)/layout.tsx` (wrap children in `SmoothScroll`)
 
 **Interfaces:**
-- Consumes: `useHeroScroll`, `HeroCanvasLoader`, `SmoothScroll` (Task 4); `RetroWindow`, `RetroDialog`, `RetroButton` (Task 2); `BonziShowcase`, `AnalyzerWalkthrough`, `LandingFooter`, `QUIP_MAP`, manifest (Task 5); `BonziAvatar` (existing).
+- Consumes: `useHeroScroll`, `HeroCanvasLoader` (Task 4); `RetroWindow`, `RetroDialog`, `RetroButton` (Task 2); `BonziShowcase`, `AnalyzerWalkthrough`, `LandingFooter`, `QUIP_MAP`, manifest (Task 5); `BonziAvatar` (existing).
 - Produces: route `/`.
 
 - [ ] **Step 1: Create `src/components/landing/hero/hero.css`**
@@ -2331,6 +2239,13 @@ git commit -m "add privacy and terms pages"
   left: 50%;
   top: 50%;
   margin: 0;
+}
+/* Motion users must not see (or tab into) the checkmate dialog before GSAP takes over. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-dialog {
+    visibility: hidden;
+    opacity: 0;
+  }
 }
 .hero-poster {
   position: absolute;
@@ -2468,36 +2383,12 @@ export default function LandingPage() {
 }
 ```
 
-- [ ] **Step 5: Wrap the marketing layout in `SmoothScroll`**
-
-Edit `src/app/(marketing)/layout.tsx`:
-
-```tsx
-import type { Metadata } from "next";
-import { msSans, vt323 } from "@/fonts/retro-fonts";
-import { Taskbar } from "@/components/retro";
-import { SmoothScroll } from "@/components/landing/smooth-scroll";
-
-export const metadata: Metadata = {
-  title: "Chess Bonzi Buddy",
-};
-
-export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className={`retro ${msSans.variable} ${vt323.variable} min-h-screen pb-[var(--r-taskbar-h)]`}>
-      <SmoothScroll>{children}</SmoothScroll>
-      <Taskbar />
-    </div>
-  );
-}
-```
-
-- [ ] **Step 6: Verify the full page**
+- [ ] **Step 5: Verify the full page**
 
 `npm run dev`, open `http://localhost:3000/`:
 1. First paint: teal desktop, hero window with headline, copy, two buttons, Bonzi waving with the quip, status bar "Scroll to watch a game", taskbar with Start and clock. No canvas yet; then within ~1 s the pixelated board appears behind the window.
 2. Scroll: the window shrinks toward the Start button and fades; the pieces play Scholar's mate as you scroll; the camera drops to a low angle; near the end the checkmate dialog appears centered with Rematch / Show me why; continuing scrolls into the showcase, the walkthrough cascade, footer.
-3. Scroll back up: everything reverses smoothly (Lenis inertia, no jumps).
+3. Scroll back up: everything reverses smoothly, no jumps; scrolling is native (no wheel hijack) with the scrub easing the animation.
 4. Both CTAs navigate: Play → `/app?view=play-bonzi` shows the play setup; Analyze → `/app`.
 5. DevTools: no console errors; Network shows the three/fiber chunk requested only after the page is interactive.
 6. Reduced motion emulation, reload: no canvas (`[data-testid=hero-canvas]` absent), teal panel behind (poster arrives in Task 8), window at full size, dialog directly below the window, native scrolling.
@@ -2520,7 +2411,7 @@ git commit -m "add retro landing page"
 
 **Files:**
 - Create: `scripts/capture-screenshots.mjs`
-- Create: `public/screenshots/hero-poster.webp`, `public/screenshots/play.png` (generated)
+- Create: `public/screenshots/hero-poster.webp` (generated)
 - Modify: `src/components/landing/screenshots.json` (generated)
 - Create (only if `DATABASE_URL` is set): `public/screenshots/import.png`, `review.png`, `practice.png`
 
@@ -2540,20 +2431,10 @@ import path from "node:path";
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const OUT = path.resolve("public/screenshots");
 const MANIFEST = path.resolve("src/components/landing/screenshots.json");
-const manifest = { hero: false, play: false, import: false, review: false, practice: false };
+const manifest = { hero: false, import: false, review: false, practice: false };
 
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch();
-
-async function capturePlay() {
-  const page = await browser.newPage({ viewport: { width: 1200, height: 750 } });
-  await page.goto(`${BASE_URL}/app?view=play-bonzi`);
-  await page.getByRole("button", { name: "Start Game" }).click();
-  await page.waitForTimeout(2500);
-  await page.screenshot({ path: path.join(OUT, "play.png") });
-  manifest.play = true;
-  await page.close();
-}
 
 async function captureHeroPoster() {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -2618,7 +2499,6 @@ async function captureAnalyzer() {
 }
 
 try {
-  await capturePlay();
   await captureHeroPoster();
   await captureAnalyzer();
 } finally {
@@ -2628,7 +2508,7 @@ try {
 }
 ```
 
-Before running, read `src/app/api/games/import/route.ts` to confirm the request body field name and the response shape (`id`, `whitePlayer`), and `src/components/layout/sidebar.tsx` for how a game row is labeled; adjust the selectors above to match what you find. If `DATABASE_URL` or `SCREENSHOT_GAME_URL` (a public Chess.com game URL, e.g. one from your own game history) is not set locally, the analyzer branch is skipped by design.
+Before running, read `src/app/api/games/import/route.ts` to confirm the request body field name and the response shape (`id`, `whitePlayer`), and `src/components/layout/sidebar.tsx` for how a game row is labeled; adjust the selectors above to match what you find. (Verified in review: import takes `{ url }` and returns the full game record including `id` and `whitePlayer`; sidebar rows read "{whitePlayer} vs {blackPlayer}".) If `DATABASE_URL` or `SCREENSHOT_GAME_URL` (a public Chess.com game URL, e.g. one from your own game history) is not set locally, the analyzer branch is skipped by design.
 
 - [ ] **Step 2: Run it**
 
@@ -2638,7 +2518,7 @@ With `npm run dev` running in another terminal:
 npm run screenshots && ls -la public/screenshots && cat src/components/landing/screenshots.json
 ```
 
-Expected: `play.png` (~1200x750), `hero-poster.webp` (under 150 KB; pixel blocks compress well), manifest `hero: true, play: true`, the other three `true` only with a database. Open `hero-poster.webp` and confirm it shows the board at the low camera angle with the queen on f7 and no window chrome in the shot.
+Expected: `hero-poster.webp` (under 150 KB; pixel blocks compress well), manifest `hero: true`, the other three `true` only with a database and a game URL. Open `hero-poster.webp` and confirm it shows the board at the low camera angle with the queen on f7 and no window chrome in the shot.
 
 - [ ] **Step 3: Confirm the page uses them**
 
@@ -2761,7 +2641,7 @@ Expected: 8 passed. If the reduced-motion test finds the dialog hidden, check th
 
 ```bash
 npm run typecheck
-npm run lint 2>&1 | grep -E "error" | grep -v "board(-panel)?\.tsx" ; echo "(only board.tsx / board-panel.tsx errors allowed above)"
+npx eslint . --quiet -f json | node -e 'const d=JSON.parse(require("fs").readFileSync(0));const bad=d.filter(f=>f.errorCount>0&&!/board(-panel)?\.tsx$/.test(f.filePath));if(bad.length){console.error("new lint errors in:",bad.map(f=>f.filePath));process.exit(1)}console.log("lint gate ok (only pre-existing board.tsx / board-panel.tsx errors)")'
 npm run test
 npm run build 2>&1 | tail -30
 ```
@@ -2773,18 +2653,18 @@ Then start `npm run start` and check the JS budget:
 ```bash
 npm run build >/dev/null && npm run start &
 sleep 5
-curl -s http://localhost:3000/ | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u | while read f; do printf "%8d %s\n" "$(curl -s -H 'Accept-Encoding: br' "http://localhost:3000$f" | wc -c)" "$f"; done | sort -n
+curl -s http://localhost:3000/ | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u | while read f; do printf "%8d %s\n" "$(curl -s "http://localhost:3000$f" | gzip -9 | wc -c)" "$f"; done | sort -n
 ```
 
-Expected: the initial chunks referenced by `/` total under 130 KB; the three/fiber chunk is not in the initial HTML (it loads via the dynamic import). Record the numbers in the final report.
+(`next start` may serve identity encoding locally, so the pipeline gzips client-side to measure the budget as gzip bytes; kill any still-running dev server first — both bind :3000.) Expected: the initial chunks referenced by `/` total under 130 KB; the three/fiber chunk is not in the initial HTML (it loads via the dynamic import). Record the numbers in the final report.
 
 - [ ] **Step 5: Lighthouse (record, do not gate)**
 
 ```bash
-CHROME_PATH=~/Library/Caches/ms-playwright/chromium-1194/chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium npx lighthouse http://localhost:3000/ --preset=perf --form-factor=mobile --screenEmulation.mobile --quiet --chrome-flags="--headless=new" --output=json --output-path=/private/tmp/claude-501/-Users-fv-123-chessbonzibuddy/223a078e-2ce5-43ae-9163-0cb984f48029/scratchpad/lh.json && node -e 'const r=require("/private/tmp/claude-501/-Users-fv-123-chessbonzibuddy/223a078e-2ce5-43ae-9163-0cb984f48029/scratchpad/lh.json");for(const k of ["performance","accessibility"])console.log(k,r.categories[k]?.score)'
+CHROME_PATH=$(ls -d ~/Library/Caches/ms-playwright/chromium-*/chrome-mac*/Chromium.app/Contents/MacOS/Chromium | tail -1) npx lighthouse http://localhost:3000/ --preset=perf --form-factor=mobile --screenEmulation.mobile --quiet --chrome-flags="--headless=new" --output=json --output-path=/private/tmp/claude-501/-Users-fv-123-chessbonzibuddy/223a078e-2ce5-43ae-9163-0cb984f48029/scratchpad/lh.json && node -e 'const r=require("/private/tmp/claude-501/-Users-fv-123-chessbonzibuddy/223a078e-2ce5-43ae-9163-0cb984f48029/scratchpad/lh.json");for(const k of ["performance","accessibility"])console.log(k,r.categories[k]?.score)'
 ```
 
-If the Chromium path differs, find it with `ls ~/Library/Caches/ms-playwright/chromium-1194/`. Report performance and accessibility scores (targets 85 / 95). If either is below target, list the top three audits from `r.audits` with the lowest scores in the report rather than tuning blindly.
+ Report performance and accessibility scores (targets 85 / 95). If either is below target, list the top three audits from `r.audits` with the lowest scores in the report rather than tuning blindly.
 
 - [ ] **Step 6: Commit**
 
@@ -2800,8 +2680,8 @@ git commit -m "add landing e2e tests"
 | Wave | Tasks | Why this wave |
 |---|---|---|
 | 1 | Task 0 | Everything needs the deps and scripts; it owns `package.json`. |
-| 2 | Task 1, Task 2, Task 3 | Disjoint files: app route move (`src/app/layout.tsx`, `(app)/`), design system (`retro/`, `styles/`, `fonts/`, `(marketing)/layout.tsx`, `globals.css`), pure hero logic (`landing/hero/*.ts`). |
-| 3 | Task 4, Task 5, Task 6 | Task 4 needs Task 3's exports; Tasks 5 and 6 need Task 2's components. Files are disjoint (`hero/*.tsx` + `smooth-scroll.tsx` + `lib/motion.ts`; `landing/*.tsx` + `quips.ts`; `(marketing)/privacy|terms` + `legal-page.tsx`). |
-| 4 | Task 7 | Composes Tasks 4 and 5; modifies `(marketing)/layout.tsx` from Task 2. |
+| 2 | Task 1, Task 2, Task 3 | Disjoint files: app route move (`src/app/layout.tsx`, `(app)/`, `ui/sonner.tsx`), design system (`retro/`, `styles/`, `fonts/`, `(marketing)/layout.tsx`, `globals.css`), pure hero logic (`landing/hero/*.ts` + `lib/motion.ts`). |
+| 3 | Task 4, Task 5, Task 6 | Task 4 needs Task 3's exports; Tasks 5 and 6 need Task 2's components. Files are disjoint (`hero/*.tsx`; `landing/*.tsx` + `quips.ts` + `bonzi/*`; `(marketing)/privacy|terms` + `legal-page.tsx`). |
+| 4 | Task 7 | Composes Tasks 4 and 5. |
 | 5 | Task 8 | Needs the live `/` and `/app` routes. |
 | 6 | Task 9 | Needs the poster/manifest from Task 8 for the reduced-motion visual check and runs the full build. |
