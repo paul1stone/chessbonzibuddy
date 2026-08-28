@@ -1,47 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Toaster } from "@/components/ui/sonner";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
-  title: "Chess Analyzer",
-  description: "Analyze your chess games",
-  icons: {
-    icon: "/coolmonkey.gif",
+  title: {
+    default: "Chess Bonzi Buddy",
+    template: "%s | Chess Bonzi Buddy",
   },
+  description:
+    "Play chess against Bonzi Buddy, a purple gorilla from 1999 who runs on Stockfish and talks trash. Then import your games and find out where they went wrong.",
+  icons: { icon: "/coolmonkey.gif" },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          disableTransitionOnChange
-        >
-          <DashboardLayout>{children}</DashboardLayout>
-          <Toaster richColors position="bottom-right" />
-        </ThemeProvider>
-      </body>
+    <html lang="en" suppressHydrationWarning>
+      <body>{children}</body>
     </html>
   );
 }
