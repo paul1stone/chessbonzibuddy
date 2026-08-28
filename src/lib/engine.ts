@@ -5,14 +5,23 @@
  * and must never be imported in a server-side (Node.js) context. Components
  * that use it should be marked "use client" and import it dynamically or
  * conditionally guard against SSR.
+ *
+ * All evaluations returned here are white-relative — `uci.ts` normalizes the
+ * engine's side-to-move scores before they reach any caller.
  */
+
+import {
+  parseUciEvaluation,
+  sideToMoveFromFen,
+  type ParsedUciEval,
+} from "./uci";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface EngineEvaluation {
-  /** Evaluation in centipawns (positive = white advantage) */
+  /** Evaluation in centipawns, white-relative (positive = white advantage) */
   eval: number;
   /** Best move in UCI notation, e.g. "e2e4" */
   bestMove: string;
@@ -24,23 +33,15 @@ export interface EngineEvaluation {
   mate: number | null;
 }
 
-export interface MoveAnalysis {
-  moveNumber: number;
-  color: "w" | "b";
-  /** Standard algebraic notation, e.g. "e4" */
-  san: string;
-  /** UCI notation, e.g. "e2e4" */
-  uci: string;
-  /** Eval (centipawns) of the position before this move was played */
-  evalBefore: number;
-  /** Eval (centipawns) of the position after this move was played */
-  evalAfter: number;
-  /** Engine's best move in this position (UCI) */
-  bestMove: string;
-  /** Engine's best move in SAN */
-  bestMoveSan: string;
-  classification: MoveClassification;
-  topLines: Array<{ moves: string[]; eval: number }>;
+/** Flatten a parsed search into the single-line shape play mode consumes. */
+function toEngineEvaluation(parsed: ParsedUciEval): EngineEvaluation {
+  return {
+    eval: parsed.eval,
+    bestMove: parsed.bestMove,
+    pv: parsed.lines[0]?.moves ?? [],
+    depth: parsed.depth,
+    mate: parsed.mate,
+  };
 }
 
 export type MoveClassification =
@@ -49,11 +50,51 @@ export type MoveClassification =
   | "best"
   | "good"
   | "book"
+  | "forced"
   | "inaccuracy"
   | "mistake"
   | "blunder";
 
+/** One candidate line from a MultiPV search. */
+export interface TopLine {
+  moves: string[];
+  eval: number;
+  mate: number | null;
+}
+
+export interface MoveAnalysis {
+  moveNumber: number;
+  color: "w" | "b";
+  /** Standard algebraic notation, e.g. "e4" */
+  san: string;
+  /** UCI notation, e.g. "e2e4" */
+  uci: string;
+  /** Eval (white-relative centipawns, mate folded) before this move was played */
+  evalBefore: number;
+  /** Moves to mate before this move, white-relative, or null */
+  mateBefore: number | null;
+  /** Eval (white-relative centipawns, mate folded) after this move was played */
+  evalAfter: number;
+  /** 0 = the position after this move is checkmate (winner = sign of evalAfter) */
+  mateAfter: number | null;
+  /** Win probability given up by the mover, 0-100 */
+  winPercentLoss: number;
+  /** Depth of the before-position search */
+  depth: number;
+  /** Engine's best move in this position (UCI) */
+  bestMove: string;
+  /** Engine's best move in SAN */
+  bestMoveSan: string;
+  classification: MoveClassification;
+  /** Candidate lines from the before-position search, multipv order */
+  topLines: TopLine[];
+}
+
+export const ANALYSIS_VERSION = 2 as const;
+
 export interface GameAnalysis {
+  version: typeof ANALYSIS_VERSION;
+  engine: { name: string; nodes: number; multiPv: number };
   moves: MoveAnalysis[];
   whiteAccuracy: number;
   blackAccuracy: number;
@@ -61,6 +102,20 @@ export interface GameAnalysis {
   whiteRating: number;
   /** Estimated rating Black "played like" based on accuracy */
   blackRating: number;
+}
+
+/**
+ * Whether a stored analysis blob was produced by the current pipeline.
+ *
+ * Anything older is treated as absent — pre-v2 evals were side-to-move
+ * relative, so their numbers are not merely stale but wrong.
+ */
+export function isCurrentAnalysis(a: unknown): a is GameAnalysis {
+  if (typeof a !== "object" || a === null) return false;
+  const candidate = a as Partial<GameAnalysis>;
+  return (
+    candidate.version === ANALYSIS_VERSION && Array.isArray(candidate.moves)
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -117,6 +172,19 @@ export class StockfishEngine {
   }
 
   /**
+   * Reset the engine's search state between games.
+   *
+   * Sent once per analysed game so hash entries from the previous game cannot
+   * skew the first few positions of the next one.
+   */
+  async newGame(): Promise<void> {
+    this.assertReady();
+    this.sendCommand("ucinewgame");
+    this.sendCommand("isready");
+    await this.waitFor("readyok");
+  }
+
+  /**
    * Evaluate a position given as a FEN string.
    *
    * @param fen     - FEN of the position to evaluate
@@ -130,16 +198,37 @@ export class StockfishEngine {
   ): Promise<EngineEvaluation> {
     this.assertReady();
 
-    if (multiPv > 1) {
-      this.sendCommand(`setoption name MultiPV value ${multiPv}`);
-    } else {
-      this.sendCommand("setoption name MultiPV value 1");
-    }
-
+    this.sendCommand(`setoption name MultiPV value ${multiPv}`);
     this.sendCommand("position fen " + fen);
     this.sendCommand("go depth " + depth);
+
     const lines = await this.waitFor("bestmove");
-    return this.parseEvaluation(lines);
+    return toEngineEvaluation(parseUciEvaluation(lines, sideToMoveFromFen(fen)));
+  }
+
+  /**
+   * Evaluate a position to a fixed node count.
+   *
+   * Nodes rather than depth so every position in a game gets the same amount
+   * of work regardless of how tactical it is, making evals comparable.
+   *
+   * @param fen     - FEN of the position to evaluate
+   * @param nodes   - Node budget for the search
+   * @param multiPv - Number of principal variations to return
+   */
+  async evaluateNodes(
+    fen: string,
+    nodes: number,
+    multiPv: number
+  ): Promise<ParsedUciEval> {
+    this.assertReady();
+
+    this.sendCommand(`setoption name MultiPV value ${multiPv}`);
+    this.sendCommand("position fen " + fen);
+    this.sendCommand(`go nodes ${nodes}`);
+
+    const lines = await this.waitFor("bestmove", 120_000);
+    return parseUciEvaluation(lines, sideToMoveFromFen(fen));
   }
 
   /**
@@ -176,7 +265,9 @@ export class StockfishEngine {
     }
 
     const lines = await this.waitFor("bestmove");
-    return this.parseEvaluation(lines);
+    return toEngineEvaluation(
+      parseUciEvaluation(lines, moves.length % 2 === 0 ? "w" : "b")
+    );
   }
 
   /**
@@ -208,10 +299,11 @@ export class StockfishEngine {
     this.sendCommand(`go wtime ${wtime} btime ${btime} winc ${winc} binc ${binc}`);
 
     // Safety timeout: engine's remaining time + generous buffer
-    const engineTime = moves.length % 2 === 0 ? wtime : btime;
+    const sideToMove = moves.length % 2 === 0 ? "w" : "b";
+    const engineTime = sideToMove === "w" ? wtime : btime;
     const safetyMs = Math.min(engineTime + 10_000, 30_000);
     const lines = await this.waitFor("bestmove", safetyMs);
-    return this.parseEvaluation(lines);
+    return toEngineEvaluation(parseUciEvaluation(lines, sideToMove));
   }
 
   /** Send the UCI `stop` command. */
@@ -294,12 +386,18 @@ export class StockfishEngine {
     });
   }
 
-  /** Run the UCI + isready handshake. */
+  /**
+   * Run the UCI + isready handshake.
+   *
+   * Generous timeouts: the worker's first message only lands after the browser
+   * has downloaded and compiled the ~113 MB stockfish.wasm, which is served
+   * uncached and can take minutes on a slow connection.
+   */
   private async handshake(): Promise<void> {
     this.sendCommand("uci");
-    await this.waitFor("uciok", 10_000);
+    await this.waitFor("uciok", 180_000);
     this.sendCommand("isready");
-    await this.waitFor("readyok", 10_000);
+    await this.waitFor("readyok", 180_000);
   }
 
   private assertReady(): void {
@@ -308,75 +406,5 @@ export class StockfishEngine {
         "Engine is not initialised. Call init() before evaluate()."
       );
     }
-  }
-
-  // ------------------------------------------------------------------
-  // Output parsing
-  // ------------------------------------------------------------------
-
-  /**
-   * Parse UCI `info` and `bestmove` lines into an {@link EngineEvaluation}.
-   *
-   * Typical UCI output we're interested in:
-   * ```
-   * info depth 18 seldepth 24 multipv 1 score cp 35 nodes 123456 ... pv e2e4 e7e5 ...
-   * info depth 18 ... score mate 3 ... pv ...
-   * bestmove e2e4 ponder e7e5
-   * ```
-   */
-  private parseEvaluation(lines: string[]): EngineEvaluation {
-    let bestEval = 0;
-    let mate: number | null = null;
-    let pv: string[] = [];
-    let depth = 0;
-    let bestMove = "";
-
-    // Walk info lines (deepest first) to find the highest-depth evaluation.
-    const infoLines = lines
-      .filter((l) => l.startsWith("info") && l.includes("score"))
-      .reverse(); // most recent (deepest) first
-
-    for (const line of infoLines) {
-      const lineDepth = this.extractInt(line, "depth");
-      if (lineDepth === null) continue;
-
-      // Only consider the deepest line (or requested depth)
-      if (lineDepth < depth) continue;
-      depth = lineDepth;
-
-      // Parse score
-      const cpMatch = line.match(/score cp (-?\d+)/);
-      const mateMatch = line.match(/score mate (-?\d+)/);
-
-      if (mateMatch) {
-        mate = parseInt(mateMatch[1], 10);
-        // Convert mate score to a very large centipawn value for comparison
-        bestEval = mate > 0 ? 100_000 - mate : -100_000 - mate;
-      } else if (cpMatch) {
-        bestEval = parseInt(cpMatch[1], 10);
-        mate = null;
-      }
-
-      // Parse PV
-      const pvMatch = line.match(/ pv (.+)/);
-      if (pvMatch) {
-        pv = pvMatch[1].trim().split(/\s+/);
-      }
-    }
-
-    // Parse bestmove line
-    const bestMoveLine = lines.find((l) => l.startsWith("bestmove"));
-    if (bestMoveLine) {
-      const parts = bestMoveLine.split(/\s+/);
-      bestMove = parts[1] ?? "";
-    }
-
-    return { eval: bestEval, bestMove, pv, depth, mate };
-  }
-
-  private extractInt(line: string, key: string): number | null {
-    const regex = new RegExp(`\\b${key}\\s+(\\d+)`);
-    const match = line.match(regex);
-    return match ? parseInt(match[1], 10) : null;
   }
 }
