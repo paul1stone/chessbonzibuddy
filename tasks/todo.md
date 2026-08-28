@@ -22,11 +22,15 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 - [x] Wave 2: Task 1 aa60aff (PASS; color-scheme fix 40d4e3d), Task 2 bb135ab (PASS; nbsp fix efee671, focus-contrast fix 469510d), Task 3 ccaa8fa (PASS, 13/13 tests)
 - [x] Wave 3: Task 4 dd0ec9c PASS (dither disposal a0763c1), Task 5 2dcb435 PASS (fixes 5e9718a; note: bonzi_check gif now 'point' in app play view too), Task 6 8fa0287 PASS after privacy copy fixes (f05b5f9, c15a02d)
 - [ ] Wave 4: Task 7 1e0dafb committed, review in flight
-- [ ] Wave 5: Task 8 screenshots + poster
-- [ ] Wave 6: Task 9 e2e + build verification
+- [x] Wave 5: Task 8 98fa26c (3 sound script deviations; found poster-ghost bug, fixed in 3031f42; review in flight)
+- [ ] Wave 6: Task 9 e2e + build verification (in flight, 9 tests incl. poster-unmount regression)
 
 ## Phase 4: Final review (Fable)
 - [ ] Full-diff review against plan, fixes, faithful report
+
+## Part 2 (separate /build, user-confirmed 2026-08-28)
+- Refactor the app UI (/app screens: sidebar, import, review, practice, play) to the retro design system
+- Finish out the homepage (remaining polish; analyzer screenshots once DATABASE_URL + SCREENSHOT_GAME_URL available; rename "Chess Analyzer" branding in sidebar/dashboard chrome)
 
 ## Open items for the user
 - Analyzer screenshots need DATABASE_URL + SCREENSHOT_GAME_URL locally; otherwise the walkthrough ships honest "screenshot pending" frames until part 2
