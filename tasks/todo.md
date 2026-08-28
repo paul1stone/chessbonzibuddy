@@ -11,10 +11,10 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 - [x] Plan written, self-reviewed, committed
 
 ## Phase 2: Plan review (Fable, 3 lenses)
-- [ ] Correctness + missed call sites
+- [x] Correctness + missed call sites — 3 blocking (Lenis wiring, set-state-in-effect lint, chromium revision) + copy/metadata/smoke/dialog fixes; all accepted
 - [x] Regression risk — accepted: playwright install chromium (blocking), drop next-themes + Toaster theme=dark, remove marketing metadata title, ViewParamSync in (app) layout w/ useLayoutEffect, gzip budget, eslint coverage ignore. COOP/COEP + portals confirmed non-issues
 - [x] Simpler alternatives + brief compliance — 12 findings; accepted: drop Lenis (remount bug + redundant), static stagger for WindowStack, move lib/motion.ts to wave 2, cut visibilitychange, token/comment nits, spec wording (rook rim, non-overlap cascade)
-- [ ] Triage findings, revise plan, re-review if needed
+- [x] Triage findings, revise plan, re-review — delta review confirms all 12 fixes, READY TO BUILD; spec synced
 - [ ] User check-in on final plan
 
 ## Phase 3: Build (Opus implementers, Opus step reviews)
