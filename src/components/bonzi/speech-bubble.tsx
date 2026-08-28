@@ -20,6 +20,7 @@ export function SpeechBubble({ text, visible }: SpeechBubbleProps) {
   if (!show && !visible) return null;
 
   return (
+    // #7b4fb5 duplicates --r-bonzi (retro.css); hardcoded so the bubble works outside .retro too.
     <div
       className={`relative max-w-[200px] border-2 border-black bg-[#7b4fb5] px-3 py-2 text-sm font-semibold text-white transition-all duration-300 ${
         visible ? "scale-100 opacity-100" : "scale-90 opacity-0"
