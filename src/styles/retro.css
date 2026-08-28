@@ -1,0 +1,153 @@
+/* Windows 98 design tokens and primitives. Scoped under .retro so the app's shadcn theme is untouched. */
+.retro {
+  --r-desktop: #008080;
+  --r-face: #c0c0c0;
+  --r-face-light: #dfdfdf;
+  --r-highlight: #ffffff;
+  --r-shadow: #808080;
+  --r-dark: #000000;
+  --r-title-a: #000080;
+  --r-title-b: #1084d0;
+  --r-title-text: #ffffff;
+  --r-paper: #ffffff;
+  --r-disabled: #808080;
+  --r-bonzi: #7b4fb5;
+  --r-taskbar-h: 30px;
+
+  font-family: var(--font-ui), "MS Sans Serif", Tahoma, sans-serif;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--r-dark);
+  background: var(--r-desktop);
+  -webkit-font-smoothing: none;
+  text-rendering: optimizeSpeed;
+}
+
+.retro *,
+.retro *::before,
+.retro *::after {
+  border-radius: 0;
+}
+
+.r-face { background: var(--r-face); }
+.r-paper { background: var(--r-paper); }
+
+.r-bevel-out {
+  box-shadow:
+    inset -1px -1px var(--r-dark),
+    inset 1px 1px var(--r-highlight),
+    inset -2px -2px var(--r-shadow),
+    inset 2px 2px var(--r-face-light);
+}
+
+.r-bevel-in {
+  box-shadow:
+    inset -1px -1px var(--r-highlight),
+    inset 1px 1px var(--r-dark),
+    inset -2px -2px var(--r-face-light),
+    inset 2px 2px var(--r-shadow);
+}
+
+/* Two-stop navy to blue: the literal Windows 98 title bar (stated brief exception). */
+.r-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 3px 3px 6px;
+  background: linear-gradient(90deg, var(--r-title-a), var(--r-title-b));
+  color: var(--r-title-text);
+  font-weight: 700;
+  user-select: none;
+}
+.r-title-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 14px;
+  background: var(--r-face);
+  color: var(--r-dark);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow:
+    inset -1px -1px var(--r-dark),
+    inset 1px 1px var(--r-highlight),
+    inset -2px -2px var(--r-shadow),
+    inset 2px 2px var(--r-face-light);
+}
+
+.r-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 75px;
+  min-height: 23px;
+  padding: 0 12px;
+  background: var(--r-face);
+  color: var(--r-dark);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow:
+    inset -1px -1px var(--r-dark),
+    inset 1px 1px var(--r-highlight),
+    inset -2px -2px var(--r-shadow),
+    inset 2px 2px var(--r-face-light);
+}
+.r-btn:active {
+  padding-top: 2px;
+  box-shadow:
+    inset -1px -1px var(--r-highlight),
+    inset 1px 1px var(--r-dark),
+    inset -2px -2px var(--r-face-light),
+    inset 2px 2px var(--r-shadow);
+}
+.r-btn--default {
+  font-weight: 700;
+  outline: 1px solid var(--r-dark);
+}
+.r-btn--lg {
+  min-height: 32px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+.r-btn:focus-visible,
+.retro button:focus-visible {
+  outline: 1px dotted var(--r-dark);
+  outline-offset: -4px;
+}
+.retro a:not(.r-btn):focus-visible {
+  outline: 2px solid var(--r-highlight);
+  outline-offset: 2px;
+}
+.retro a:not(.r-btn) {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.r-body {
+  font-family: Verdana, Tahoma, "DejaVu Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: auto;
+  text-rendering: auto;
+}
+.r-term {
+  font-family: var(--font-term), "Courier New", monospace;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.r-sep {
+  height: 2px;
+  border-top: 1px solid var(--r-shadow);
+  border-bottom: 1px solid var(--r-highlight);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .retro * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
