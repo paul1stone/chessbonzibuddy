@@ -30,7 +30,10 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 
 ## Part 2 (separate /build, user-confirmed 2026-08-28)
 - Refactor the app UI (/app screens: sidebar, import, review, practice, play) to the retro design system
-- Finish out the homepage (remaining polish; analyzer screenshots once DATABASE_URL + SCREENSHOT_GAME_URL available; rename "Chess Analyzer" branding in sidebar/dashboard chrome)
+- Finish out the homepage: walkthrough windows become LIVE interactive demos (Review: mini chessboard scrubbing an analyzed game; Practice: real find-the-best-move puzzle via client-side chess.js; Import: short auto-playing capture) instead of static screenshots
+- Draggable windows by title bar: hand-rolled pointerdown + setPointerCapture + translate (~40 lines, no lib); normal flow until first drag, disabled on small screens/reduced motion; verify pattern in part-2 research
+- Analyzer screenshots once DATABASE_URL + SCREENSHOT_GAME_URL available; rename "Chess Analyzer" branding in sidebar/dashboard chrome
+- Interim (end of part 1, after e2e run finishes): slim the "Screenshot pending" frames so the section reads less empty
 
 ## Open items for the user
 - Analyzer screenshots need DATABASE_URL + SCREENSHOT_GAME_URL locally; otherwise the walkthrough ships honest "screenshot pending" frames until part 2
