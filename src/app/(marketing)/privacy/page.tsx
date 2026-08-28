@@ -12,7 +12,7 @@ export default function PrivacyPage() {
 
       <h2>What stays in your browser</h2>
       <p>
-        When you link a Chess.com or Lichess account, the site keeps the username you typed and your cached ratings in your browser&apos;s local storage under the key <code>chess-analyzer-profile</code>. Nothing else identifies you. You can remove it at any time by clearing this site's data in your browser.
+        When you link a Chess.com or Lichess account, the site keeps the username you typed and your cached ratings in your browser&apos;s local storage under the key <code>chess-analyzer-profile</code>. Nothing else identifies you. You can remove it at any time by clearing this site&apos;s data in your browser.
       </p>
 
       <h2>What is stored on the server</h2>
