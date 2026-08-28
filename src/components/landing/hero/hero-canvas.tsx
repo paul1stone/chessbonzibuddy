@@ -23,9 +23,10 @@ interface HeroCanvasProps {
   progressRef: RefObject<number>;
   active: boolean;
   onContextLost?: () => void;
+  onReady?: () => void;
 }
 
-export function HeroCanvas({ progressRef, active, onContextLost }: HeroCanvasProps) {
+export function HeroCanvas({ progressRef, active, onContextLost, onReady }: HeroCanvasProps) {
   const dpr = useRetroDpr();
   const dither = useMemo(() => new DitherEffect({ levels: 6 }), []);
   useEffect(() => () => dither.dispose(), [dither]);
@@ -43,6 +44,7 @@ export function HeroCanvas({ progressRef, active, onContextLost }: HeroCanvasPro
           e.preventDefault();
           onContextLost?.();
         });
+        onReady?.();
       }}
     >
       <ChessScene progressRef={progressRef} />

@@ -17,6 +17,7 @@ type Status = "poster" | "canvas" | "failed";
 export function HeroCanvasLoader({ progressRef, stageRef, poster }: HeroCanvasLoaderProps) {
   const [status, setStatus] = useState<Status>("poster");
   const [inView, setInView] = useState(true);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (prefersReducedMotion() || !supportsWebGL()) return;
@@ -38,12 +39,19 @@ export function HeroCanvasLoader({ progressRef, stageRef, poster }: HeroCanvasLo
     return () => io.disconnect();
   }, [stageRef]);
 
+  // The canvas is alpha:true, so a mounted poster would ghost through it; drop the
+  // poster only once the renderer is live, and bring it back on context loss.
   return (
     <>
-      {poster}
+      {(status !== "canvas" || !ready) && poster}
       {status === "canvas" && (
         <div className="absolute inset-0" aria-hidden="true" data-testid="hero-canvas">
-          <HeroCanvas progressRef={progressRef} active={inView} onContextLost={() => setStatus("failed")} />
+          <HeroCanvas
+            progressRef={progressRef}
+            active={inView}
+            onContextLost={() => setStatus("failed")}
+            onReady={() => setReady(true)}
+          />
         </div>
       )}
     </>
