@@ -118,7 +118,7 @@
   outline-offset: -4px;
 }
 .retro a:not(.r-btn):focus-visible {
-  outline: 2px solid var(--r-highlight);
+  outline: 2px solid var(--r-dark);
   outline-offset: 2px;
 }
 .retro a:not(.r-btn) {
