@@ -28,6 +28,7 @@ interface HeroCanvasProps {
 export function HeroCanvas({ progressRef, active, onContextLost }: HeroCanvasProps) {
   const dpr = useRetroDpr();
   const dither = useMemo(() => new DitherEffect({ levels: 6 }), []);
+  useEffect(() => () => dither.dispose(), [dither]);
 
   return (
     <Canvas
