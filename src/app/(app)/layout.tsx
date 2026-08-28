@@ -9,7 +9,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`dark ${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
+    <div className={`dark ${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground [color-scheme:dark]`}>
       <Suspense fallback={null}>
         <ViewParamSync />
       </Suspense>
