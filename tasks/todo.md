@@ -30,7 +30,7 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 
 ## Open items for the user
 - Analyzer screenshots need DATABASE_URL + SCREENSHOT_GAME_URL locally; otherwise the walkthrough ships honest "screenshot pending" frames until part 2
-- Privacy/terms copy needs a read before deploy
+- Privacy/terms copy needs a read before deploy; ALSO confirm Neon project region is US (copy claims it), and note games API is unauthenticated (copy says games are not private)
 - BonziBuddy trademark status unverified; footer disclaims affiliation
 
 ## Review
