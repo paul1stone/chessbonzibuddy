@@ -249,7 +249,7 @@ Expected: clean.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/app
+git add src/app src/components/ui/sonner.tsx
 git commit -m "move app under app route"
 ```
 
@@ -1095,7 +1095,7 @@ Note on ids: the queen starts on d1 so its id is `wq3`; the light-squared bishop
 - [ ] **Step 4: Run the timeline tests**
 
 Run: `npx vitest run src/components/landing/hero/hero-timeline.test.ts`
-Expected: PASS (5 tests). If `cameraAt(MOVE_END).position` fails by floating error, compare with `toBeCloseTo` per component; `easeInOutCubic(1)` is exactly 1 so `toEqual` should hold.
+Expected: PASS (6 tests). If `cameraAt(MOVE_END).position` fails by floating error, compare with `toBeCloseTo` per component; `easeInOutCubic(1)` is exactly 1 so `toEqual` should hold.
 
 - [ ] **Step 5: Write the failing geometry tests**
 
@@ -2646,7 +2646,7 @@ npm run test
 npm run build 2>&1 | tail -30
 ```
 
-Expected: typecheck clean; lint errors only the two pre-existing files; 12 unit tests pass; build succeeds and the route table shows `○` (static) for `/`, `/privacy`, `/terms` and `ƒ` or `○` for `/app` (either is fine; it is a client page).
+Expected: typecheck clean; lint errors only the two pre-existing files; 13 unit tests pass (6 timeline + 7 geometry); build succeeds and the route table shows `○` (static) for `/`, `/privacy`, `/terms` and `ƒ` or `○` for `/app` (either is fine; it is a client page).
 
 Then start `npm run start` and check the JS budget:
 

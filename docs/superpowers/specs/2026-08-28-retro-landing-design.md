@@ -27,7 +27,7 @@ src/app/
     terms/page.tsx                terms in a RetroWindow
   (app)/
     layout.tsx                    Geist fonts, `.dark` wrapper (next-themes dropped; Toaster hardcoded dark), DashboardLayout, Toaster
-    app/page.tsx                  the existing src/app/page.tsx moved verbatim + `?view=` support
+    app/page.tsx                  the existing src/app/page.tsx moved verbatim; ?view= synced in (app) layout
   api/...                         unchanged
 src/components/
   retro/                          design system: window, title bar, button, menu, taskbar, dialog
@@ -40,7 +40,7 @@ e2e/                              Playwright specs
 ```
 
 Routing:
-- `/` landing (static). `/privacy`, `/terms` (static). `/app` the existing app. `/app?view=play-bonzi` opens the play view directly (the app page reads `view` from `useSearchParams` on mount and calls `setView`).
+- `/` landing (static). `/privacy`, `/terms` (static). `/app` the existing app. `/app?view=play-bonzi` opens the play view directly (a `ViewParamSync` client component in the `(app)` layout reads `view` from `useSearchParams` in a layout effect and calls `setView`).
 - Root layout no longer forces `class="dark"` on `<html>`; the `(app)` layout wraps its children in `<div className="dark">` and owns the `Toaster` (next-themes is dropped entirely — its forcedTheme would write the class onto `<html>` and leak into marketing pages on client-side navigation), so marketing pages never pick up shadcn dark tokens or a theme flash.
 
 New dependencies (exact versions verified on npm 2026-08-28):
@@ -78,7 +78,7 @@ Typography:
 Focus: `:focus-visible { outline: 1px dotted var(--r-dark); outline-offset: -4px }` (the Win98 focus rect), plus a 2px solid outline on links over teal so it is visible on the desktop.
 
 Components (`src/components/retro/`, all server-compatible unless noted):
-- `RetroWindow({ title, children, className?, statusBar?, controls? })`: face + bevel, `TitleBar` with title text and decorative minimize/maximize/close glyphs (text glyphs, `aria-hidden`), optional status bar row.
+- `RetroWindow({ title, children, className?, style?, statusBar?, ref?, id?, aria-labelledby? })`: face + bevel, `TitleBar` with title text and decorative minimize/maximize/close glyphs (text glyphs, `aria-hidden`), optional status bar row.
 - `RetroButton`: `<button>` or `<Link>` (via `href`), raised bevel, active state sunken, 1px dotted focus rect inside. Sizes: default (min 75x23px like Win98) and `lg`.
 - `RetroDialog({ title, children, actions })`: a `RetroWindow` variant with an icon slot and centered buttons.
 - `Taskbar` (client): fixed bottom bar, `StartButton` + `StartMenu` (links: Play Bonzi Buddy, Analyze my games, Privacy, Terms, GitHub), a clock rendered only after mount. Escape closes the menu; menu is a `<nav>` with a `<ul>` of links; button has `aria-expanded`.
@@ -108,7 +108,7 @@ Rendering (approach A):
 - Internal render resolution: width 400px (height by aspect), achieved with `<Canvas dpr={400 / viewportWidth}>` clamped to [0.15, 1]; canvas element CSS `image-rendering: pixelated`, `width/height: 100%`.
 - Materials: `MeshLambertMaterial` with `flatShading: true`. One `DirectionalLight` (warm, from upper-left) + `AmbientLight` 0.7. No shadows, no antialiasing (`gl={{ antialias: false }}`).
 - Post-processing: `EffectComposer` with one custom `DitherEffect` (4x4 Bayer ordered dither, quantizing each channel with levels = 6). ~30 lines of GLSL.
-- Frame loop: `frameloop="always"` only while the hero is in the viewport and `document.visibilityState === "visible"`; otherwise `frameloop="never"`. Target: under 2 ms GPU per frame on a 2020 phone at 400px internal width.
+- Frame loop: `frameloop="always"` only while the hero is in the viewport (IntersectionObserver); otherwise `frameloop="never"`. Hidden tabs are already throttled by rAF, so no visibilitychange handling. Target: under 2 ms GPU per frame on a 2020 phone at 400px internal width.
 - Scroll input: one GSAP `ScrollTrigger` timeline on the hero section (`start: "top top"`, `end: "bottom bottom"`, `scrub: 0.3`): a full-length linear proxy tween publishes smoothed progress to a `useRef` read by the R3F `useFrame`, and the same timeline animates the DOM window's transform/autoAlpha and the dialog's autoAlpha (autoAlpha keeps invisible elements out of the tab order). Wrapped in `gsap.matchMedia()`; under reduced motion there is no ScrollTrigger and no canvas: the hero renders the poster, the window at full size, and the dialog directly below the window in normal flow.
 
 Colors in the scene: board light `#D9C9A3`, dark `#6E4B2A`, rim `#3A2A1A`; white pieces `#F0E6D2`; black pieces `#2B2B2B`; background transparent over the teal desktop.
@@ -125,7 +125,7 @@ Heading (h2): "Then find out what went wrong." Three `RetroWindow`s laid out as 
 
 | Window title | Copy | Image |
 |---|---|---|
-| Import | Paste a Chess.com or Lichess link, or pull your last 50 games and pick the ones worth a look. | `public/screenshots/import.png` |
+| Import | Paste a Chess.com game link, or pull your last 50 games from Chess.com or Lichess and pick the ones worth a look. | `public/screenshots/import.png` |
 | Review | Stockfish 18 grades every move from best to blunder, scores accuracy for both sides, and estimates the rating you played at. | `public/screenshots/review.png` |
 | Practice | Every mistake becomes a puzzle. Find the move you should have played. | `public/screenshots/practice.png` |
 
@@ -170,7 +170,7 @@ The user reviews both pages before deploy; they are real copy, not placeholders.
 ## 9. Performance and loading
 
 - `/`, `/privacy`, `/terms` are statically generated (no dynamic APIs used in marketing routes). Verified after build by `next build` output showing `○ (Static)` for those routes.
-- Initial landing JS budget: 130 KB gzip (framework + GSAP + Lenis + retro components). The 3D chunk (three, fiber, postprocessing, scene) is a separate dynamic chunk, budget 260 KB gzip, requested after idle.
+- Initial landing JS budget: 130 KB gzip (framework + GSAP + retro components). The 3D chunk (three, fiber, postprocessing, scene) is a separate dynamic chunk, budget 260 KB gzip, requested after idle.
 - Images: `next/image` for screenshots (`sizes` set, lazy), poster as `<img loading="eager" fetchpriority="low">` behind text. Hero text is the LCP candidate.
 - Fonts: `next/font` self-hosts both faces with `display: swap`; the UI font is preloaded.
 - Compression: brotli confirmed at Vercel's edge on 2026-08-28 (`content-encoding: br`); no middleware.
