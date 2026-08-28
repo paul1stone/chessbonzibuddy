@@ -26,7 +26,7 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 - [x] Wave 6: Task 9 7a40eda — 9/9 e2e (dev+prod), 13/13 unit, lint gate ok, routes static, Lighthouse perf 0.94 / a11y 0.96; JS budget missed 194KB → fixed by lazy gsap e6c972b → 150.8KB modern (target 130 declared floor-limited); e2e re-verified 9/9 after fix
 
 ## Phase 4: Final review (Fable)
-- [ ] Full-diff review against plan, fixes, faithful report
+- [x] Full-diff review: SHIP, 0 blocking. Should-fixes applied: gsap import .catch + dialog unhide (f6b45e1); budget reporting corrected to ~194 KB gzip (not ~151 — my subtraction was wrong). Nits deferred to part 2: drop next-themes+theme-provider, reduced-motion status-bar copy, mid-session motion-toggle canvas idle.
 
 ## Part 2 (separate /build, user-confirmed 2026-08-28)
 - Refactor the app UI (/app screens: sidebar, import, review, practice, play) to the retro design system
@@ -40,5 +40,9 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 - Privacy/terms copy needs a read before deploy; ALSO confirm Neon project region is US (copy claims it), and note games API is unauthenticated (copy says games are not private)
 - BonziBuddy trademark status unverified; footer disclaims affiliation
 
-## Review
-(filled in at the end)
+## Review (2026-08-28, part 1 complete)
+- 30 commits, all 10 tasks implemented, step-reviewed, and fixed; Fable final review verdict SHIP.
+- Delivered: Win98 landing page at / (scroll-driven pixelated 3D Scholar's mate hero, Bonzi showcase with live quips, walkthrough cascade, footer), /privacy + /terms, retro design system (src/components/retro + retro.css + pixel fonts), app intact at /app with ?view=play-bonzi deep link.
+- Gates: typecheck clean; lint = 2 pre-existing board errors only; 13/13 unit; 9/9 e2e (dev + prod); / /privacy /terms /app all static; Lighthouse perf 0.94 / a11y 0.96; zero console errors.
+- Honest misses: initial JS ~194 KB gzip vs 130 KB budget (three + gsap are lazy; remainder framework floor). Analyzer screenshots pending (no DATABASE_URL): honest placeholder frames.
+- NOT pushed/deployed. User must: read /privacy + /terms, confirm Neon region is US, then decide on deploy.
