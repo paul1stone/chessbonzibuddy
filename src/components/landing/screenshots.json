@@ -1,1 +1,6 @@
-{ "hero": false, "import": false, "review": false, "practice": false }
+{
+  "hero": true,
+  "import": false,
+  "review": false,
+  "practice": false
+}
