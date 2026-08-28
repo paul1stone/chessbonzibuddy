@@ -86,6 +86,14 @@ export function useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef }:
       });
 
       cleanup = () => mm.revert();
+    }).catch(() => {
+      // Chunk load failed (deploy skew, flaky network): no choreography, but the
+      // dialog must not stay CSS-hidden forever — return it to normal flow.
+      const dialog = dialogRef.current;
+      if (dialog) {
+        dialog.style.visibility = "visible";
+        dialog.style.opacity = "1";
+      }
     });
 
     return () => {
