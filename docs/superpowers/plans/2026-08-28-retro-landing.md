@@ -20,7 +20,7 @@
 - Do not modify anything under `src/components/play`, `src/components/review`, `src/components/practice`, `src/components/import`, `src/components/chess`, `src/app/api`, `src/db`, `src/lib/engine.ts`, `src/lib/server`.
 - Exact dependency versions (verified 2026-08-28): `three@0.185.1 @react-three/fiber@9.7.0 postprocessing@6.39.4 @react-three/postprocessing@3.1.1 gsap@3.15.0 @gsap/react@2.1.2` (no Lenis: ScrollTrigger's `scrub: 0.3` provides the smoothing); dev `@playwright/test@1.62.1 vitest@^4 @types/three@^0.185 sharp@^0.35`. Pin these; do not add `@react-three/drei`.
 - Git: commit per task with a 3-5 word plain message (no prefixes, no colons, no Co-Authored-By). Never push.
-- Verification commands: `npm run typecheck`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm run build`. Lint may only report the two pre-existing errors in `src/components/chess/board.tsx` and `src/components/chess/board-panel.tsx`.
+- Verification commands: `npm run typecheck`, `npm run lint`, `npm run test`, `npm run test:e2e`, `npm run build`. Lint baseline: 8 pre-existing errors across 4 files (bonzi-avatar.tsx x5, speech-bubble.tsx, board.tsx, board-panel.tsx). Task 5 Step 1b fixes the two bonzi files; from then on only the two board files' errors are allowed.
 - Node 24.17, npm 11. ffmpeg is at `/opt/homebrew/bin/ffmpeg`. Task 0 installs the Playwright chromium build; do not assume one is cached (the cache holds revision 1194, but @playwright/test 1.62.1 needs 1234).
 
 ---
