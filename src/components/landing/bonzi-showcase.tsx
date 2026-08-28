@@ -86,7 +86,7 @@ export function BonziShowcase() {
           <p className="r-body mt-2">
             Every capture, check, and checkmate gets a comment. The lines are hand-written and he never repeats one within three turns.
           </p>
-          <ol className="r-paper r-bevel-in r-term mt-4 h-[180px] overflow-hidden p-3" aria-label="Game log">
+          <ol className="r-paper r-bevel-in r-term mt-4 flex h-[180px] flex-col justify-end overflow-hidden p-3" aria-label="Game log">
             {lines.map((line) => (
               <li key={line.key} className="flex gap-3">
                 <span className="text-[var(--r-disabled)]">[{LABELS[line.event] ?? line.event}]</span>

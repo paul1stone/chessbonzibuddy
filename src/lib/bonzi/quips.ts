@@ -32,7 +32,7 @@ export const QUIP_MAP: Record<BonziEvent, QuipEntry> = {
     ],
   },
   bonzi_check: {
-    gif: "laugh",
+    gif: "point",
     quips: [
       "Check! Your king is in danger!",
       "Knock knock! Check!",
