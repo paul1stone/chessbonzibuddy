@@ -531,7 +531,7 @@ const slotDelta = () => {
 };
 ```
 (`x: () => slotDelta().x, y: () => slotDelta().y`. The stage is sticky — `hero.css:17-23` — so viewport-space deltas measured at refresh hold during the scrub; `transform-origin: bottom left` already set at `hero.css:27`.)
-- [ ] **Step 3: Dock trigger.** Same matchMedia block: `ScrollTrigger.create({ trigger: section, start: "35% top", onEnter: () => useDockStore.getState().setDocked("hero", true), onLeaveBack: () => useDockStore.getState().setDocked("hero", false) })`; kill in cleanup.
+- [ ] **Step 3: Dock trigger.** Same matchMedia block: `ScrollTrigger.create({ trigger: section, start: "top top-=70%", onEnter: () => useDockStore.getState().setDocked("hero", true), onLeaveBack: () => useDockStore.getState().setDocked("hero", false) })`; kill in cleanup, `setDocked("hero", false)` on cleanup too. (Review math: the window's minimize tween dies at timeline 0.35 of a 200vh scrub = 70vh past section top; the original "35% top" fired at 105vh — ~35vh of empty taskbar after the window landed.)
 - [ ] **Step 4:** In `hero-section.tsx`: `useSectionDock("hero", sectionRef, { dockOnExit: false })`.
 - [ ] **Step 5: No-flash boot gate — LANDING PAGE ONLY.** The marketing layout also wraps `/privacy` and `/terms`; the boot must not run (or consume the session flag) there. In `(marketing)/layout.tsx` add before `{children}`:
 
@@ -717,6 +717,7 @@ Call it inside `demoWindow()` (or at the top of the three demo tests) before loc
 - [ ] **Step 3: Desktop test:** `opens the MS-DOS Prompt from the Start menu` — click Start, click "MS-DOS Prompt", expect a window titled `MS-DOS Prompt` and `data-testid="terminal-xterm"` attached within 10s. Do NOT wait for the full Linux boot.
 - [ ] **Step 4:** Full suite: `npm run typecheck && npm run lint && npm test`; then e2e per the port-3000 guard (Global Constraints). Existing tests that must stay green: overflow at 375/1024px, reduced-motion pair, checkmate dialog, start-menu Escape, all desktop specs.
 - [ ] **Step 4b:** `npm run build` MUST pass (coordinate: it disrupts the shared dev server, run it last): the terminal loads v86 via a runtime `import(/* turbopackIgnore */ "/v86/libv86.mjs")` that is only dev-verified — the production build must confirm it survives; also confirms the marketing/landing pages compile with all new client components.
+- [ ] **Step 4c:** Production-build eyeball (dev StrictMode is unreliable for these): first-session scroll-during-boot jumps cleanly even though `hero--motion`'s 200vh growth lands ~0.55s late; the hero's post-boot `ScrollTrigger.refresh(true)` doesn't visibly jump the cascade pin mid-scroll.
 - [ ] **Step 5:** Commit: `cover retro motion e2e`
 
 ---
