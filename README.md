@@ -28,7 +28,7 @@ There are two ways to bring games into the analyzer:
 Every imported game can be analyzed with Stockfish 18 running in your browser via WebAssembly (single-threaded WASM build). The analysis pipeline works as follows:
 
 - **Runs on your machine** -- The engine is downloaded once and cached by the browser, then every position is searched locally with a fixed node budget. Progress updates as each move is evaluated, and the finished analysis is saved to your game history. Analysis is not resumable: closing the tab mid-run discards the in-flight game.
-- **Move classifications** -- Each move is categorized into one of six tiers: **best**, **great**, **good**, **inaccuracy**, **mistake**, or **blunder**, based on the centipawn loss relative to the engine's top line.
+- **Move classifications** -- Each move is categorized as **best**, **great**, **good**, **inaccuracy**, **mistake**, or **blunder** based on how much win probability it gave up (Lichess-style, so a small slip in a dead-won position isn't a "blunder"), with special labels for **book** moves from opening theory and **forced** moves with only one legal reply.
 - **Win percentage** -- Centipawn evaluations are converted to win probability using a logistic regression curve, giving a more intuitive sense of who is winning at any point in the game.
 - **Per-side accuracy** -- An overall accuracy score is calculated for both White and Black, weighted by position volatility (sharp tactical positions are weighted differently from quiet ones).
 - **"Played like ~Elo" estimation** -- Based on the accuracy and quality of moves played, the analyzer estimates a performance rating for each side, giving a rough sense of the Elo level the player performed at in that particular game.
