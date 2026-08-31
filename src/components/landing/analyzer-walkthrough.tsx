@@ -1,8 +1,12 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useRef, type ReactNode } from "react";
+import { useCascadeScroll } from "./cascade/use-cascade-scroll";
 import { ImportDemo } from "./demo/import-demo";
 import { PracticeDemo } from "./demo/practice-demo";
 import { ReviewDemo } from "./demo/review-demo";
 import { WindowStack, type StackItem } from "./window-stack";
+import "./cascade/cascade.css";
 
 const ITEMS: {
   key: string;
@@ -40,6 +44,9 @@ const ITEMS: {
 ];
 
 export function AnalyzerWalkthrough() {
+  const sectionRef = useRef<HTMLElement>(null);
+  useCascadeScroll(sectionRef);
+
   const items: StackItem[] = ITEMS.map((item) => ({
     key: item.key,
     title: item.title,
@@ -55,11 +62,15 @@ export function AnalyzerWalkthrough() {
   }));
 
   return (
-    <section aria-labelledby="walkthrough-heading" className="mx-auto w-[min(92vw,960px)] lg:w-[min(92vw,1200px)]">
-      <h2 id="walkthrough-heading" className="mb-6 text-[33px] font-bold leading-tight text-[var(--r-highlight)]">
-        Then find out what went wrong.
-      </h2>
-      <WindowStack items={items} />
+    <section ref={sectionRef} aria-labelledby="walkthrough-heading">
+      {/* The centred column is an inner wrapper: pinning wraps the section in a pin-spacer
+          that zeroes auto margins, which would knock this off-centre on lg+. */}
+      <div className="mx-auto w-[min(92vw,960px)] lg:w-[min(92vw,1200px)]">
+        <h2 id="walkthrough-heading" className="mb-6 text-[33px] font-bold leading-tight text-[var(--r-highlight)]">
+          Then find out what went wrong.
+        </h2>
+        <WindowStack items={items} pinnedContainer={sectionRef} />
+      </div>
     </section>
   );
 }

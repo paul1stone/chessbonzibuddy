@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode, type RefObject } from "react";
 import { RetroWindow } from "@/components/retro";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/components/desktop/use-is-mobile";
 import { useDrag } from "@/hooks/use-drag";
 import { usePrefersReducedMotion } from "@/lib/motion";
+import type { DockId } from "@/stores/dock-store";
+import { useSectionDock } from "./use-section-dock";
 
 export interface StackItem {
   key: string;
@@ -27,7 +29,13 @@ const STACK_POS =
 // Win98-style cascade: each window steps 48px right on md+; plain vertical stack below md.
 // Cascade and drag offset share one inline `translate`, so a drag can never clobber the
 // cascade (and the window cannot jump left on the first pointer move).
-export function WindowStack({ items }: { items: StackItem[] }) {
+interface WindowStackProps {
+  items: StackItem[];
+  /** The pinning element, when the stack lives inside a pinned section (see use-cascade-scroll). */
+  pinnedContainer?: RefObject<HTMLElement | null>;
+}
+
+export function WindowStack({ items, pinnedContainer }: WindowStackProps) {
   const isMobile = useIsMobile();
   const reduced = usePrefersReducedMotion();
   const draggable = !isMobile && !reduced;
@@ -42,7 +50,15 @@ export function WindowStack({ items }: { items: StackItem[] }) {
   return (
     <div className="grid gap-6 md:pr-[96px] lg:grid-cols-2 lg:gap-x-6 lg:gap-y-10 lg:pr-[32px]">
       {items.map((item, i) => (
-        <StackWindow key={item.key} item={item} index={i} draggable={draggable} z={zMap[item.key]} onRaise={raise} />
+        <StackWindow
+          key={item.key}
+          item={item}
+          index={i}
+          draggable={draggable}
+          z={zMap[item.key]}
+          onRaise={raise}
+          pinnedContainer={pinnedContainer}
+        />
       ))}
     </div>
   );
@@ -54,10 +70,15 @@ interface StackWindowProps {
   draggable: boolean;
   z?: number;
   onRaise: (key: string) => void;
+  pinnedContainer?: RefObject<HTMLElement | null>;
 }
 
-function StackWindow({ item, index, draggable, z, onRaise }: StackWindowProps) {
+function StackWindow({ item, index, draggable, z, onRaise, pinnedContainer }: StackWindowProps) {
   const [pos, setPos] = useState({ dx: 0, dy: 0 });
+  const winRef = useRef<HTMLElement>(null);
+
+  // Every stack key is a DockId today (import/review/practice).
+  useSectionDock(item.key as DockId, winRef, { pinnedContainer: () => pinnedContainer?.current ?? null });
 
   const onMove = useCallback((dx: number, dy: number) => {
     setPos((p) => ({ dx: p.dx + dx, dy: p.dy + dy }));
@@ -74,6 +95,8 @@ function StackWindow({ item, index, draggable, z, onRaise }: StackWindowProps) {
 
   return (
     <RetroWindow
+      ref={winRef}
+      containerProps={{ "data-stack-key": item.key }}
       title={item.title}
       className={cn("relative w-full md:w-[560px] lg:w-full lg:max-w-[560px]", STACK_POS, item.place)}
       style={{

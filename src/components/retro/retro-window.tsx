@@ -1,6 +1,9 @@
 import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "@/lib/utils";
 
+/** React's HTMLAttributes has no data-* keys, so allow them explicitly. */
+type ContainerProps = HTMLAttributes<HTMLElement> & { [key: `data-${string}`]: string | undefined };
+
 interface RetroWindowProps {
   title: string;
   children: ReactNode;
@@ -11,6 +14,7 @@ interface RetroWindowProps {
   id?: string;
   "aria-labelledby"?: string;
   titleBarProps?: HTMLAttributes<HTMLDivElement>;
+  containerProps?: ContainerProps;
 }
 
 export function RetroWindow({
@@ -23,9 +27,11 @@ export function RetroWindow({
   id,
   "aria-labelledby": labelledBy,
   titleBarProps,
+  containerProps,
 }: RetroWindowProps) {
   return (
     <section
+      {...containerProps}
       ref={ref}
       id={id}
       style={style}
