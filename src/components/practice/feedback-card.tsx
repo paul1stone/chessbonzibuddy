@@ -1,15 +1,7 @@
 "use client";
 
 import { Check, X, Eye, ArrowRight, RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { RetroButton, RetroPanel } from "@/components/retro";
 
 interface FeedbackCardProps {
   isCorrect: boolean | null;
@@ -34,144 +26,105 @@ export function FeedbackCard({
   hasNextMistake,
   sideToMove,
 }: FeedbackCardProps) {
+  const side = sideToMove === "w" ? "White" : "Black";
+
   // Before attempt
   if (isCorrect === null && playedMoveSan === null) {
     return (
-      <Card className="border-purple-800 bg-purple-900">
-        <CardHeader>
-          <CardTitle className="text-purple-100">Find the best move</CardTitle>
-          <CardDescription className="text-purple-300">
-            {sideToMove === "w" ? "White" : "Black"} to move. Drag a piece to
-            make your move.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 rounded-lg bg-purple-800/50 px-4 py-3">
-            <div
-              className={`h-4 w-4 rounded-full ${
-                sideToMove === "w" ? "bg-white" : "bg-purple-700 border border-purple-500"
-              }`}
-            />
-            <span className="text-sm text-purple-200">
-              {sideToMove === "w" ? "White" : "Black"} to play
-            </span>
-          </div>
-        </CardContent>
-        <CardFooter className="gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onShowAnswer}
-            className="border-purple-700 text-purple-300 hover:text-purple-100"
-          >
-            <Eye className="h-4 w-4" />
-            Show Answer
-          </Button>
+      <RetroPanel caption="Your move">
+        <p className="text-[var(--r-shadow)]">
+          Find the best move. {side} to move, drag a piece to play it.
+        </p>
+        <div className="r-bevel-in mt-2 flex items-center gap-2 bg-[var(--r-face-light)] px-3 py-2">
+          <span
+            className="h-3 w-3 border border-[var(--r-dark)]"
+            style={{ background: sideToMove === "w" ? "#f0e6d2" : "#2b2b2b" }}
+            aria-hidden="true"
+          />
+          <span>{side} to play</span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <RetroButton onClick={onShowAnswer} className="gap-1">
+            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+            Show answer
+          </RetroButton>
           {hasNextMistake && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onNextMistake}
-              className="text-purple-300 hover:text-purple-100"
-            >
+            <RetroButton onClick={onNextMistake} className="gap-1">
               Skip
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </RetroButton>
           )}
-        </CardFooter>
-      </Card>
+        </div>
+      </RetroPanel>
     );
   }
 
   // Correct
   if (isCorrect === true) {
     return (
-      <Card className="border-green-800/50 bg-purple-900">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-400">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/20">
-              <Check className="h-4 w-4" />
-            </div>
-            Correct!
-          </CardTitle>
-          <CardDescription className="text-purple-300">
-            You found the best move: <span className="font-semibold text-green-400">{bestMoveSan}</span>
-          </CardDescription>
-        </CardHeader>
-        <CardFooter className="gap-2">
+      <RetroPanel caption="Result">
+        <p className="flex items-center gap-2 text-[13px] font-bold text-[#008000]">
+          <Check className="h-4 w-4" aria-hidden="true" />
+          Correct
+        </p>
+        <p className="mt-2 text-[var(--r-shadow)]">
+          You found the best move:{" "}
+          <span className="font-bold text-[#008000]">{bestMoveSan}</span>
+        </p>
+        <div className="mt-3">
           {hasNextMistake ? (
-            <Button
-              size="sm"
-              onClick={onNextMistake}
-              className="bg-green-600 text-white hover:bg-green-700"
-            >
-              Next Mistake
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            <RetroButton variant="default" onClick={onNextMistake} className="gap-1">
+              Next mistake
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </RetroButton>
           ) : (
-            <span className="text-sm text-purple-400">
-              All mistakes reviewed!
-            </span>
+            <span className="text-[var(--r-shadow)]">All mistakes reviewed.</span>
           )}
-        </CardFooter>
-      </Card>
+        </div>
+      </RetroPanel>
     );
   }
 
   // Incorrect
   return (
-    <Card className="border-orange-800/50 bg-purple-900">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-orange-400">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500/20">
-            <X className="h-4 w-4" />
-          </div>
-          Not quite
-        </CardTitle>
-        <CardDescription className="text-purple-300">
-          {playedMoveSan && (
-            <span>
-              You played <span className="font-semibold text-purple-200">{playedMoveSan}</span>.{" "}
-            </span>
-          )}
-          The best move was:{" "}
-          <span className="font-semibold text-green-400">{bestMoveSan}</span>
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {evalDiff > 0 && (
-          <div className="rounded-lg bg-purple-800/50 px-4 py-3">
-            <p className="text-sm text-purple-300">
-              The best move is{" "}
-              <span className="font-semibold text-orange-400">
-                +{evalDiff.toFixed(1)} pawns
-              </span>{" "}
-              better
-            </p>
-          </div>
+    <RetroPanel caption="Result">
+      <p className="flex items-center gap-2 text-[13px] font-bold text-[#800000]">
+        <X className="h-4 w-4" aria-hidden="true" />
+        Not quite
+      </p>
+      <p className="mt-2 text-[var(--r-shadow)]">
+        {playedMoveSan && (
+          <span>
+            You played{" "}
+            <span className="font-bold text-[var(--r-dark)]">{playedMoveSan}</span>.{" "}
+          </span>
         )}
-      </CardContent>
-      <CardFooter className="gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onTryAgain}
-          className="border-purple-700 text-purple-300 hover:text-purple-100"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Try Again
-        </Button>
+        The best move was:{" "}
+        <span className="font-bold text-[#008000]">{bestMoveSan}</span>
+      </p>
+      {evalDiff > 0 && (
+        <div className="r-bevel-in mt-2 bg-[var(--r-face-light)] px-3 py-2">
+          <p className="text-[var(--r-shadow)]">
+            The best move is{" "}
+            <span className="font-bold text-[#c08000]">
+              +{evalDiff.toFixed(1)} pawns
+            </span>{" "}
+            better
+          </p>
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <RetroButton onClick={onTryAgain} className="gap-1">
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+          Try again
+        </RetroButton>
         {hasNextMistake && (
-          <Button
-            size="sm"
-            onClick={onNextMistake}
-            className="bg-purple-700 text-purple-100 hover:bg-purple-600"
-          >
-            Next Mistake
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+          <RetroButton variant="default" onClick={onNextMistake} className="gap-1">
+            Next mistake
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </RetroButton>
         )}
-      </CardFooter>
-    </Card>
+      </div>
+    </RetroPanel>
   );
 }

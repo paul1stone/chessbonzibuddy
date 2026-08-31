@@ -8,7 +8,7 @@ import {
   Play,
   Pause,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { RetroButton } from "@/components/retro";
 
 interface MoveControlsProps {
   currentMove: number;
@@ -20,6 +20,10 @@ interface MoveControlsProps {
   isPlaying?: boolean;
   onTogglePlay?: () => void;
 }
+
+// Win98 toolbar buttons: square-ish, so the .r-btn 75px floor has to go.
+const ICON_BTN =
+  "min-w-[32px]! px-1! disabled:cursor-default disabled:text-[var(--r-disabled)]!";
 
 export function MoveControls({
   currentMove,
@@ -35,75 +39,61 @@ export function MoveControls({
   const atEnd = currentMove === totalMoves;
 
   return (
-    <div className="flex flex-col items-center gap-2 py-3">
-      <div className="flex items-center gap-1 rounded-lg bg-purple-900/50 p-1">
-        <Button
-          variant="ghost"
-          size="icon"
+    <div className="flex flex-col items-center gap-2 py-2">
+      <div className="r-bevel-in flex items-center gap-1 bg-[var(--r-face-light)] p-1">
+        <RetroButton
           onClick={onFirst}
           disabled={atStart || isPlaying}
           aria-label="First move"
-          className="text-purple-300 hover:text-purple-100"
+          className={ICON_BTN}
         >
-          <ChevronsLeft className="h-4 w-4" />
-        </Button>
+          <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
+        </RetroButton>
 
-        <Button
-          variant="ghost"
-          size="icon"
+        <RetroButton
           onClick={onPrevious}
           disabled={atStart || isPlaying}
           aria-label="Previous move"
-          className="text-purple-300 hover:text-purple-100"
+          className={ICON_BTN}
         >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </RetroButton>
 
         {onTogglePlay && (
-          <Button
-            variant="ghost"
-            size="icon"
+          <RetroButton
             onClick={onTogglePlay}
             disabled={atEnd && !isPlaying}
             aria-label={isPlaying ? "Pause" : "Play"}
-            className={
-              isPlaying
-                ? "text-blue-400 hover:text-blue-300"
-                : "text-purple-300 hover:text-purple-100"
-            }
+            className={ICON_BTN}
           >
             {isPlaying ? (
-              <Pause className="h-4 w-4" />
+              <Pause className="h-4 w-4" aria-hidden="true" />
             ) : (
-              <Play className="h-4 w-4" />
+              <Play className="h-4 w-4" aria-hidden="true" />
             )}
-          </Button>
+          </RetroButton>
         )}
 
-        <Button
-          variant="ghost"
-          size="icon"
+        <RetroButton
           onClick={onNext}
           disabled={atEnd || isPlaying}
           aria-label="Next move"
-          className="text-purple-300 hover:text-purple-100"
+          className={ICON_BTN}
         >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </RetroButton>
 
-        <Button
-          variant="ghost"
-          size="icon"
+        <RetroButton
           onClick={onLast}
           disabled={atEnd || isPlaying}
           aria-label="Last move"
-          className="text-purple-300 hover:text-purple-100"
+          className={ICON_BTN}
         >
-          <ChevronsRight className="h-4 w-4" />
-        </Button>
+          <ChevronsRight className="h-4 w-4" aria-hidden="true" />
+        </RetroButton>
       </div>
 
-      <span className="text-xs text-purple-400">
+      <span className="r-bevel-in bg-[var(--r-face-light)] px-3 text-[11px]">
         Move {currentMove} of {totalMoves}
       </span>
     </div>

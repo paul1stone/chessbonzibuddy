@@ -4,14 +4,16 @@ import { useState, useCallback, useMemo } from "react";
 import { Chess } from "chess.js";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Board } from "@/components/chess/board";
-import { Button } from "@/components/ui/button";
+import { RetroButton } from "@/components/retro";
+import { useBoardSize } from "@/hooks/use-board-size";
+import { CLASSIFICATION_COLORS } from "@/lib/classification-colors";
 import { FeedbackCard } from "./feedback-card";
 import type { MoveAnalysis } from "@/lib/engine";
 
 interface PracticeViewProps {
   pgn: string;
   moves: MoveAnalysis[]; // the analyzed moves
-  onExit: () => void; // go back to review view
+  onExit: () => void; // leave practice (the window closes itself)
 }
 
 /**
@@ -71,6 +73,9 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [displayFen, setDisplayFen] = useState<string | null>(null);
+
+  // Board fills the window column; 40px reserves the frame and breathing room.
+  const { ref: boardRef, width: boardWidth } = useBoardSize({ h: 40 });
 
   // ---------------------------------------------------------------------------
   // Current mistake data
@@ -179,7 +184,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
 
   if (showAnswer && currentMistake) {
     const { from, to } = parseUciMove(currentMistake.bestMove);
-    arrows.push([from, to, "rgba(0, 180, 80, 0.8)"]);
+    arrows.push([from, to, "rgba(0, 128, 0, 0.8)"]);
   }
 
   // ---------------------------------------------------------------------------
@@ -194,17 +199,9 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
   // ---------------------------------------------------------------------------
   if (mistakes.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4">
-        <p className="text-lg text-purple-300">
-          No mistakes or blunders found in this game.
-        </p>
-        <Button
-          variant="outline"
-          onClick={onExit}
-          className="border-purple-700 text-purple-300 hover:text-purple-100"
-        >
-          Back to Review
-        </Button>
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-4 text-center">
+        <p>No mistakes or blunders found in this game.</p>
+        <RetroButton onClick={onExit}>Exit practice</RetroButton>
       </div>
     );
   }
@@ -213,43 +210,42 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
       {/* Header */}
-      <div className="flex items-center justify-between px-2">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-purple-100">
-            Practice Mode
-          </h2>
-          <span className="rounded-md bg-purple-800 px-2.5 py-1 text-xs font-medium text-purple-300">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="text-[13px] font-bold">Practice mode</h2>
+          <span className="r-badge r-badge--flat">
             Mistake {currentMistakeIndex + 1} of {mistakes.length}
           </span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onExit}
-          className="text-purple-300 hover:text-purple-100"
-        >
-          <X className="h-4 w-4" />
+        <RetroButton onClick={onExit} className="gap-1">
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
           Exit
-        </Button>
+        </RetroButton>
       </div>
 
       {/* Main content: board + feedback */}
-      <div className="flex flex-1 items-start gap-6">
-        {/* Board — constrained to a max size */}
-        <div className="w-[min(480px,50vh)] shrink-0">
-          <Board
-            position={displayFen ?? positionFen}
-            interactive={isCorrect === null && !showAnswer}
-            onPieceDrop={handlePieceDrop}
-            boardOrientation={boardOrientation}
-            customArrows={arrows}
-          />
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-4">
+        {/* Board — sized by the window, never the viewport */}
+        <div
+          ref={boardRef}
+          className="flex min-h-[200px] min-w-0 flex-1 items-center justify-center lg:items-start"
+        >
+          {boardWidth > 0 && (
+            <Board
+              position={displayFen ?? positionFen}
+              interactive={isCorrect === null && !showAnswer}
+              onPieceDrop={handlePieceDrop}
+              boardOrientation={boardOrientation}
+              customArrows={arrows}
+              boardWidth={boardWidth}
+            />
+          )}
         </div>
 
         {/* Feedback panel */}
-        <div className="flex w-72 flex-col gap-4">
+        <div className="r-scroll flex w-full shrink-0 flex-col gap-3 lg:w-72">
           <FeedbackCard
             isCorrect={isCorrect}
             bestMoveSan={currentMistake?.bestMoveSan ?? ""}
@@ -263,18 +259,21 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
           />
 
           {/* Mistake context info */}
-          <div className="rounded-lg border border-purple-800 bg-purple-900/50 px-4 py-3">
-            <p className="text-xs text-purple-400">
+          <div className="r-bevel-in bg-[var(--r-face-light)] px-3 py-2">
+            <p className="text-[var(--r-shadow)]">
               Move {currentMistake?.moveNumber}.
               {currentMistake?.color === "b" ? ".." : ""}{" "}
-              <span className="text-purple-200">{currentMistake?.san}</span>{" "}
+              <span className="font-bold text-[var(--r-dark)]">
+                {currentMistake?.san}
+              </span>{" "}
               was played (
               <span
-                className={
-                  currentMistake?.classification === "blunder"
-                    ? "text-red-400"
-                    : "text-orange-400"
-                }
+                className="font-bold"
+                style={{
+                  color: currentMistake
+                    ? CLASSIFICATION_COLORS[currentMistake.classification].hex
+                    : undefined,
+                }}
               >
                 {currentMistake?.classification}
               </span>
@@ -285,27 +284,23 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-center gap-2 pb-2">
-        <Button
-          variant="ghost"
-          size="sm"
+      <div className="flex items-center justify-center gap-2">
+        <RetroButton
           onClick={handlePrevMistake}
           disabled={currentMistakeIndex === 0}
-          className="text-purple-300 hover:text-purple-100"
+          className="gap-1 disabled:cursor-default disabled:text-[var(--r-disabled)]!"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Previous
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
+        </RetroButton>
+        <RetroButton
           onClick={handleNextMistake}
           disabled={currentMistakeIndex >= mistakes.length - 1}
-          className="text-purple-300 hover:text-purple-100"
+          className="gap-1 disabled:cursor-default disabled:text-[var(--r-disabled)]!"
         >
           Next
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </RetroButton>
       </div>
     </div>
   );
