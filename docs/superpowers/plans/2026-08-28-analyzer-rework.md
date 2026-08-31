@@ -739,6 +739,8 @@ Real-engine browser smoke (analyze an imported game end-to-end, watch eval bar/l
 - **Brilliant detection.** Plan review showed the conservative 5-condition sacrifice gate still misfires on routine tactics (a piece landing on an attacked square that is tactically immune passes every condition), and the spec sanctions deferral. The pipeline ships `detectBrilliant → false` with the `BrilliantInput` interface fixed in Task F, so a follow-up branch — validated against real games, after the part-2 UI merge — is a drop-in. `"brilliant"` stays in the union unproduced (today's status quo; all UI Records render it).
 - Partial persistence / resume of in-flight analysis (accepted tradeoff, Task G point 7).
 - Nulling stale v1 accuracy columns (sidebar shows old numbers until a game is re-analyzed).
+- Practice-mode eval-diff display: `practice-view.tsx:188-190` + `feedback-card.tsx:147` render mate folds as raw pawns ("+1005.0 pawns") for mistakes that allowed mate. Pre-existing behavior, both files owned by the part-2 UI redesign — fix there (use the stored `winPercentLoss` instead of the cp delta).
+- Unsigned mate text ("M3") in the engine-panel top-lines list has no side cue — plan-sanctioned formatEval tradeoff; revisit in part 2 if confusing.
 
 ## Parallelization map
 
