@@ -31,9 +31,16 @@ export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, o
     const { registerTarget, setDocked, setActive } = useDockStore.getState();
     registerTarget(id, ref.current);
 
+    // Unmounting (soft nav away) must drop this section's dock state, not just its target.
+    const unregister = () => {
+      registerTarget(id, null);
+      setDocked(id, false);
+      if (useDockStore.getState().active === id) setActive(null);
+    };
+
     if (prefersReducedMotion()) {
       setDocked(id, true);
-      return () => registerTarget(id, null);
+      return unregister;
     }
 
     let cancelled = false;
@@ -94,7 +101,7 @@ export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, o
     return () => {
       cancelled = true;
       cleanup?.();
-      registerTarget(id, null);
+      unregister();
     };
   }, [id, ref, dockOnExit, managedQuery]);
 }
