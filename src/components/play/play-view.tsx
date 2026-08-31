@@ -137,7 +137,7 @@ export function PlayView({ onExit }: PlayViewProps) {
 
       if (reason) {
         const result = winner === "draw" ? "Draw" : winner === "w" ? "White wins" : "Black wins";
-        addLogEntry({ type: "game", message: `Game over — ${result} by ${reason}` });
+        addLogEntry({ type: "game", message: `Game over - ${result} by ${reason}` });
         const pgn = chess.pgn();
         addLogEntry({ type: "game", message: `PGN: ${pgn}` });
         console.log("[Game PGN]", pgn);
@@ -253,7 +253,7 @@ export function PlayView({ onExit }: PlayViewProps) {
     startGame();
 
     const colorLabel = playerColor === "w" ? "white" : "black";
-    addLogEntry({ type: "game", message: `Game started — Player: ${colorLabel}, Time: ${timeControl.label}` });
+    addLogEntry({ type: "game", message: `Game started - Player: ${colorLabel}, Time: ${timeControl.label}` });
     fireBonziReaction("game_start");
 
     // If player is black, engine moves first
@@ -323,7 +323,7 @@ export function PlayView({ onExit }: PlayViewProps) {
     const winner: PlayerColor = playerColor === "w" ? "b" : "w";
     setGameOver("resign", winner);
     const result = winner === "w" ? "White wins" : "Black wins";
-    addLogEntry({ type: "game", message: `Game over — ${result} by resignation` });
+    addLogEntry({ type: "game", message: `Game over - ${result} by resignation` });
     const pgn = gameRef.current.pgn();
     addLogEntry({ type: "game", message: `PGN: ${pgn}` });
     console.log("[Game PGN]", pgn);
@@ -341,7 +341,7 @@ export function PlayView({ onExit }: PlayViewProps) {
     if (phase === "game_over" && gameOverReason === "timeout") {
       const state = useBonziPlayStore.getState();
       const result = state.gameOverWinner === "w" ? "White wins" : "Black wins";
-      addLogEntry({ type: "game", message: `Game over — ${result} on time` });
+      addLogEntry({ type: "game", message: `Game over - ${result} on time` });
       const pgn = gameRef.current.pgn();
       addLogEntry({ type: "game", message: `PGN: ${pgn}` });
       console.log("[Game PGN]", pgn);

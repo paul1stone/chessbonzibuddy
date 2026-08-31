@@ -49,7 +49,7 @@ export default function Home() {
         // Dynamic import keeps Stockfish and the opening book out of the initial bundle.
         const { analyzeGame } = await import("@/lib/analyze");
         toast.info(
-          "Warming up Stockfish — first analysis downloads the engine (~113 MB)"
+          "Warming up Stockfish - first analysis downloads the engine (~113 MB)"
         );
 
         const result = await analyzeGame(game.pgn, {
@@ -170,7 +170,7 @@ export default function Home() {
         addGame(importedGame);
         setActiveGame(importedGame);
         useWindowStore.getState().open("review");
-        toast.success("Game imported — queued for analysis");
+        toast.success("Game imported - queued for analysis");
         enqueueAnalysis([importedGame]);
       } finally {
         setIsLoading(false);
@@ -212,7 +212,7 @@ export default function Home() {
         // Queue all imported games for analysis
         enqueueAnalysis(imported);
         toast.success(
-          `Imported ${imported.length} game${imported.length > 1 ? "s" : ""} — queued for analysis`
+          `Imported ${imported.length} game${imported.length > 1 ? "s" : ""} - queued for analysis`
         );
       }
     },
