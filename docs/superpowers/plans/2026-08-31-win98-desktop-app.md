@@ -10,16 +10,18 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-28-win98-desktop-app-design.md` (build on part 1: `2026-08-28-retro-landing-design.md`)
 
+**Rebase note (2026-08-31):** the upstream analyzer rework merged after this plan was drafted: analysis now runs IN THE BROWSER (`analyzeGame` in `src/lib/analyze.ts`, dynamic-imported; the SSE route and `src/lib/server/engine.ts` are deleted), `MoveClassification` gained `"forced"` (9 values), `GameAnalysis` gained `version`/`engine` fields with an `isCurrentAnalysis` guard, and several review components were slimmed. Tasks below were updated to match; purple-class counts in restyle tasks are now approximate — re-grep each file before sweeping. The upstream unit suite brings `npm run test` to 47 passing before this plan adds any.
+
 ## Global Constraints
 
 - No new npm dependencies. No API/DB changes. No behavior changes to import/analysis/practice/play logic — restyles and window reparenting only, except the two stated corrections: eval-bar uses `cpToWinPercent`, and board-panel's keyboard handler gains focus scoping.
 - Product name in UI: `Chess Bonzi Buddy`. localStorage key `chess-analyzer-profile` MUST NOT change.
 - Retro rules: radius 0, colors via `--r-*` tokens or the remapped shadcn tokens, no new `purple-*`/`shadow-*`/`rounded-*` classes in app code, no lucide icons in NEW desktop chrome (existing interior components may keep their lucide icons), sentence case copy, no em-dashes.
 - Every task commits with pathspec only after checking `git status` (parallel agents share the index). Plain 3-5 word commit messages, no prefixes, no Co-Authored-By. Never push.
-- Verification commands: `npm run typecheck`, `npx eslint <scope> --quiet`, `npm run test`, `npm run test:e2e`, `npm run build`. Lint baseline: only `src/components/chess/board.tsx` may error after this plan (board-panel's pre-existing error is fixed in Task 3).
+- Verification commands: `npm run typecheck`, `npx eslint <scope> --quiet`, `npm run test`, `npm run test:e2e`, `npm run build`. Lint baseline: run `npx eslint . --quiet` at Task 0 and record the post-merge baseline; after Task 3, board-panel must be clean and only pre-existing errors outside this plan's files may remain.
 - Dev servers: never kill a server you did not start; pick a free port; the repo `.next` dev lock may be held — use an APFS-cloned devroot in the scratchpad if so (pattern proven in part 1).
 - Part-1 e2e suite (9 tests) must still pass at every task boundary that touches landing files.
-- **Purple→retro mapping (applies to every restyle task):** `text-purple-100/50/200` → default `--r-dark` (drop the class), `text-purple-300/400/500` → `text-[var(--r-shadow)]`, `bg-purple-900/950` panels and `border-purple-800` → `RetroPanel` or `.r-bevel-in bg-[var(--r-face-light)]`, selection/active accents (`blue-500`, `bg-purple-800` active rows) → `bg-[var(--r-title-a)] text-[var(--r-title-text)]`, success greens → `#008000`, warnings → `#c08000`, errors/destructive → `#800000`, every `rounded-*` dropped, every `shadow-*` dropped (bevels only). Classification-related colors always come from `CLASSIFICATION_COLORS` (Task 3).
+- **Purple→retro mapping (applies to every restyle task):** `text-purple-100/50/200` → default `--r-dark` (drop the class), `text-purple-300/400/500` → `text-[var(--r-shadow)]`, `bg-purple-900/950` panels and `border-purple-800` → `RetroPanel` or `.r-bevel-in bg-[var(--r-face-light)]`, selection/active accents (`blue-500`, `bg-purple-800` active rows) → `bg-[var(--r-title-a)] text-[var(--r-title-text)]`, success greens → `#008000`, warnings → `#c08000`, errors/destructive → `#800000`, every `rounded-*` dropped, every `shadow-*` dropped (bevels only). Classification-related colors always come from `CLASSIFICATION_COLORS` (Task 3; 9 entries including `forced`).
 - UI copy is sentence case: rename "Start Game" → "Start game" and "New Analysis" → "Import games" where ported. Playwright role-name matching is case-insensitive, so part-1's `getByRole("button", { name: "Start Game" })` still passes unmodified.
 
 ---
@@ -219,7 +221,7 @@ In the menu `<ul>`, render `item.onSelect` entries as `<button type="button" onC
 
 - [ ] **Step 5: Cleanups.** `rm src/components/theme-provider.tsx src/components/ui/tooltip.tsx`; `npm uninstall next-themes`; in `package.json` set `"name": "chess-bonzi-buddy"`. In `src/stores/profile-store.ts` delete the `isFetching` field (L19-20), the `setIsFetching` action (L28, L46), and its initializer (L39) — `partialize` already excludes it. Grep for consumers first: `grep -rn "isFetching\|setIsFetching\|theme-provider\|next-themes" src/` must show zero remaining references after the edits.
 
-- [ ] **Step 6: Verify and commit.** `npm run typecheck && npx eslint src/components/retro src/styles src/stores/profile-store.ts --quiet && npm run test` (13 pass) and part-1 e2e still green: `npm run test:e2e` if :3000 is free, else the cloned-devroot pattern. The marketing pages must be visually unchanged (Taskbar defaults preserved; the new empty flex strip may shift the clock a few px — acceptable, don't gate on pixel identity).
+- [ ] **Step 6: Verify and commit.** `npm run typecheck && npx eslint src/components/retro src/styles src/stores/profile-store.ts --quiet && npm run test` (all pass; 47 at time of writing) and part-1 e2e still green: `npm run test:e2e` if :3000 is free, else the cloned-devroot pattern. The marketing pages must be visually unchanged (Taskbar defaults preserved; the new empty flex strip may shift the clock a few px — acceptable, don't gate on pixel identity).
 
 ```bash
 git add src/styles src/components/retro src/app/globals.css package.json package-lock.json src/stores/profile-store.ts
@@ -441,7 +443,7 @@ export function useWindowFocused(id: WindowId): boolean {
 }
 ```
 
-- [ ] **Step 4: Run tests — 6 pass.** (Total suite now 19.)
+- [ ] **Step 4: Run tests — the 6 new store tests pass.**
 
 - [ ] **Step 5: Create `src/hooks/use-drag.ts`:**
 
@@ -842,7 +844,7 @@ git commit -m "add desktop window chrome"
 - Consumes: `MoveClassification` from `@/lib/engine`; `useWindowFocused` (Task 1).
 - Produces: `CLASSIFICATION_COLORS: Record<MoveClassification, { hex: string; label: string }>`, `classificationArrowColor(c): string` (rgba of the hex at 0.8); `useBoardSize(reserved?: { w?: number; h?: number }): { ref, width }` — attach `ref` to the board's flex container, `width = max(200, floor(min(cw - (reserved.w ?? 0), ch - (reserved.h ?? 0))))`, observed via ResizeObserver; `BoardPanel` gains prop `windowId?: WindowId` (keyboard active only while that window is focused; when omitted, behavior is unchanged). Note `BoardPanel`'s only importer is `review-view.tsx`, so the window-store import here cannot reach the landing bundle (demos use `Board` directly).
 
-- [ ] **Step 1: Failing color-map test** (`src/lib/classification-colors.test.ts`): assert all 8 `MoveClassification` values are keys, every hex matches `/^#[0-9a-f]{6}$/`, and `classificationArrowColor("blunder")` starts with `"rgba(128, 0, 0"`.
+- [ ] **Step 1: Failing color-map test** (`src/lib/classification-colors.test.ts`): assert all 9 `MoveClassification` values are keys (the union includes `forced` since the analyzer rework), every hex matches `/^#[0-9a-f]{6}$/`, and `classificationArrowColor("blunder")` starts with `"rgba(128, 0, 0"`.
 
 - [ ] **Step 2: Create `src/lib/classification-colors.ts`:**
 
@@ -855,6 +857,7 @@ export const CLASSIFICATION_COLORS: Record<MoveClassification, { hex: string; la
   best:       { hex: "#000080", label: "Best" },
   good:       { hex: "#008000", label: "Good" },
   book:       { hex: "#808000", label: "Book" },
+  forced:     { hex: "#808080", label: "Forced" },
   inaccuracy: { hex: "#c08000", label: "Inaccuracy" },
   mistake:    { hex: "#c04000", label: "Mistake" },
   blunder:    { hex: "#800000", label: "Blunder" },
@@ -914,7 +917,7 @@ Consumers must render the board only when `width > 0` (first ResizeObserver tick
   - Fix the file's pre-existing `react-hooks/refs` error at L119 with an effect mirror: wrap the offending ref write in `useEffect(() => { <the same assignment>; })` (read the current code at L110-125 first and preserve behavior — the ref must reflect the latest value before the keyboard/interval callbacks read it, which an unconditioned effect guarantees).
   - Move-info bar (L238): `rounded-lg bg-purple-900/70` → `r-bevel-in bg-[var(--r-face-light)]`; text classes `text-purple-400` → `text-[var(--r-shadow)]`, `text-purple-100` → `text-[var(--r-dark)]`, `text-green-400` (L254) → `text-[#008000] font-bold`, `text-purple-500` arrow icon → `text-[var(--r-shadow)]`.
   - Best-move arrow color (L197): `rgba(34, 197, 94, 0.7)` → `rgba(0, 128, 0, 0.7)`.
-- [ ] **Step 6: `eval-bar.tsx`:** replace the private sigmoid (L21-23) with `import { cpToWinPercent } from "@/lib/analysis-utils"` and use it; colors: `bg-purple-800` → `bg-[#2b2b2b]`, `bg-purple-100` → `bg-[#f0e6d2]` (the piece palette), border via `r-bevel-in`.
+- [ ] **Step 6: `eval-bar.tsx`:** the analyzer rework already unified the math (it now imports `winPercent`/`formatEval` from analysis-utils) — this step is COLORS ONLY: `bg-purple-*` halves → `bg-[#2b2b2b]` (black side) and `bg-[#f0e6d2]` (white side, the piece palette), frame via `r-bevel-in`. Re-grep the file first; it was heavily slimmed upstream.
 
 - [ ] **Step 7: Verify and commit.** `npm run test` (color test + all prior pass), `npm run typecheck`, `npx eslint src/lib src/hooks src/components/chess src/components/review/eval-bar.tsx --quiet` — expect ZERO errors in board-panel now (baseline shrinks to board.tsx only).
 
@@ -966,7 +969,7 @@ git commit -m "add games profile import windows"
 - Consumes: Tasks 0/1/3. `ReviewWindow({ onAnalyze, isAnalyzing, analysisProgress })` reads `activeGame`/`analysisQueue`/`activeMove` from the game store.
 - Produces: restyled interiors; `ReviewView` gains `windowId` pass-through to `BoardPanel` and drops its own `h-full` assumptions in favor of the window body flex chain.
 
-**Empty state (required):** `ReviewWindow` with `activeGame === null` (opened cold from its icon, or the active game was deleted) renders "No game selected." + RetroButton "Open my games" → `open("games")` — never mounts `ReviewView` without a pgn.
+**Empty state (required):** analysis presence is judged with `isCurrentAnalysis` from `@/lib/engine` (pre-v2 blobs count as absent). `ReviewWindow` with `activeGame === null` (opened cold from its icon, or the active game was deleted) renders "No game selected." + RetroButton "Open my games" → `open("games")` — never mounts `ReviewView` without a pgn.
 
 Restyle specifics (the Global Constraints mapping, plus):
 - `review-view.tsx` (7 purple, 1 blue, 3 rounded): progress overlay `bg-purple-950/80` (L100) → `bg-[rgba(0,0,0,0.45)]` with an inner `r-face r-bevel-out` panel; progress bar `bg-blue-500` (L115) → `.r-progress`/`.r-progress-fill`; grid stays `lg:grid-cols-[1fr_400px]`; root `h-full` relies on the window body's flex chain (drop nothing else).
@@ -998,7 +1001,7 @@ git commit -m "restyle review window"
 **Interfaces:**
 - Consumes: Tasks 0/1/3. `PracticeWindow()` reads `activeGame` + analysis from the game store and closes its window on exit (`close("practice")`).
 
-**Empty state (required):** `PracticeWindow` with `activeGame === null` OR no parsed analysis renders "Analyze a game first." + RetroButton "Open my games" → `open("games")` — never mounts `PracticeView` without moves.
+**Empty state (required):** `PracticeWindow` with `activeGame === null` OR `!isCurrentAnalysis(activeGame.analysis)` renders "Analyze a game first." + RetroButton "Open my games" → `open("games")` — never mounts `PracticeView` without moves.
 
 Restyle specifics (the Global Constraints mapping, plus):
 - `practice-view.tsx`: `w-[min(480px,50vh)]` (L241) → `useBoardSize({ h: 40 })` width; header/nav RetroButtons; 17 purple swept.
@@ -1047,7 +1050,7 @@ git commit -m "restyle play window"
 - Consumes: everything above.
 - Produces: `/app` renders `<div className="retro app"><Desktop defs={DEFS} /></div>`.
 
-- [ ] **Step 1: New `page.tsx`.** Keeps VERBATIM: `runAnalysis` SSE loop (L330-394) and queue processor (L397-423). `handleSubmit`/`handleBulkImport` (L430-505) port with ONE addition each: immediately after their `setActiveGame(...)` call, add `useWindowStore.getState().open("review")` — the old flow reached review via `setActiveGame`'s `view` side-effect, which is now inert; without the explicit open, both import paths dead-end. (`game-store.view` stays in the store but nothing renders from it.) Removes: LoginScreen, ImportView, the three top bars, all view branching. Adds `DEFS: Record<WindowId, WindowDef>` wiring each window body (`games` → `<GamesWindow/>`, `import` → `<ImportWindow onImportUrl={...} onBulkImport={...} importing={isLoading}/>`, `review` → `<ReviewWindow .../>` with title `` `${activeGame.whitePlayer} vs ${activeGame.blackPlayer}` `` (fallback "Game review"), `practice` → `<PracticeWindow/>`, `play` → `<PlayWindow/>`, `profile` → `<ProfileWindow/>`). On-mount effect (once-ref guarded): read `window.location.search` INSIDE the effect (no `useSearchParams` — that would force a Suspense/CSR bailout on this static page); if `view=play-bonzi` is present, do nothing (ViewParamSync's `useLayoutEffect` has already opened `play` — layout effects run before passive effects). Otherwise: a linked username → `open("games")`; no linked username → `open("games")` then `open("profile")` (both per spec §3 — games shows the empty state explaining linking, profile lands on top focused).
+- [ ] **Step 1: New `page.tsx`.** Keeps VERBATIM: the client-side `runAnalysis` (L332-390: dynamic `import("@/lib/analyze")`, the ~113 MB warm-up toast, `analyzeGame` with the onProgress live-scrub, the PUT `/api/games/[id]/analysis` persistence, the background-guard `getState()` checks) and the queue processor (L392-430) — with ONE required change: the queue-hold guard `view === "play-bonzi"` (L400) reads the now-inert view field; replace it with `playOpen` from `useWindowStore((s) => s.windows.play.open)` (subscribed in the page, added to the effect deps). Intent preserved: analysis and Bonzi each spawn a 113 MB WASM engine; never run both, including while the play window is merely minimized (the game is still live). `handleSubmit`/`handleBulkImport` (handleBulkImport at L476; locate handleSubmit by grep) port with ONE addition each: immediately after their `setActiveGame(...)` call, add `useWindowStore.getState().open("review")` — the old flow reached review via `setActiveGame`'s `view` side-effect, which is now inert; without the explicit open, both import paths dead-end. (`game-store.view` stays in the store but nothing renders from it.) Removes: LoginScreen, ImportView, the three top bars, all view branching. Adds `DEFS: Record<WindowId, WindowDef>` wiring each window body (`games` → `<GamesWindow/>`, `import` → `<ImportWindow onImportUrl={...} onBulkImport={...} importing={isLoading}/>`, `review` → `<ReviewWindow .../>` with title `` `${activeGame.whitePlayer} vs ${activeGame.blackPlayer}` `` (fallback "Game review"), `practice` → `<PracticeWindow/>`, `play` → `<PlayWindow/>`, `profile` → `<ProfileWindow/>`). On-mount effect (once-ref guarded): read `window.location.search` INSIDE the effect (no `useSearchParams` — that would force a Suspense/CSR bailout on this static page); if `view=play-bonzi` is present, do nothing (ViewParamSync's `useLayoutEffect` has already opened `play` — layout effects run before passive effects). Otherwise: a linked username → `open("games")`; no linked username → `open("games")` then `open("profile")` (both per spec §3 — games shows the empty state explaining linking, profile lands on top focused).
 - [ ] **Step 2: `view-param-sync.tsx`:** `setView("play-bonzi")` → `useWindowStore.getState().open("play")`.
 - [ ] **Step 3: `(app)/layout.tsx`:** wrapper class `dark ... [color-scheme:dark]` → `retro app ${msSans.variable} ${vt323.variable} min-h-screen overscroll-none` (min-h-screen makes the teal `.retro` background actually paint behind the fixed desktop — the body's light `bg-background` would otherwise flash in macOS overscroll); drop Geist imports, import `msSans, vt323` from `@/fonts/retro-fonts`; remove `<DashboardLayout>` (children render bare); Toaster gets `position="bottom-right"` + `offset={{ bottom: 38 }}` + `mobileOffset={{ bottom: 38 }}` (sonner's mobile default is 16px, under the taskbar) and `richColors` removed.
 - [ ] **Step 4: `sonner.tsx`:** `theme="dark"` → `theme="light"`; style block → `{ "--normal-bg": "var(--r-face)", "--normal-text": "var(--r-dark)", "--normal-border": "var(--r-shadow)", "--border-radius": "0px" }`; add `toastOptions={{ className: "r-bevel-out", style: { fontFamily: "var(--font-ui), sans-serif", fontSize: "12px" } }}`.
@@ -1073,8 +1076,11 @@ git commit -m "compose desktop app page"
 **Interfaces:**
 - Produces: JSON `{ pgn: string, analysis: GameAnalysis }` for the Opera Game (Morphy vs Duke of Brunswick and Count Isouard, 1858; PGN embedded in the script: `1. e4 e5 2. Nf3 d6 3. d4 Bg4 4. dxe5 Bxf3 5. Qxf3 dxe5 6. Bc4 Nf6 7. Qb3 Qe7 8. Nc3 c6 9. Bg5 b5 10. Nxb5 cxb5 11. Bxb5+ Nbd7 12. O-O-O Rd8 13. Rxd7 Rxd7 14. Rd1 Qe6 15. Bxd7+ Nxd7 16. Qb8+ Nxb8 17. Rd8# 1-0`).
 
-- [ ] **Step 1: Script.** A plain `.mjs` cannot import the TypeScript engine module, so write the script as `scripts/generate-demo-analysis.ts` run with `node --experimental-strip-types` (Node 24 supports type stripping natively). It imports `{ ServerStockfishEngine }` from `../src/lib/server/engine.ts`, `{ cpToWinPercent, classifyMove, calculateAccuracy, accuracyToRating, uciToSan }` from `../src/lib/analysis-utils.ts`, `Chess` from chess.js, replicates the loop from `src/app/api/games/[id]/analyze/route.ts:73-138` exactly (depth 12, `prevResult` reuse), and writes the JSON with `whiteAccuracy/blackAccuracy/ratings`. Update the npm script accordingly (`node --experimental-strip-types scripts/generate-demo-analysis.ts`). Run from repo root (engine resolves `.stockfish/` via cwd).
-- [ ] **Step 2: Run it** (`npm run demo-fixture`, ~1-2 min at depth 12 for 33 plies). Sanity-check the JSON: 33 moves, every move has `classification`, `whiteAccuracy > blackAccuracy` (Morphy should grade far higher), at least one black move classified mistake or blunder (the demo picker needs one; the Opera Game guarantees several). Pretty-print with 2-space indent; expect roughly 40-80 KB.
+- [ ] **Step 1: Script.** A plain `.mjs` cannot import the TypeScript pipeline, so write `scripts/generate-demo-analysis.ts`, run with `node --experimental-strip-types` (Node 24 native type stripping). The analyzer rework makes this clean: `analyzeGame(pgn, { engine, onProgress })` accepts an injected `AnalysisEngine` (src/lib/analyze.ts:35-52 — `init/newGame/evaluateNodes(fen, nodes, multiPv)/quit`). The script:
+  1. Implements `AnalysisEngine` over a spawned UCI child process: `spawn(process.execPath, ["node_modules/stockfish/bin/stockfish-18-lite-single.js"])`, line-buffered stdout, `evaluateNodes` sends `position fen ...` + `go nodes N` with `setoption MultiPV`, collects `info` lines until `bestmove`, and parses them with `parseUciEvaluation` from `../src/lib/uci.ts` (reuse the production parser — do not hand-roll).
+  2. Calls `analyzeGame(OPERA_PGN, { engine })` from `../src/lib/analyze.ts` and writes `src/components/landing/demo/opera-game.json` (2-space indent).
+  3. All relative imports carry explicit `.ts` extensions (hence the tsconfig change). KNOWN LIMITATION, acceptable and stated: `loadOpenings` imports `@/data/openings.json` via the tsconfig alias, which plain node cannot resolve; its `.catch(() => new Set())` degrades book detection to none, so the fixture's opening moves grade best/good instead of book. The caption's "Real Stockfish 18 analysis" remains true.
+- [ ] **Step 2: Run it** (`npm run demo-fixture`; runs from repo root). Sanity-check the JSON: `version: 2`, `engine.name` present, 33 moves each with `classification` and a populated `winPercentLoss`, `whiteAccuracy > blackAccuracy` (Morphy grades far higher), at least one black move classified mistake or blunder. Expect roughly 40-100 KB.
 - [ ] **Step 3: Commit** script + JSON + package.json.
 
 ```bash
@@ -1094,7 +1100,7 @@ git commit -m "generate demo analysis fixture"
 
 **Interfaces:**
 - Consumes: fixture JSON (Task 8); `Board` (read-only + interactive); `CLASSIFICATION_COLORS`; `useDrag` NOT consumed here (Task 10).
-- Produces: `demo-utils.ts` exports `DEMO = { pgn, analysis }` (typed import of the JSON), `demoPositions(): string[]` (FENs via chess.js), `worstLossIndex(): number` (index into `analysis.moves` of the black-side mistake/blunder with max win% swing; tested — black-side because Morphy's own moves grade near-best; spec amended to match). `use-in-view.ts` exports `useDemoActivation(threshold = 0.5): { ref, inView, reduced }` — one IntersectionObserver + `usePrefersReducedMotion`, shared by all three demos so gating is uniform.
+- Produces: `demo-utils.ts` exports `DEMO = { pgn, analysis }` (typed import of the JSON), `demoPositions(): string[]` (FENs via chess.js), `worstLossIndex(): number` — max built-in `winPercentLoss` field among black moves classified mistake/blunder (the rework computes the loss per move; do not re-derive it; tested — black-side because Morphy's own moves grade near-best; spec amended to match). `use-in-view.ts` exports `useDemoActivation(threshold = 0.5): { ref, inView, reduced }` — one IntersectionObserver + `usePrefersReducedMotion`, shared by all three demos so gating is uniform.
 - **Bundle rule:** `demo-utils.ts` (chess.js + the 40-80 KB fixture) may be imported ONLY from the two `-inner` files and the test. The outer `review-demo.tsx`/`practice-demo.tsx` wrappers are `"use client"` files (required — `analyzer-walkthrough` is a server component and `next/dynamic({ ssr: false })` is client-only): they hold the dynamic import, the reserve box, and `useDemoActivation`, mounting the inner chunk on first intersection. `import-demo.tsx` (also `"use client"`) imports neither chess.js nor the fixture.
 
 - [ ] **Step 1: `demo-utils.ts` + failing tests:** `worstLossIndex` returns a black move classified mistake/blunder; `demoPositions().length === DEMO.analysis.moves.length + 1`; every uci square parses.

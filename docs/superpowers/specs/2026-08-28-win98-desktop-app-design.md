@@ -6,7 +6,7 @@ Date: 2026-08-28. Status: user chose "full Win98 desktop app" and "scripted impo
 
 The app at `/app` becomes a Windows 98 desktop: every feature is a draggable window on the teal desktop with a taskbar, replacing the dark-purple sidebar dashboard. The homepage walkthrough windows become live, honest demos, and homepage windows become draggable too. Queued cleanups ship alongside: next-themes removed, "Chess Analyzer" chrome renamed, shadcn tooltip deleted.
 
-Every existing feature survives unchanged in behavior: linking accounts, import by URL and bulk, SSE analysis with live board scrubbing, review (moves/summary/engine), practice, play vs Bonzi with clocks and taunts, delete games, profile settings.
+Every existing feature survives unchanged in behavior: linking accounts, import by URL and bulk, in-browser Stockfish analysis with live board scrubbing (the analyzer rework of 2026-08-31 moved analysis client-side), review (moves/summary/engine), practice, play vs Bonzi with clocks and taunts, delete games, profile settings.
 
 Out of scope: window resizing by edge-drag (windows have fixed per-type sizes plus maximize), multi-monitor persistence, new features, any API/DB change, Bonzi voice.
 
@@ -82,7 +82,7 @@ Sonner toasts stay (they are the one portal) but get Win98 styling: `theme="ligh
 
 ### 5.1 Demo fixture (`scripts/generate-demo-analysis.mjs`, `npm run demo-fixture`)
 
-Runs the repo's `ServerStockfishEngine` (the `.stockfish/` lite build from postinstall) over a fixed public-domain miniature — the Opera Game, Morphy vs Duke of Brunswick and Count Isouard, Paris 1858 (17 moves, PGN embedded in the script) — at depth 12 with the exact loop from `api/games/[id]/analyze/route.ts:73-138`, and writes `src/components/landing/demo/opera-game.json`: `{ pgn, analysis: GameAnalysis }`. The JSON is committed; the script is run by a developer, not at build time (CI has no engine). The demo is therefore real Stockfish output for a real game; the footer credits say so.
+Runs the production `analyzeGame` pipeline with an injected node UCI engine (the rework's `AnalysisEngine` seam; the lite Stockfish build from node_modules) over a fixed public-domain miniature — the Opera Game, Morphy vs Duke of Brunswick and Count Isouard, Paris 1858 (17 moves, PGN embedded in the script) — at the pipeline's default node budget, and writes `src/components/landing/demo/opera-game.json`: `{ pgn, analysis: GameAnalysis }`. The JSON is committed; the script is run by a developer, not at build time (CI has no engine). The demo is therefore real Stockfish output for a real game; the footer credits say so.
 
 ### 5.2 Review demo (`ReviewDemo`, client)
 
