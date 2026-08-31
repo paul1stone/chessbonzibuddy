@@ -93,20 +93,22 @@ export function useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef }:
             0.9
           );
 
-          // The taskbar button pops in exactly where the window died.
+          // The button pops in exactly where and when the window died: the minimize tween ends
+          // at timeline 0.35 of a 200vh scrub, i.e. 70vh past the section top.
           const dockTrigger = ScrollTrigger.create({
             trigger: section,
-            start: "35% top",
+            start: "top top-=70%",
             onEnter: () => useDockStore.getState().setDocked("hero", true),
             onLeaveBack: () => useDockStore.getState().setDocked("hero", false),
           });
 
           // `hero--motion` grew the section to 300vh, so triggers measured before this
-          // (section dock, cascade) are holding stale bounds.
-          ScrollTrigger.refresh();
+          // (section dock, cascade) hold stale bounds. Deferred: a forced refresh reverts pins mid-scroll.
+          ScrollTrigger.refresh(true);
 
           return () => {
             dockTrigger.kill();
+            useDockStore.getState().setDocked("hero", false);
             tl.scrollTrigger?.kill();
             tl.kill();
             section.classList.remove("hero--motion");

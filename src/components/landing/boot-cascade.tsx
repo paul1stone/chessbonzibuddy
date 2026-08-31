@@ -15,16 +15,21 @@ let gate: Promise<void> | null = null;
 let openGate = () => {};
 let booting = 0;
 
+// Long enough that a slow gsap chunk cannot reintroduce the clobber, short enough that a
+// boot wedged before it can release still hands the hero window back.
+const GATE_TIMEOUT_MS = 5000;
+
 function holdGate(): Promise<void> {
   if (!gate) gate = new Promise<void>((resolve) => (openGate = resolve));
   return gate;
 }
 
 export function whenBootSettled(): Promise<void> {
-  if (gate) return gate;
-  const pending =
+  const pendingBoot =
     typeof document !== "undefined" && document.documentElement.classList.contains(BOOT_CLASS);
-  return pending ? holdGate() : Promise.resolve();
+  const held = gate ?? (pendingBoot ? holdGate() : null);
+  if (!held) return Promise.resolve();
+  return Promise.race([held, new Promise<void>((r) => setTimeout(r, GATE_TIMEOUT_MS))]);
 }
 
 // First visit of a session: the taskbar slides up and the hero window zooms open.
@@ -34,9 +39,14 @@ export function BootCascade() {
     const root = document.documentElement;
     if (!root.classList.contains(BOOT_CLASS)) return;
 
-    markBooted(safeSessionStorage());
     holdGate();
     booting += 1;
+
+    try {
+      markBooted(safeSessionStorage());
+    } catch {
+      // setItem still throws in some private modes; a throw here would strand the gate.
+    }
 
     let cancelled = false;
     let released = false;
@@ -46,7 +56,9 @@ export function BootCascade() {
       if (released) return;
       released = true;
       booting -= 1;
-      if (booting <= 0) openGate();
+      queueMicrotask(() => {
+        if (booting <= 0) openGate();
+      });
     };
 
     loadGsap()
