@@ -110,7 +110,9 @@ export function Board({
   );
 
   return (
-    <div className="r-bevel-in bg-[var(--r-face)] p-[3px]">
+    // Read-only boards are display-only: inert drops react-chessboard's ~32
+    // unlabeled piece tab stops from keyboard and AT navigation.
+    <div className="r-bevel-in bg-[var(--r-face)] p-[3px]" inert={!interactive || undefined}>
       <Chessboard
         options={{
           // react-chessboard 5.x no longer accepts the legacy "start" alias.

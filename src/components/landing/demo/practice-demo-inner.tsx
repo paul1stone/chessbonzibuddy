@@ -63,7 +63,7 @@ export default function PracticeDemoInner() {
       />
       <p className="text-center">
         {TO_MOVE} to move. {PUZZLE.moveNumber}
-        {PUZZLE.color === "w" ? "." : "..."} {PUZZLE.san} was a {PUZZLE.classification}. Find the better move.
+        {PUZZLE.color === "w" ? "." : "..."}{PUZZLE.san} was a {PUZZLE.classification}. Find the better move.
       </p>
       <div className="flex min-h-[52px] items-center gap-2">
         {(solved || misses > 0) && (

@@ -15,7 +15,7 @@ const STATIC_PLY = Math.min(worstLossIndex() + 1, LAST_PLY);
 const BEST_ARROW_COLOR = classificationArrowColor("best");
 
 function label(move: (typeof MOVES)[number]) {
-  return `${move.moveNumber}${move.color === "w" ? "." : "..."} ${move.san}`;
+  return `${move.moveNumber}${move.color === "w" ? "." : "..."}${move.san}`;
 }
 
 export default function ReviewDemoInner({ inView, reduced }: { inView: boolean; reduced: boolean }) {

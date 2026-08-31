@@ -6,7 +6,7 @@ import { useDemoActivation } from "./use-in-view";
 
 // Scripted, no chess dependency: one 80 ms tick drives type -> fetch -> list -> hold -> loop.
 const TICK_MS = 80;
-const GAME_URL = "https://www.chess.com/game/live/128744021";
+const GAME_URL = "https://www.chess.com/game/live/…";
 const TYPE_TICKS = GAME_URL.length;
 const PROGRESS_TICKS = 15; // 1.2s
 const BEAT_TICKS = 4; // ~300ms between rows, then between ticks
@@ -15,9 +15,9 @@ const END_TICK = TYPE_TICKS + PROGRESS_TICKS + BEAT_TICKS * 6;
 const TOTAL_TICKS = END_TICK + HOLD_TICKS;
 
 const ROWS = [
-  "you vs pawnstorm99 - 5 min blitz",
-  "knightowl vs you - 10 min rapid",
-  "you vs bishopric - 3 min blitz",
+  "you vs opponent - 5 min blitz",
+  "opponent vs you - 10 min rapid",
+  "you vs opponent - 3 min blitz",
 ];
 
 interface Frame {
