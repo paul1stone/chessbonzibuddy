@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 interface UseDragOptions {
   onMove: (dx: number, dy: number) => void;
@@ -11,6 +11,14 @@ interface UseDragOptions {
 /** Pointer-capture drag for a title-bar handle. Attach the returned handler to the handle. */
 export function useDrag({ onMove, onEnd, disabled }: UseDragOptions) {
   const last = useRef<{ x: number; y: number } | null>(null);
+
+  // Unmounting mid-drag releases pointer capture without firing pointerup on the
+  // removed handle, which would strand user-select:none on the body page-wide.
+  useEffect(() => {
+    return () => {
+      if (last.current) document.body.style.userSelect = "";
+    };
+  }, []);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {

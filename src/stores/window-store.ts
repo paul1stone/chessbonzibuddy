@@ -92,16 +92,20 @@ export const useWindowStore = create<WindowStore>((set) => ({
 
   minimize: (id) =>
     set((s) => {
+      if (!s.windows[id].open) return s;
       const windows = { ...s.windows, [id]: { ...s.windows[id], minimized: true } };
       return { windows, focused: s.focused === id ? topWindow(windows) : s.focused };
     }),
 
   toggleMaximize: (id) =>
-    set((s) => ({
-      windows: { ...s.windows, [id]: { ...s.windows[id], maximized: !s.windows[id].maximized, z: s.nextZ } },
-      focused: id,
-      nextZ: s.nextZ + 1,
-    })),
+    set((s) => {
+      if (!s.windows[id].open) return s;
+      return {
+        windows: { ...s.windows, [id]: { ...s.windows[id], maximized: !s.windows[id].maximized, z: s.nextZ } },
+        focused: id,
+        nextZ: s.nextZ + 1,
+      };
+    }),
 
   focus: (id) =>
     set((s) => {
