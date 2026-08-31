@@ -24,7 +24,7 @@ The landing page already has: a 300vh scroll-scrubbed 3D Scholar's Mate hero (`s
 
 ## 3. Bonzi scroll companion
 
-- A fixed Bonzi sprite rides the right page margin (only ≥1280px viewports, motion allowed). Vertical position tracks smoothed scroll progress (GSAP `quickTo`).
+- A fixed Bonzi sprite rides the right page margin (only ≥1440px viewports — below that he'd overlap the content column; motion allowed). Vertical position tracks smoothed scroll progress (GSAP `quickTo`).
 - States: `idle` at rest; `backflip` when scroll velocity spikes (debounced); section reactions driven by the dock store's active section (wave at showcase, point at import, shocked at review, talk at practice), each with a one-shot speech-bubble quip per pageview.
 - `aria-hidden`, `pointer-events: none`, z-index below the taskbar. Absent on mobile and under reduced motion.
 

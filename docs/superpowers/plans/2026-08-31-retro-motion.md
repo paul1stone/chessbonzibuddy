@@ -170,8 +170,9 @@ export function loadGsap(): Promise<GsapBundle> {
 "use client";
 
 import { cn } from "@/lib/utils";
-import { DOCK_LABELS, DOCK_ORDER, useDockStore } from "@/stores/dock-store";
-import { DEFAULT_MENU_ITEMS, Taskbar } from "@/components/retro"; // re-export DEFAULT_MENU_ITEMS from retro/index.ts if needed
+import { DOCK_LABELS, DOCK_ORDER, useDockStore, type DockId } from "@/stores/dock-store";
+import { Taskbar } from "@/components/retro";
+import { DEFAULT_MENU_ITEMS } from "@/components/retro/taskbar"; // direct import; no index churn
 import { prefersReducedMotion } from "@/lib/motion";
 
 export function MarketingTaskbar() {
@@ -573,7 +574,7 @@ And in `hero.css`: `.boot-pending .hero-window, .boot-pending [data-taskbar] { v
   - register precise dock jumps: for each seg, `registerScrollFn(seg.key, () => st.start + (st.end - st.start) * seg.end)` — clicking a taskbar button must land where the window is REVEALED, not at pin start where everything is still hidden; cleanup calls `registerScrollFn(seg.key, null)`;
   - cleanup: remove class + `cascade-open`s, kill trigger, remove outline divs, `mm.revert()`.
 - [ ] **Step 4:** `analyzer-walkthrough.tsx`: convert to `"use client"`; `import "./cascade/cascade.css"` (mirror `hero-section.tsx:13` — WITHOUT this import the entire cascade silently no-ops); `const sectionRef = useRef<HTMLElement>(null)` on the `<section>`; `useCascadeScroll(sectionRef)`; pass `pinnedContainer={sectionRef}` to `WindowStack`.
-- [ ] **Step 5:** Manual at 1440×900: pin engages; windows open in order with stepped outlines from the taskbar area; reverse closes them; demos play once revealed; taskbar buttons appear as each window reveals... (dock trigger fires via pinnedContainer-corrected positions once the pin releases — verify buttons don't appear 250vh early); clicking "Review" in the taskbar lands with Review visible. At 375px and reduced motion: static layout identical to today.
+- [ ] **Step 5:** Manual at 1440×900: pin engages; windows open in order with stepped outlines from the taskbar area; reverse closes them; demos play once revealed; taskbar buttons appear near the pin's end via the pinnedContainer-corrected triggers (verify they don't appear ~250vh early); clicking "Review" in the taskbar lands with Review visible. At 375px and reduced motion: static layout identical to today.
 - [ ] **Step 6:** Verify hero triggers after the pin (document got 250vh longer — ScrollTrigger auto-refresh should handle; scroll the whole page).
 - [ ] **Step 7:** typecheck/lint/test; e2e only per the port-3000 guard.
 - [ ] **Step 8:** Commit: `pin walkthrough cascade`
