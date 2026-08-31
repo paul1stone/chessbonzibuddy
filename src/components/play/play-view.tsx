@@ -39,6 +39,9 @@ export function PlayView({ onExit }: PlayViewProps) {
   const resetGame = useBonziPlayStore((s) => s.resetGame);
 
   const engineRef = useRef<StockfishEngine | null>(null);
+  // Resolves to the configured engine once init completes (null on failure/unmount),
+  // so a move made during the ~3.5s init WAITS instead of being silently dropped.
+  const engineReadyRef = useRef<Promise<StockfishEngine | null> | null>(null);
   const gameRef = useRef<Chess>(new Chess());
   const bonziTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -47,10 +50,10 @@ export function PlayView({ onExit }: PlayViewProps) {
     const engine = new StockfishEngine();
     let mounted = true;
 
-    engine.init().then(() => {
+    engineReadyRef.current = engine.init().then(() => {
       if (!mounted) {
         engine.quit();
-        return;
+        return null;
       }
       // Configure for max strength
       engine.setOption("Skill Level", 20);
@@ -58,11 +61,13 @@ export function PlayView({ onExit }: PlayViewProps) {
       // Account for browser Web Worker message-passing overhead
       engine.setOption("Move Overhead", 150);
       engineRef.current = engine;
+      return engine;
     }).catch((err) => {
       // Suppress init errors from strict-mode double-mount (engine was quit mid-init)
       if (mounted) {
         console.error("Engine init failed:", err);
       }
+      return null;
     });
 
     return () => {
@@ -70,6 +75,7 @@ export function PlayView({ onExit }: PlayViewProps) {
       // Quit the engine whether it's finished init or still loading
       engine.quit();
       engineRef.current = null;
+      engineReadyRef.current = null;
     };
   }, []);
 
@@ -144,7 +150,8 @@ export function PlayView({ onExit }: PlayViewProps) {
 
   // Engine move
   const doEngineMove = useCallback(async () => {
-    const engine = engineRef.current;
+    // Wait out engine init rather than dropping the move (a drop bricked the game).
+    const engine = engineRef.current ?? (await (engineReadyRef.current ?? Promise.resolve(null)));
     if (!engine || useBonziPlayStore.getState().phase !== "playing") return;
 
     setEngineThinking(true);
