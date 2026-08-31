@@ -403,7 +403,7 @@ function PlayBoard({ onPieceDrop, onResign, onPlayAgain, onExit }: PlayBoardProp
           {phase === "playing" && (
             <RetroButton
               onClick={onResign}
-              className="min-h-[20px] min-w-0 px-2 text-[11px]"
+              className="min-w-0! px-2! text-[11px]!"
             >
               Resign
             </RetroButton>

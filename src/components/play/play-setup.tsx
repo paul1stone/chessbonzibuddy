@@ -69,7 +69,6 @@ export function PlaySetup({ onStart, onBack }: PlaySetupProps) {
                 onClick={() => setTimeControl(tc)}
                 aria-pressed={timeControl.label === tc.label}
                 style={timeControl.label === tc.label ? SUNKEN : undefined}
-                className="min-w-0 px-3"
               >
                 {tc.label}
               </RetroButton>
