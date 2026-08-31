@@ -2,17 +2,17 @@
 
 import { useLayoutEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { useGameStore } from "@/stores/game-store";
+import { useWindowStore } from "@/stores/window-store";
 
-// Lets the landing page deep-link into a view: /app?view=play-bonzi
+// Lets the landing page deep-link into a window: /app?view=play-bonzi
 export function ViewParamSync() {
   const params = useSearchParams();
-  const setView = useGameStore((s) => s.setView);
   const view = params.get("view");
 
+  // A layout effect so play is already open before the page's mount effect runs.
   useLayoutEffect(() => {
-    if (view === "play-bonzi") setView("play-bonzi");
-  }, [view, setView]);
+    if (view === "play-bonzi") useWindowStore.getState().open("play");
+  }, [view]);
 
   return null;
 }
