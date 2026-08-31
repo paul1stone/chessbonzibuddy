@@ -679,7 +679,7 @@ const reboot = () => {
 };
 ```
 - [ ] **Step 3:** Mount `<Screensaver idleMs={45000} />` and `<EvalProgress />` in `(marketing)/page.tsx`.
-- [ ] **Step 4:** Manual sweep: Shut Down dims to the orange message (instant under reduced motion, still functional); click reboots and the boot cascade replays; MS-DOS Prompt opens/boots/drags; Esc in `vi` does NOT close the window, Esc after clicking the title bar does; idle (temporarily 3s locally, restore 45000 before commit) → bouncing pieces; eval bar slides toward M4.
+- [ ] **Step 4:** Manual sweep: Shut Down dims to the orange message (instant under reduced motion, still functional); click reboots and the boot cascade replays; MS-DOS Prompt opens/boots/drags; Esc in `vi` does NOT close the window, Esc after clicking the title bar does; idle (temporarily 3s locally, restore 45000 before commit) → bouncing pieces; eval bar slides toward M4. Known + accepted: the screensaver can arm invisibly behind the z-100 shutdown overlay after 45s idle — harmless (opaque cover, next input reloads); do NOT add state plumbing for it.
 - [ ] **Step 5:** typecheck/lint/test. **Step 6:** Commit: `wire marketing easter eggs`
 
 ---
