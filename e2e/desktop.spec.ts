@@ -26,6 +26,7 @@ test.describe("win98 desktop app", () => {
 
     // 1+0 keeps Stockfish's own clock allocation small: on the 5+0 default it spends
     // ~20s on move 1, which measures its time management rather than the engine wiring.
+    // Measured end to end here: ~3.5s engine handshake plus a ~2s search.
     await dialog.getByRole("button", { name: "1+0", exact: true }).click();
     await dialog.getByRole("button", { name: "Start game" }).click();
     await expect(dialog.locator("[data-column]").first()).toBeVisible({ timeout: 15000 });
@@ -39,7 +40,9 @@ test.describe("win98 desktop app", () => {
     await expect(firstMoveRow).toContainText(/1\.\s*e4/);
 
     // Bonzi answers: the black cell of move 1 fills in with the engine's reply.
-    await expect(firstMoveRow.locator("span").nth(2)).toHaveText(/\S/, { timeout: 15000 });
+    // 30s, not 15s: the wasm handshake is slower on a cold or loaded machine, and a
+    // generous budget only costs time when the test is genuinely failing.
+    await expect(firstMoveRow.locator("span").nth(2)).toHaveText(/\S/, { timeout: 30000 });
   });
 
   test("deep link opens the play window", async ({ page }) => {

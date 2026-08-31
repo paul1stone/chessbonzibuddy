@@ -73,8 +73,8 @@ export default function Home() {
         });
         if (!res.ok) throw new Error("Failed to save analysis");
         const updatedGame = (await res.json()) as Game;
-        // A queued game finishing in the background must not yank the user out of
-        // whatever they are viewing — setActiveGame forces view: "review".
+        // Only refresh the game on screen: setActiveGame resets activeMove, which
+        // would jump the review scrubber back to move 0 in a game being read.
         if (useGameStore.getState().activeGame?.id === game.id) {
           setActiveGame(updatedGame);
         }
