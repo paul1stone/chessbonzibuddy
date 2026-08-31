@@ -23,7 +23,7 @@ interface MoveControlsProps {
 
 // Win98 toolbar buttons: square-ish, so the .r-btn 75px floor has to go.
 const ICON_BTN =
-  "min-w-[32px]! px-1! disabled:cursor-default disabled:text-[var(--r-disabled)]!";
+  "min-w-[32px]! px-1! disabled:cursor-default! disabled:text-[var(--r-disabled)]!";
 
 export function MoveControls({
   currentMove,

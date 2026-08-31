@@ -288,7 +288,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
         <RetroButton
           onClick={handlePrevMistake}
           disabled={currentMistakeIndex === 0}
-          className="gap-1 disabled:cursor-default disabled:text-[var(--r-disabled)]!"
+          className="gap-1 disabled:cursor-default! disabled:text-[var(--r-disabled)]!"
         >
           <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Previous
@@ -296,7 +296,7 @@ export function PracticeView({ pgn, moves, onExit }: PracticeViewProps) {
         <RetroButton
           onClick={handleNextMistake}
           disabled={currentMistakeIndex >= mistakes.length - 1}
-          className="gap-1 disabled:cursor-default disabled:text-[var(--r-disabled)]!"
+          className="gap-1 disabled:cursor-default! disabled:text-[var(--r-disabled)]!"
         >
           Next
           <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
