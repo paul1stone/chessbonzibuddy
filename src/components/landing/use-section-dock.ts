@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { loadGsap } from "@/lib/gsap-loader";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useDockStore, type DockId } from "@/stores/dock-store";
@@ -15,7 +15,11 @@ interface SectionDockOptions {
 // section owns the viewport centre. Under reduced motion every button is simply always docked.
 export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, opts?: SectionDockOptions) {
   const dockOnExit = opts?.dockOnExit;
-  const pinnedContainer = opts?.pinnedContainer;
+  // Read opts through a ref: an inline pinnedContainer arrow would otherwise rebuild the triggers every render.
+  const optsRef = useRef(opts);
+  useEffect(() => {
+    optsRef.current = opts;
+  });
 
   useEffect(() => {
     const { registerTarget, setDocked, setActive } = useDockStore.getState();
@@ -37,7 +41,7 @@ export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, o
 
         const mm = gsap.matchMedia();
         mm.add("(prefers-reduced-motion: no-preference)", () => {
-          const pinned = pinnedContainer?.() ?? undefined;
+          const pinned = optsRef.current?.pinnedContainer?.() ?? undefined;
           const triggers: ReturnType<typeof ScrollTrigger.create>[] = [];
 
           if (dockOnExit !== false) {
@@ -71,6 +75,7 @@ export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, o
         cleanup = () => mm.revert();
       })
       .catch(() => {
+        if (cancelled) return;
         // Chunk load failed: keep the button usable (it still jumps) instead of losing it entirely.
         setDocked(id, true);
       });
@@ -80,5 +85,5 @@ export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, o
       cleanup?.();
       registerTarget(id, null);
     };
-  }, [id, ref, dockOnExit, pinnedContainer]);
+  }, [id, ref, dockOnExit]);
 }
