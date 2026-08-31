@@ -8,7 +8,11 @@ Plan: docs/superpowers/plans/2026-08-31-win98-desktop-app.md
 - [ ] Plan review (Fable x3) — simplify DONE: accept Task5 split 5a/5b, 3 file-spec bullets, hoist color map, cut opacity hack, shared useInView, "Start game" case, reword Task2 note + statusbar class; Task 10 stays wave 5 (Task 9 touches window-stack for statusBar — reviewer missed); flag lucide-in-windows at check-in. regression DONE: 3 blocking accepted (import must open review; CSS-hide not unmount for minimize/mobile — worker/gameRef/clock survival; review+practice empty states) + 6 should-fix + 6 nits accepted; "Start game" rename safe (Playwright name match case-insensitive). Correctness pending
 - [x] Triage + revise done (00660dd); upstream analyzer rework pulled and absorbed into plan/spec (client-side analyzeGame, forced classification, DI-based fixture script)
 - [x] User check-in — approved 2026-08-31; lucide icons stay (no objection)
-- [ ] Build waves: wave1 Task0 + Task1 (parallel, disjoint) DISPATCHED; then 8 (pkg.json after 0), 3 (after 1), then 2/4/5a/5b/6, then 7/9, 10, 11
+- [ ] Build waves:
+  - [x] Task 0 be20fe8 (marketing byte-identical; review in flight); Task 1 6e751e5 PASS + hardening 1f2f167
+  - [x] Task 3 d572357 (accepted deviation: render-time stop-playback; review in flight); lint baseline now 1 error (board.tsx) after ignore fixes 7655e58+5f977dc
+  - [ ] In flight: Task 8 fixture; wave 3 fan-out Tasks 2/4/5a/5b/6 (5 implementers)
+  - [ ] Then: 7/9 (wave 4), 10, 11
 - [ ] Final Fable review
 - [x] Part 1 pushed to origin/main (9794a8d)
 
