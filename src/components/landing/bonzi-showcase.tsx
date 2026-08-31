@@ -7,6 +7,7 @@ import { getBonziReaction } from "@/lib/bonzi/bonzi-engine";
 import { QUIP_MAP } from "@/lib/bonzi/quips";
 import type { BonziEvent, BonziGifState } from "@/lib/bonzi/types";
 import { usePrefersReducedMotion } from "@/lib/motion";
+import { useSectionDock } from "./use-section-dock";
 
 const SCRIPT: BonziEvent[] = ["game_start", "bonzi_capture", "bonzi_check", "bonzi_checkmate"];
 const STEP_MS = 2800;
@@ -41,6 +42,8 @@ export function BonziShowcase() {
   const reduced = usePrefersReducedMotion();
   const [inView, setInView] = useState(false);
   const [log, setLog] = useState<LogLine[]>([FIRST_LINE]);
+
+  useSectionDock("showcase", ref);
 
   useEffect(() => {
     const el = ref.current;

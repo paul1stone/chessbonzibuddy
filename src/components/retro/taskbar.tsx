@@ -10,7 +10,7 @@ export interface TaskbarMenuItem {
   onSelect?: () => void;
 }
 
-const DEFAULT_MENU_ITEMS: TaskbarMenuItem[] = [
+export const DEFAULT_MENU_ITEMS: TaskbarMenuItem[] = [
   { href: "/app?view=play-bonzi", label: "Play Bonzi Buddy" },
   { href: "/app", label: "Analyze my games" },
   { href: "/privacy", label: "Privacy" },
@@ -70,6 +70,7 @@ export function Taskbar({
   return (
     <div
       ref={rootRef}
+      data-taskbar
       className="r-face fixed inset-x-0 bottom-0 z-50 flex h-[var(--r-taskbar-h)] items-center gap-1 border-t-2 border-[var(--r-highlight)] px-[2px]"
     >
       <button
