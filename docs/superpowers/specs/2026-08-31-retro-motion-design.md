@@ -30,15 +30,15 @@ The landing page already has: a 300vh scroll-scrubbed 3D Scholar's Mate hero (`s
 
 ## 4. Easter-egg bundle
 
-- **Screensaver**: 45s with no input on the landing page → full-screen black canvas with bouncing dithered chess glyphs; any input dismisses; disarmed while the tab is hidden; never under reduced motion.
+- **Screensaver**: 45s with no input on the landing page → full-screen black canvas with bouncing solid-color chess glyphs; any input dismisses; disarmed while the tab is hidden; never under reduced motion.
 - **Shut Down…**: new Start-menu item → screen dims in steps, then orange-on-black "It is now safe to turn off your computer." Any click/key "reboots": clears the boot flag, reloads the page so the boot cascade replays. (No scroll-past-footer trigger — menu only.)
 - **Eval-bar scroll progress**: a slim vertical eval bar fixed to the left edge maps page scroll progress to a fake eval that climbs from +0.2 to M4 (Bonzi plays White in the hero's Scholar's Mate). Desktop only, `aria-hidden`.
-- **Boot cascade**: first visit per session (`sessionStorage` flag), ≤900ms: taskbar slides up, hero window zoom-opens via stepped outline. A pre-paint inline script adds a `boot-pending` class so nothing flashes. Skipped under reduced motion; any input fast-forwards.
+- **Boot cascade**: first visit per session (`sessionStorage` flag), landing page only (not `/privacy`/`/terms`), ≤900ms: taskbar slides up, hero window opens with a stepped scale zoom. A pre-paint inline script adds a `boot-pending` class so nothing flashes. Skipped under reduced motion; any input (including scroll) fast-forwards.
 
 ## 5. Linux terminal in the Start menu
 
 - **Engine: v86** (BSD-2, npm package `v86`) booting a custom i686 Alpine image over a 9p filesystem — a real kernel and real BusyBox userland, so every standard command works. No network device is configured (fully sandboxed).
-- **Assets** built by a documented Docker script (`scripts/terminal/`), committed under `public/terminal/` (fs.json + content-addressed flat files + kernel + initramfs). `postinstall` copies `v86.wasm` to `public/v86/`, mirroring the existing Stockfish copy step.
+- **Assets** built by a documented Docker script (`scripts/terminal/`, based on v86's upstream `tools/docker/alpine` recipe: `virt` kernel + `linux-firmware-none`, keeping the committed image ~25–40MB), committed under `public/terminal/` (fs.json + content-addressed flat files; the kernel and initramfs are read from the filesystem's `/boot` via `bzimage_initrd_from_filesystem`). `postinstall` copies `v86.wasm` to a gitignored `public/v86/`, mirroring the existing Stockfish copy step.
 - **Image easter eggs**: `/etc/motd` Bonzi ASCII art, `PS1='C:\> '` (a DOS-looking prompt that runs Linux — the joke), autologin `ash` on the serial console, `/home/bonzi/` lore files, a `bonzi` command that prints random quips.
 - **UI**: xterm.js (`@xterm/xterm` + fit addon) in a RetroWindow titled "MS-DOS Prompt". Wired serial0 ⇄ xterm. Kernel boot messages scroll visibly (that's charm, not a bug). Failure → retro fatal-exception message with a retry button.
 - **Entry points**: a new `terminal` window id on the `/app` desktop (icon + Start menu + taskbar), and an "MS-DOS Prompt" Start-menu item on the marketing page opening a centered draggable overlay window.
