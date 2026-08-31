@@ -13,7 +13,7 @@ Plan: docs/superpowers/plans/2026-08-31-win98-desktop-app.md
   - [x] Task 3 d572357 (accepted deviation: render-time stop-playback; review in flight); lint baseline now 1 error (board.tsx) after ignore fixes 7655e58+5f977dc
   - [x] Task 3 review: FAIL→fixed (eval-bar bevel + board frame 6px) in 87fa3c5; CLOSED
   - [x] Task 8 8cb17e7 review PASS (fixture replay-verified); picker spec fixed + script polish; CLOSED. Note: analyze.ts init() outside try/finally can leak a child on init timeout (upstream, logged for final review)
-  - [ ] In flight: Task 4 0bb4047 + Task 5b 01cb722 landed (reviews running); Tasks 2/5a/6 implementing; Task 9 dispatched early (deps 0/3/8 all closed, files disjoint from wave 3)
+  - [ ] In flight: Task 4 0bb4047 + Task 5b 01cb722 landed (reviews running); Task 6 7bc244a landed (review dispatched); Tasks 2/5a implementing; Task 9 dispatched early (deps 0/3/8 all closed, files disjoint from wave 3)
   - [ ] Then: 7/9 (wave 4), 10, 11
 - [ ] Final Fable review
 - [x] Part 1 pushed to origin/main (9794a8d)
