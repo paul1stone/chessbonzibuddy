@@ -5,7 +5,7 @@ Spec: docs/superpowers/specs/2026-08-28-win98-desktop-app-design.md
 Plan: docs/superpowers/plans/2026-08-31-win98-desktop-app.md
 - [x] Scope: full Win98 desktop app (user), scripted import demo (user)
 - [x] App internals explored; spec + plan written and committed (05b8fbd)
-- [ ] Plan review (Fable x3: correctness, regression, simplify) — in flight
+- [ ] Plan review (Fable x3) — simplify DONE: accept Task5 split 5a/5b, 3 file-spec bullets, hoist color map, cut opacity hack, shared useInView, "Start game" case, reword Task2 note + statusbar class; Task 10 stays wave 5 (Task 9 touches window-stack for statusBar — reviewer missed); flag lucide-in-windows at check-in. Correctness + regression pending
 - [ ] Triage, revise, user check-in
 - [ ] Build waves 1-6 (12 tasks)
 - [ ] Final Fable review
