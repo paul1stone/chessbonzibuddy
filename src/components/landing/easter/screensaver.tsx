@@ -16,6 +16,9 @@ export function Screensaver({ idleMs = 45000 }: ScreensaverProps) {
   const reduced = usePrefersReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [active, setActive] = useState(false);
+  // One condition for the guards below and the render: reduced motion must tear the loop down,
+  // not just hide the canvas.
+  const showing = active && !reduced;
 
   // The watcher stays armed while the screensaver shows: the input that dismisses it
   // also resets the countdown, so it re-arms itself.
@@ -27,17 +30,17 @@ export function Screensaver({ idleMs = 45000 }: ScreensaverProps) {
   }, [reduced, idleMs]);
 
   useEffect(() => {
-    if (!active) return;
+    if (!showing) return;
     const dismiss = () => setActive(false);
     for (const type of IDLE_EVENTS) window.addEventListener(type, dismiss, { passive: true });
     return () => {
       for (const type of IDLE_EVENTS) window.removeEventListener(type, dismiss);
     };
-  }, [active]);
+  }, [showing]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!active || !canvas) return;
+    if (!showing || !canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -100,9 +103,9 @@ export function Screensaver({ idleMs = 45000 }: ScreensaverProps) {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, [active]);
+  }, [showing]);
 
-  if (reduced || !active) return null;
+  if (!showing) return null;
 
   return <canvas ref={canvasRef} aria-hidden className="fixed inset-0 z-[90] h-screen w-screen bg-black" />;
 }
