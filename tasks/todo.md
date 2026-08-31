@@ -11,7 +11,9 @@ Plan: docs/superpowers/plans/2026-08-31-win98-desktop-app.md
 - [ ] Build waves:
   - [x] Task 0 be20fe8 (marketing byte-identical; review in flight); Task 1 6e751e5 PASS + hardening 1f2f167
   - [x] Task 3 d572357 (accepted deviation: render-time stop-playback; review in flight); lint baseline now 1 error (board.tsx) after ignore fixes 7655e58+5f977dc
-  - [ ] In flight: Task 8 fixture; wave 3 fan-out Tasks 2/4/5a/5b/6 (5 implementers)
+  - [x] Task 3 review: FAIL→fixed (eval-bar bevel + board frame 6px) in 87fa3c5; CLOSED
+  - [x] Task 8 8cb17e7 (resolve-hook deviation, book detection works, fixture deterministic 44.5KB; review in flight)
+  - [ ] In flight: Task 0 review, Task 8 review, wave 3 Tasks 2/4/5a/5b/6 (5 implementers)
   - [ ] Then: 7/9 (wave 4), 10, 11
 - [ ] Final Fable review
 - [x] Part 1 pushed to origin/main (9794a8d)
