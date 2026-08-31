@@ -1,14 +1,13 @@
-// Captures real product screenshots and the hero poster. Requires `npm run dev` on BASE_URL.
+// Captures the hero poster. Requires `npm run dev` on BASE_URL.
 import { chromium } from "@playwright/test";
-import { Chess } from "chess.js";
 import sharp from "sharp";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const OUT = path.resolve("public/screenshots");
-const MANIFEST = path.resolve("src/components/landing/screenshots.json");
-const manifest = { hero: false, import: false, review: false, practice: false };
+const MANIFEST = path.resolve("src/components/landing/hero/poster.json");
+const manifest = { hero: false };
 
 await mkdir(OUT, { recursive: true });
 // Headless scrollbars are painted over the canvas and would land in the poster.
@@ -44,114 +43,14 @@ async function captureHeroPoster() {
   await page.close();
 }
 
-// A real analysis runs Stockfish in the browser for minutes; screenshots only need a
-// populated review UI, so replay the PGN and hand the API a flat v2 blob instead.
-// Two plies are flagged as errors purely so the practice view has something to drill.
-function syntheticAnalysis(pgn) {
-  const chess = new Chess();
-  chess.loadPgn(pgn);
-  const history = chess.history({ verbose: true });
-
-  const moves = history.map((m, i) => {
-    const flagged =
-      i === 10 ? { classification: "mistake", loss: 12 } :
-      i === 21 ? { classification: "blunder", loss: 25 } :
-      null;
-    // Losses are shown from the mover's POV; evals are white-relative.
-    const evalAfter = flagged ? (m.color === "w" ? -flagged.loss : flagged.loss) * 10 : 0;
-    const uci = m.from + m.to + (m.promotion ?? "");
-    return {
-      moveNumber: Math.floor(i / 2) + 1,
-      color: m.color,
-      san: m.san,
-      uci,
-      evalBefore: 0,
-      mateBefore: null,
-      evalAfter,
-      mateAfter: null,
-      winPercentLoss: flagged ? flagged.loss : 0,
-      depth: 0,
-      bestMove: uci,
-      bestMoveSan: m.san,
-      classification: flagged ? flagged.classification : "good",
-      topLines: [],
-    };
-  });
-
-  return {
-    version: 2,
-    engine: { name: "synthetic", nodes: 0, multiPv: 0 },
-    moves,
-    whiteAccuracy: 90,
-    blackAccuracy: 90,
-    whiteRating: 1500,
-    blackRating: 1500,
-  };
-}
-
-async function captureAnalyzer() {
-  if (!process.env.DATABASE_URL) {
-    console.log("DATABASE_URL not set; skipping import/review/practice screenshots");
-    return;
-  }
-  // Import a public game through the real API, analyze it, then screenshot each view.
-  const gameUrl = process.env.SCREENSHOT_GAME_URL;
-  if (!gameUrl) {
-    console.log("SCREENSHOT_GAME_URL not set; skipping import/review/practice screenshots");
-    return;
-  }
-  const res = await fetch(`${BASE_URL}/api/games/import`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ url: gameUrl }),
-  });
-  if (!res.ok) throw new Error(`import failed: ${res.status} ${await res.text()}`);
-  const game = await res.json();
-  const analysis = syntheticAnalysis(game.pgn);
-  const saved = await fetch(`${BASE_URL}/api/games/${game.id}/analysis`, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ analysis, whiteAccuracy: 90, blackAccuracy: 90 }),
-  });
-  if (!saved.ok) throw new Error(`analysis save failed: ${saved.status} ${await saved.text()}`);
-
-  const page = await browser.newPage({ viewport: { width: 1200, height: 750 } });
-  await page.goto(`${BASE_URL}/app`);
-  await page.evaluate((username) => {
-    localStorage.setItem(
-      "chess-analyzer-profile",
-      JSON.stringify({ state: { chessComUsername: username, lichessUsername: "", chessComRatings: null, lichessRatings: null }, version: 0 })
-    );
-  }, game.whitePlayer);
-  await page.reload();
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: path.join(OUT, "import.png") });
-  manifest.import = true;
-
-  await page.getByText(game.whitePlayer, { exact: false }).first().click();
-  await page.waitForTimeout(2000);
-  await page.screenshot({ path: path.join(OUT, "review.png") });
-  manifest.review = true;
-
-  await page.getByRole("button", { name: /practice/i }).click();
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: path.join(OUT, "practice.png") });
-  manifest.practice = true;
-  await page.close();
-}
-
 try {
   await captureHeroPoster();
-  await captureAnalyzer();
 } finally {
   await browser.close();
-  // Never regress a flag to false when the file it points at is still on disk
+  // Never regress the flag to false when the file it points at is still on disk
   // (a botched run must not silently swap the landing hero back to the placeholder).
   const { existsSync } = await import("node:fs");
   manifest.hero ||= existsSync(path.join(OUT, "hero-poster.webp"));
-  for (const key of ["import", "review", "practice"]) {
-    manifest[key] ||= existsSync(path.join(OUT, `${key}.png`));
-  }
   await writeFile(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
   console.log("manifest", manifest);
 }

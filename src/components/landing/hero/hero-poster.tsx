@@ -1,8 +1,8 @@
-import shots from "../screenshots.json";
+import posterOk from "./poster.json";
 
 // Static fallback behind the hero: the LCP-safe image, also what reduced-motion users see.
 export function HeroPoster() {
-  if (!shots.hero) {
+  if (!posterOk.hero) {
     return <div className="hero-poster bg-[var(--r-desktop)]" aria-hidden="true" />;
   }
   return (

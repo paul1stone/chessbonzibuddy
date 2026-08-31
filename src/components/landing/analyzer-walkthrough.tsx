@@ -1,57 +1,39 @@
-import Image from "next/image";
-import shots from "./screenshots.json";
+import type { ReactNode } from "react";
+import { ImportDemo } from "./demo/import-demo";
+import { PracticeDemo } from "./demo/practice-demo";
+import { ReviewDemo } from "./demo/review-demo";
 import { WindowStack, type StackItem } from "./window-stack";
 
-type ShotKey = "import" | "review" | "practice";
-
-const ITEMS: { key: ShotKey; title: string; copy: string; alt: string }[] = [
+const ITEMS: { key: string; title: string; copy: string; demo: ReactNode; statusBar?: ReactNode }[] = [
   {
     key: "import",
     title: "Import",
     copy: "Paste a Chess.com game link, or pull your last 50 games from Chess.com or Lichess and pick the ones worth a look.",
-    alt: "Import screen listing recent games from Chess.com with checkboxes to select which to import",
+    demo: <ImportDemo />,
+    statusBar: "Demo",
   },
   {
     key: "review",
     title: "Review",
     copy: "Stockfish 18 grades every move from best to blunder, scores accuracy for both sides, and estimates the rating you played at.",
-    alt: "Review screen with a chessboard, a color-coded move list, and accuracy summary",
+    demo: <ReviewDemo />,
   },
   {
     key: "practice",
     title: "Practice",
     copy: "Every mistake becomes a puzzle. Find the move you should have played.",
-    alt: "Practice screen asking for the best move in a position where a mistake was made",
+    demo: <PracticeDemo />,
   },
 ];
-
-function Shot({ item }: { item: (typeof ITEMS)[number] }) {
-  if (shots[item.key]) {
-    return (
-      <Image
-        src={`/screenshots/${item.key}.png`}
-        alt={item.alt}
-        width={1200}
-        height={750}
-        sizes="(min-width: 768px) 560px, 92vw"
-        className="r-bevel-in h-auto w-full"
-      />
-    );
-  }
-  return (
-    <div className="r-bevel-in r-body flex h-[120px] items-center justify-center bg-[var(--r-face)] p-6 text-center">
-      Screenshot pending. This screen is being redesigned in part 2.
-    </div>
-  );
-}
 
 export function AnalyzerWalkthrough() {
   const items: StackItem[] = ITEMS.map((item) => ({
     key: item.key,
     title: item.title,
+    statusBar: item.statusBar,
     content: (
       <>
-        <Shot item={item} />
+        {item.demo}
         <p className="r-body mt-3">{item.copy}</p>
       </>
     ),

@@ -5,6 +5,7 @@ export interface StackItem {
   key: string;
   title: string;
   content: ReactNode;
+  statusBar?: ReactNode;
 }
 
 // Win98-style cascade: each window steps 48px right on md+; plain vertical stack below md.
@@ -19,6 +20,7 @@ export function WindowStack({ items }: { items: StackItem[] }) {
             title={item.title}
             className="w-full md:w-[560px] md:translate-x-[calc(48px*var(--depth))]"
             style={style}
+            statusBar={item.statusBar}
           >
             {item.content}
           </RetroWindow>
