@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { RetroButton } from "@/components/retro";
 import { BonziAvatar } from "@/components/bonzi/bonzi-avatar";
 import {
   useBonziPlayStore,
@@ -13,6 +13,12 @@ interface PlaySetupProps {
   onBack: () => void;
 }
 
+// Same sunken bevel the taskbar uses for its pressed window buttons.
+const SUNKEN = {
+  boxShadow:
+    "inset -1px -1px var(--r-highlight), inset 1px 1px var(--r-dark), inset -2px -2px var(--r-face-light), inset 2px 2px var(--r-shadow)",
+};
+
 export function PlaySetup({ onStart, onBack }: PlaySetupProps) {
   const playerColor = useBonziPlayStore((s) => s.playerColor);
   const setPlayerColor = useBonziPlayStore((s) => s.setPlayerColor);
@@ -20,71 +26,65 @@ export function PlaySetup({ onStart, onBack }: PlaySetupProps) {
   const setTimeControl = useBonziPlayStore((s) => s.setTimeControl);
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="flex flex-col items-center gap-8">
+    <div className="r-scroll flex h-full min-h-0 items-center justify-center p-4">
+      <div className="flex flex-col items-center gap-4">
         <BonziAvatar gif="wave" quip="Ready to play? Pick your settings!" size="lg" />
 
-        <h2 className="text-2xl font-bold text-purple-50">
-          Play Bonzi Buddy
-        </h2>
+        <h2 className="text-xl font-bold">Play Bonzi Buddy</h2>
 
         {/* Color selection */}
-        <div className="flex flex-col items-center gap-3">
-          <label className="text-sm font-medium text-purple-300">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--r-shadow)]">
             Choose your color
-          </label>
+          </span>
           <div className="flex gap-2">
             {(["w", "b"] as PlayerColor[]).map((c) => (
-              <button
+              <RetroButton
                 key={c}
                 onClick={() => setPlayerColor(c)}
-                className={`flex h-12 w-24 items-center justify-center rounded-lg border text-sm font-medium transition-colors ${
-                  playerColor === c
-                    ? "border-purple-500 bg-purple-800 text-purple-100"
-                    : "border-purple-700 bg-purple-950 text-purple-400 hover:bg-purple-900"
-                }`}
+                aria-pressed={playerColor === c}
+                style={playerColor === c ? SUNKEN : undefined}
+                className="w-24 gap-2"
               >
                 <span
-                  className={`mr-2 inline-block h-4 w-4 rounded-sm ${
-                    c === "w" ? "bg-white" : "bg-gray-800 border border-gray-600"
+                  className={`inline-block h-3 w-3 border border-[var(--r-dark)] ${
+                    c === "w" ? "bg-[var(--r-paper)]" : "bg-[var(--r-dark)]"
                   }`}
                 />
                 {c === "w" ? "White" : "Black"}
-              </button>
+              </RetroButton>
             ))}
           </div>
         </div>
 
         {/* Time control selection */}
-        <div className="flex flex-col items-center gap-3">
-          <label className="text-sm font-medium text-purple-300">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--r-shadow)]">
             Time control
-          </label>
+          </span>
           <div className="grid grid-cols-3 gap-2">
-            {TIME_CONTROLS.map((tc) => (
-              <button
+            {TIME_CONTROLS.map((tc: TimeControl) => (
+              <RetroButton
                 key={tc.label}
                 onClick={() => setTimeControl(tc)}
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                  timeControl.label === tc.label
-                    ? "border-purple-500 bg-purple-800 text-purple-100"
-                    : "border-purple-700 bg-purple-950 text-purple-400 hover:bg-purple-900"
-                }`}
+                aria-pressed={timeControl.label === tc.label}
+                style={timeControl.label === tc.label ? SUNKEN : undefined}
+                className="min-w-0 px-3"
               >
                 {tc.label}
-              </button>
+              </RetroButton>
             ))}
           </div>
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-3 pt-2">
-          <Button onClick={onStart} size="lg">
-            Start Game
-          </Button>
-          <Button onClick={onBack} variant="outline" size="lg">
+        <div className="flex gap-3 pt-1">
+          <RetroButton onClick={onStart} variant="default" size="lg">
+            Start game
+          </RetroButton>
+          <RetroButton onClick={onBack} size="lg">
             Back
-          </Button>
+          </RetroButton>
         </div>
       </div>
     </div>

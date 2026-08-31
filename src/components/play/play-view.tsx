@@ -11,7 +11,8 @@ import { PlaySetup } from "./play-setup";
 import { useBonziPlayStore } from "@/stores/bonzi-play-store";
 import { getBonziReaction } from "@/lib/bonzi/bonzi-engine";
 import { StockfishEngine } from "@/lib/engine";
-import { Button } from "@/components/ui/button";
+import { useBoardSize } from "@/hooks/use-board-size";
+import { RetroButton } from "@/components/retro";
 import type { BonziEvent } from "@/lib/bonzi/types";
 import type { PlayerColor } from "@/stores/bonzi-play-store";
 
@@ -23,9 +24,6 @@ export function PlayView({ onExit }: PlayViewProps) {
   const phase = useBonziPlayStore((s) => s.phase);
   const playerColor = useBonziPlayStore((s) => s.playerColor);
   const timeControl = useBonziPlayStore((s) => s.timeControl);
-  const fen = useBonziPlayStore((s) => s.fen);
-  const bonziGif = useBonziPlayStore((s) => s.bonziGif);
-  const bonziQuip = useBonziPlayStore((s) => s.bonziQuip);
   const engineThinking = useBonziPlayStore((s) => s.engineThinking);
   const gameOverReason = useBonziPlayStore((s) => s.gameOverReason);
 
@@ -360,61 +358,99 @@ export function PlayView({ onExit }: PlayViewProps) {
     return <PlaySetup onStart={handleStart} onBack={onExit} />;
   }
 
+  return (
+    <PlayBoard
+      onPieceDrop={handlePieceDrop}
+      onResign={handleResign}
+      onPlayAgain={handlePlayAgain}
+      onExit={onExit}
+    />
+  );
+}
+
+interface PlayBoardProps {
+  onPieceDrop: (source: string, target: string, piece: string) => boolean;
+  onResign: () => void;
+  onPlayAgain: () => void;
+  onExit: () => void;
+}
+
+/**
+ * Live-game body. Split from PlayView so useBoardSize mounts with the board
+ * container in the tree (PlayView also renders the setup screen, where it isn't).
+ */
+function PlayBoard({ onPieceDrop, onResign, onPlayAgain, onExit }: PlayBoardProps) {
+  const phase = useBonziPlayStore((s) => s.phase);
+  const playerColor = useBonziPlayStore((s) => s.playerColor);
+  const timeControl = useBonziPlayStore((s) => s.timeControl);
+  const fen = useBonziPlayStore((s) => s.fen);
+  const bonziGif = useBonziPlayStore((s) => s.bonziGif);
+  const bonziQuip = useBonziPlayStore((s) => s.bonziQuip);
+  const engineThinking = useBonziPlayStore((s) => s.engineThinking);
+
+  // Board fills its grid cell; 8px reserves the board's bevel frame.
+  const { ref: boardAreaRef, width: boardWidth } = useBoardSize({ h: 8 });
+
   const boardOrientation = playerColor === "w" ? "white" : "black";
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-purple-800 bg-purple-950 px-4 py-2">
-        <span className="text-sm font-medium text-purple-100">
-          Play vs Bonzi Buddy
-        </span>
+      <div className="r-face flex shrink-0 items-center justify-between px-2 py-1">
+        <span className="font-bold">Play vs Bonzi Buddy</span>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-purple-400">
-            {timeControl.label}
-          </span>
+          <span className="text-[var(--r-shadow)]">{timeControl.label}</span>
           {phase === "playing" && (
-            <Button variant="outline" size="sm" onClick={handleResign}>
+            <RetroButton
+              onClick={onResign}
+              className="min-h-[20px] min-w-0 px-2 text-[11px]"
+            >
               Resign
-            </Button>
+            </RetroButton>
           )}
         </div>
       </div>
+      <div className="r-sep shrink-0" />
 
       {/* Main content */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-2 sm:p-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,50%)] gap-2 pt-2 lg:grid-cols-[1fr_300px] lg:grid-rows-1">
         {/* Board */}
-        <div className="relative flex items-center justify-center">
-          <div className="w-[90%] max-w-[calc(100vh-14rem)]">
+        <div
+          ref={boardAreaRef}
+          className="relative flex min-h-0 items-center justify-center"
+        >
+          {boardWidth > 0 && (
             <Board
               position={fen}
               interactive={phase === "playing" && !engineThinking}
-              onPieceDrop={handlePieceDrop}
+              onPieceDrop={onPieceDrop}
               boardOrientation={boardOrientation}
+              boardWidth={boardWidth}
             />
-          </div>
+          )}
 
           {/* Game over overlay */}
           {phase === "game_over" && (
-            <GameOverOverlay
-              onPlayAgain={handlePlayAgain}
-              onExit={onExit}
-            />
+            <GameOverOverlay onPlayAgain={onPlayAgain} onExit={onExit} />
           )}
         </div>
 
         {/* Side panel */}
-        <div className="flex flex-col gap-3 overflow-hidden rounded-lg border border-purple-800 bg-purple-950 p-3">
-          {/* Bonzi avatar */}
-          <div className="flex justify-center">
-            <BonziAvatar gif={bonziGif} quip={bonziQuip} size="md" />
+        <div className="r-bevel-in flex min-h-0 flex-col gap-2 overflow-hidden bg-[var(--r-face-light)] p-2">
+          {/* Bonzi avatar + clocks: side by side until the panel moves to the right column */}
+          <div className="flex shrink-0 items-end gap-2 lg:flex-col lg:items-stretch">
+            <div className="flex shrink-0 justify-center lg:w-full">
+              <BonziAvatar gif={bonziGif} quip={bonziQuip} size="md" />
+            </div>
+            <div className="min-w-0 flex-1 lg:w-full">
+              <ChessClock playerColor={playerColor} />
+            </div>
           </div>
 
-          {/* Clocks */}
-          <ChessClock playerColor={playerColor} />
-
           {/* Move list */}
-          <div className="text-xs font-bold uppercase tracking-wider text-purple-400">Moves</div>
+          <div className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-[var(--r-shadow)]">
+            Moves
+          </div>
           <GameLog />
         </div>
       </div>

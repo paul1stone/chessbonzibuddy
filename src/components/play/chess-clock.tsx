@@ -31,20 +31,26 @@ function ClockDisplay({ timeMs, isActive, label }: ClockDisplayProps) {
   const isLow = timeMs < 30_000 && timeMs > 0;
   const isCritical = timeMs < 10_000 && timeMs > 0;
 
+  const digitColor = !isActive
+    ? "text-[var(--r-shadow)]"
+    : isCritical
+      ? "text-[#800000]"
+      : isLow
+        ? "text-[#c08000]"
+        : "text-[var(--r-dark)]";
+
   return (
     <div
-      className={`flex items-center justify-between rounded-md px-3 py-2 font-mono text-lg transition-colors ${
-        isActive
-          ? isCritical
-            ? "bg-red-900/60 text-red-300"
-            : isLow
-              ? "bg-yellow-900/40 text-yellow-300"
-              : "bg-purple-800 text-purple-100"
-          : "bg-purple-950 text-purple-500"
+      className={`r-bevel-in flex items-center justify-between px-2 py-1 ${
+        isActive ? "bg-[var(--r-paper)]" : "bg-[var(--r-face-light)]"
       }`}
     >
-      <span className="text-xs font-sans">{label}</span>
-      <span className={`tabular-nums ${isCritical && isActive ? "animate-pulse" : ""}`}>
+      <span className="text-[11px] text-[var(--r-shadow)]">{label}</span>
+      <span
+        className={`r-term tabular-nums ${digitColor} ${
+          isCritical && isActive ? "animate-pulse" : ""
+        }`}
+      >
         {formatTime(timeMs)}
       </span>
     </div>
