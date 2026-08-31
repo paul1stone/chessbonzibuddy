@@ -1,4 +1,17 @@
-# Frontend overhaul, part 1: retro landing page + design system
+# Frontend overhaul
+
+## PART 2: Win98 desktop app + live demos (current)
+Spec: docs/superpowers/specs/2026-08-28-win98-desktop-app-design.md
+Plan: docs/superpowers/plans/2026-08-31-win98-desktop-app.md
+- [x] Scope: full Win98 desktop app (user), scripted import demo (user)
+- [x] App internals explored; spec + plan written and committed (05b8fbd)
+- [ ] Plan review (Fable x3: correctness, regression, simplify) — in flight
+- [ ] Triage, revise, user check-in
+- [ ] Build waves 1-6 (12 tasks)
+- [ ] Final Fable review
+- [x] Part 1 pushed to origin/main (9794a8d)
+
+# Part 1 (done): retro landing page + design system
 
 Spec: docs/superpowers/specs/2026-08-28-retro-landing-design.md
 Plan: docs/superpowers/plans/2026-08-28-retro-landing.md
