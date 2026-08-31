@@ -11,7 +11,7 @@ export function RetroPanel({ caption, children, className }: RetroPanelProps) {
   return (
     <fieldset
       className={cn(
-        "border border-[var(--r-shadow)] p-3 [border-style:groove] [border-width:2px]",
+        "min-w-0 border border-[var(--r-shadow)] p-3 [border-style:groove] [border-width:2px]",
         className
       )}
     >
