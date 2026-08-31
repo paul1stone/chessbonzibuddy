@@ -19,14 +19,18 @@ export function MarketingTerminal({ onClose }: MarketingTerminalProps) {
   const { onPointerDown } = useDrag({ onMove });
 
   // Inside the VM Esc belongs to vi, so only close when focus is outside the window.
+  // Capture phase, because React commits the taskbar's menu close synchronously inside its
+  // document-level handler: by the bubble phase #start-menu is gone and that spent Esc,
+  // which only dismissed the menu, would also kill a booted VM.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (document.getElementById("start-menu")) return;
       if (containerRef.current?.contains(document.activeElement)) return;
       onClose();
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [onClose]);
 
   return (
