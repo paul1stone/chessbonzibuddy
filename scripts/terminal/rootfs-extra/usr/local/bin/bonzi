@@ -1,0 +1,12 @@
+#!/bin/sh
+# Prints a random BonziBUDDY quip. Copied verbatim from src/lib/bonzi/quips.ts.
+awk -v seed="$$" 'BEGIN { srand(seed) } { l[NR] = $0 } END { print l[int(rand() * NR) + 1] }' <<'QUIPS'
+Hi there! Ready to get destroyed?
+Oh, a challenger! How cute.
+Welcome! I haven't lost since... well, ever.
+Let's play! I'll try to go easy on you. (I won't.)
+CHECKMATE! Better luck next time!
+Checkmate! Would you like to uninstall chess?
+Game over! I am simply too powerful.
+Checkmate! Your king has fallen! Long live ME!
+QUIPS

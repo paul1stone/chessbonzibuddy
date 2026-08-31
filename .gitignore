@@ -36,6 +36,13 @@ yarn-error.log*
 # stockfish wasm (copied from node_modules at install time)
 /public/stockfish/
 
+# v86 wasm (copied from node_modules at install time)
+/public/v86/
+
+# terminal image build byproducts (see scripts/terminal/README.md)
+/scripts/terminal/.build/
+/scripts/terminal/.venv/
+
 # vercel
 .vercel
 
