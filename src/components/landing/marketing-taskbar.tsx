@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Taskbar, type TaskbarMenuItem } from "@/components/retro";
 import { DEFAULT_MENU_ITEMS } from "@/components/retro/taskbar";
 import { prefersReducedMotion } from "@/lib/motion";
@@ -15,6 +16,9 @@ export function MarketingTaskbar() {
   const active = useDockStore((s) => s.active);
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [shuttingDown, setShuttingDown] = useState(false);
+  const pathname = usePathname();
+  // Dock state is module-global and survives client-side nav; only the landing page has these sections.
+  const dockedIds = pathname === "/" ? DOCK_ORDER.filter((id) => docked[id]) : [];
 
   const menuItems = useMemo<TaskbarMenuItem[]>(() => {
     const extras: TaskbarMenuItem[] = [
@@ -45,7 +49,7 @@ export function MarketingTaskbar() {
     <>
       <Taskbar menuItems={menuItems}>
         <div data-dock-slots className="flex min-w-0 flex-1 gap-1 overflow-hidden">
-          {DOCK_ORDER.filter((id) => docked[id]).map((id) => {
+          {dockedIds.map((id) => {
             const isActive = active === id;
             return (
               <button

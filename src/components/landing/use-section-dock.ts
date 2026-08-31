@@ -58,7 +58,8 @@ export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, o
             triggers.push(
               ScrollTrigger.create({
                 trigger: el,
-                start: "bottom top",
+                // clamp(): the last section's "bottom top" can compute past max scroll on short viewports.
+                start: "clamp(bottom top)",
                 pinnedContainer: pinned,
                 onEnter: () => setDocked(id, true),
                 onLeaveBack: () => setDocked(id, false),
