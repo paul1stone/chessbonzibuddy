@@ -45,7 +45,7 @@ export function ReviewPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="r-tabs shrink-0 pt-1" role="tablist">
+      <div className="r-tabs shrink-0 pt-1!" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
