@@ -24,9 +24,11 @@ export function EvalBar({ eval: evaluation, mate, height = 400 }: EvalBarProps) 
 
   return (
     <div
-      className="r-bevel-in relative w-8 flex-shrink-0 overflow-hidden bg-[var(--r-face)] p-[2px]"
+      className="r-bevel-in w-8 flex-shrink-0 bg-[var(--r-face)] p-[2px]"
       style={{ height }}
     >
+      {/* Absolute children anchor to this inner box, so the 2px frame stays visible. */}
+      <div className="relative h-full w-full overflow-hidden">
       {/* Black section (top) */}
       <div
         className="absolute top-0 left-0 right-0 bg-[#2b2b2b] transition-all duration-300"
@@ -55,6 +57,7 @@ export function EvalBar({ eval: evaluation, mate, height = 400 }: EvalBarProps) 
         >
           {evalText}
         </span>
+      </div>
       </div>
     </div>
   );

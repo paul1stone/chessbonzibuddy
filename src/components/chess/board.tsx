@@ -123,7 +123,9 @@ export function Board({
           darkSquareStyle: { backgroundColor: "#6e4b2a" },
           dropSquareStyle: { boxShadow: "inset 0 0 1px 6px rgba(0,0,0,.1)" },
           boardStyle: {
-            ...(boardWidth ? { width: boardWidth } : {}),
+            // The 3px bevel frame adds 6px: shrink the board so the framed
+            // element measures exactly the requested boardWidth outside.
+            ...(boardWidth ? { width: boardWidth - 6 } : {}),
           },
           onSquareClick: interactive ? handleSquareClick : undefined,
           onPieceDrop: onPieceDrop
