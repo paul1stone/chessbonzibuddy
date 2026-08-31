@@ -5,7 +5,7 @@ import { useWindowStore, WINDOW_IDS, type WindowId } from "@/stores/window-store
 import { useIsMobile } from "./use-is-mobile";
 import { DesktopIcon } from "./desktop-icon";
 import { DesktopWindow } from "./desktop-window";
-import { WINDOW_ICONS } from "./icons";
+import { ICON_LABELS, WINDOW_ICONS } from "./icons";
 import { AppTaskbar } from "./app-taskbar";
 
 export interface WindowDef {
@@ -14,14 +14,8 @@ export interface WindowDef {
   statusBar?: ReactNode;
 }
 
-export const ICON_LABELS: Record<WindowId, string> = {
-  games: "My games",
-  import: "Import",
-  review: "Game review",
-  practice: "Practice",
-  play: "Play Bonzi Buddy",
-  profile: "Profile",
-};
+// Re-exported so existing consumers of "./desktop" keep working; source of truth is icons.tsx.
+export { ICON_LABELS };
 
 export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
   const windows = useWindowStore((s) => s.windows);
@@ -33,6 +27,8 @@ export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
       className="fixed inset-x-0 top-0 bottom-[var(--r-taskbar-h)] overflow-hidden bg-[var(--r-desktop)]"
       onPointerDown={(e) => {
         // Clicking bare desktop clears focus (spec 2.3); windows call focus() in their own handler.
+        // Not on mobile: there the focused window is the only visible one, so clearing blanks the screen.
+        if (isMobile) return;
         if (e.target === e.currentTarget) useWindowStore.setState({ focused: null });
       }}
     >

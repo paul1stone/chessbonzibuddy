@@ -3,11 +3,9 @@
 import { Taskbar, type TaskbarMenuItem } from "@/components/retro";
 import { cn } from "@/lib/utils";
 import { useWindowStore, WINDOW_IDS } from "@/stores/window-store";
-import { WINDOW_ICONS } from "./icons";
-import { ICON_LABELS } from "./desktop";
+import { ICON_LABELS, WINDOW_ICONS } from "./icons";
 
-// Taskbar buttons use the same static labels as icons (never the dynamic window title).
-// desktop.tsx imports this file, so ICON_LABELS is only ever read at render time.
+// Taskbar buttons use the same static labels as the desktop icons (never the dynamic window title).
 
 export function AppTaskbar() {
   const windows = useWindowStore((s) => s.windows);

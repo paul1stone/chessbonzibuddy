@@ -28,7 +28,9 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
       const { x, y } = useWindowStore.getState().windows[id];
       const maxX = window.innerWidth - 60;
       const maxY = window.innerHeight - 60;
-      move(id, Math.min(maxX, Math.max(-WINDOW_SIZES[id].w + 60, x + dx)), Math.min(maxY, Math.max(0, y + dy)));
+      // Clamp against the rendered width, not the nominal one: the frame caps at 100vw - 16px.
+      const w = ref.current?.offsetWidth ?? WINDOW_SIZES[id].w;
+      move(id, Math.min(maxX, Math.max(-w + 60, x + dx)), Math.min(maxY, Math.max(0, y + dy)));
     },
     [id, move]
   );
@@ -110,7 +112,7 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
       </div>
       <div className="r-body flex min-h-0 flex-1 flex-col p-2">{children}</div>
       {statusBar !== undefined && (
-        <div className="r-bevel-in mx-[1px] mb-[1px] shrink-0 px-2 py-[3px] text-[11px]">{statusBar}</div>
+        <div className="r-bevel-in r-statusbar shrink-0">{statusBar}</div>
       )}
     </section>
   );

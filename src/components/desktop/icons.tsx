@@ -153,6 +153,15 @@ export function ProfileIcon() {
   );
 }
 
+export const ICON_LABELS: Record<WindowId, string> = {
+  games: "My games",
+  import: "Import",
+  review: "Game review",
+  practice: "Practice",
+  play: "Play Bonzi Buddy",
+  profile: "Profile",
+};
+
 export const WINDOW_ICONS: Record<WindowId, ReactNode> = {
   games: <GamesIcon />,
   import: <ImportIcon />,
