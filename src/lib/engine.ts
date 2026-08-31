@@ -143,6 +143,10 @@ export class StockfishEngine {
   private worker: Worker | null = null;
   private isReady = false;
   private messageHandler: ((data: string) => void) | null = null;
+  /** Rejects the in-flight `waitFor` when the worker dies or is terminated. */
+  private failWaiter: ((err: Error) => void) | null = null;
+  /** Set once the worker is unusable; every later wait fails immediately. */
+  private fatalError: Error | null = null;
 
   // ------------------------------------------------------------------
   // Lifecycle
@@ -155,6 +159,15 @@ export class StockfishEngine {
       );
     }
 
+    // The first message only lands once the ~113 MB wasm is fetched and
+    // compiled, so a slow load is normal — but it must never look like a freeze.
+    const slowWarning = setTimeout(() => {
+      console.warn(
+        "[StockfishEngine] Still waiting for Stockfish after 20s - " +
+          "the engine wasm (~113 MB) is probably still downloading."
+      );
+    }, 20_000);
+
     try {
       this.worker = this.createLocalWorker();
       await this.handshake();
@@ -162,10 +175,14 @@ export class StockfishEngine {
       this.worker?.terminate();
       this.worker = null;
       throw new Error(
-        `Failed to initialise Stockfish engine. ` +
-          `Make sure stockfish.js is available at /stockfish/stockfish.js. ` +
+        `Failed to initialise Stockfish engine. Check that ` +
+          `/stockfish/stockfish.js and /stockfish/stockfish.wasm are both ` +
+          `served (they are gitignored and copied from node_modules by the ` +
+          `postinstall script, so a fresh worktree needs "npm install"). ` +
           `Original error: ${err}`
       );
+    } finally {
+      clearTimeout(slowWarning);
     }
 
     this.isReady = true;
@@ -298,10 +315,13 @@ export class StockfishEngine {
 
     this.sendCommand(`go wtime ${wtime} btime ${btime} winc ${winc} binc ${binc}`);
 
-    // Safety timeout: engine's remaining time + generous buffer
+    // Safety timeout: a backstop above what Stockfish can legitimately spend,
+    // which is bounded by its own remaining clock. Capping this *below* that
+    // (the old flat 30s) aborted every long time control - at 30+0 Stockfish
+    // budgets ~90s for the first move, so the wait died before it ever replied.
     const sideToMove = moves.length % 2 === 0 ? "w" : "b";
     const engineTime = sideToMove === "w" ? wtime : btime;
-    const safetyMs = Math.min(engineTime + 10_000, 30_000);
+    const safetyMs = Math.min(engineTime + 10_000, 180_000);
     const lines = await this.waitFor("bestmove", safetyMs);
     return toEngineEvaluation(parseUciEvaluation(lines, sideToMove));
   }
@@ -323,6 +343,9 @@ export class StockfishEngine {
       this.worker = null;
     }
     this.isReady = false;
+    // Terminating the worker makes any pending wait unresolvable - reject it
+    // now rather than leaving the caller hanging until the timeout expires.
+    this.fail(new Error("Stockfish engine was shut down."));
   }
 
   // ------------------------------------------------------------------
@@ -346,8 +369,12 @@ export class StockfishEngine {
       }
     };
 
+    // A dead worker can never answer, so surface it now instead of letting the
+    // pending wait sit until its timeout expires.
     worker.onerror = (e) => {
       console.error("[StockfishEngine] Worker error:", e);
+      const detail = e instanceof ErrorEvent && e.message ? e.message : String(e);
+      this.fail(new Error(`Stockfish worker failed: ${detail}`));
     };
   }
 
@@ -365,9 +392,23 @@ export class StockfishEngine {
    */
   private waitFor(token: string, timeoutMs = 30_000): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
+      if (this.fatalError) {
+        reject(this.fatalError);
+        return;
+      }
+
       const lines: string[] = [];
-      const timer = setTimeout(() => {
+      const clear = () => {
+        clearTimeout(timer);
         this.messageHandler = null;
+        this.failWaiter = null;
+      };
+
+      const timer = setTimeout(() => {
+        clear();
+        // Leave no search running behind us: an orphaned search would answer
+        // the *next* waitFor with a bestmove for the previous position.
+        this.sendCommand("stop");
         reject(
           new Error(
             `Timed out waiting for "${token}" from Stockfish after ${timeoutMs}ms`
@@ -375,15 +416,29 @@ export class StockfishEngine {
         );
       }, timeoutMs);
 
+      this.failWaiter = (err: Error) => {
+        clearTimeout(timer);
+        reject(err);
+      };
+
       this.messageHandler = (data: string) => {
         lines.push(data);
         if (data.includes(token)) {
-          clearTimeout(timer);
-          this.messageHandler = null;
+          clear();
           resolve(lines);
         }
       };
     });
+  }
+
+  /** Mark the worker unusable and reject whatever is waiting on it. */
+  private fail(err: Error): void {
+    this.fatalError = err;
+    this.isReady = false;
+    const reject = this.failWaiter;
+    this.messageHandler = null;
+    this.failWaiter = null;
+    reject?.(err);
   }
 
   /**
