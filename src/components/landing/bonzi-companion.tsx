@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { BonziAvatar } from "@/components/bonzi/bonzi-avatar";
+import { SpeechBubble } from "@/components/bonzi/speech-bubble";
 import { loadGsap } from "@/lib/gsap-loader";
 import { usePrefersReducedMotion } from "@/lib/motion";
 import type { BonziGifState } from "@/lib/bonzi/types";
@@ -16,7 +17,10 @@ function subscribeWide(cb: () => void) {
   return () => mql.removeEventListener("change", cb);
 }
 
-const wideSnapshot = () => window.matchMedia(WIDE_QUERY).matches;
+const wideSnapshot = () =>
+  typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia(WIDE_QUERY).matches
+    : false;
 
 function useIsWide(): boolean {
   return useSyncExternalStore(subscribeWide, wideSnapshot, () => false);
@@ -37,6 +41,10 @@ const FLING_DEBOUNCE_MS = 4000;
 const REACTION_MS = 2500;
 const QUIP_MS = 3500;
 
+// Module scope, not a ref: crossing 1440px remounts Companion, and a per-instance Set
+// would hand out every quip again.
+const quipped = new Set<DockId>();
+
 export function BonziCompanion() {
   const reduced = usePrefersReducedMotion();
   const wide = useIsWide();
@@ -55,7 +63,6 @@ function Companion() {
   const lastFlipRef = useRef(0);
   const gifTimerRef = useRef(0);
   const quipTimerRef = useRef(0);
-  const quippedRef = useRef<Set<DockId>>(new Set());
 
   const flip = useCallback(() => {
     if (reactingRef.current || flippingRef.current) return;
@@ -128,8 +135,8 @@ function Companion() {
         reactingRef.current = true;
         setGif(reaction.gif);
 
-        if (!quippedRef.current.has(id)) {
-          quippedRef.current.add(id);
+        if (!quipped.has(id)) {
+          quipped.add(id);
           window.clearTimeout(quipTimerRef.current);
           setQuip(reaction.quip);
           quipTimerRef.current = window.setTimeout(() => setQuip(undefined), QUIP_MS);
@@ -158,7 +165,16 @@ function Companion() {
       className="pointer-events-none fixed z-40"
       style={{ right: "max(8px, calc((100vw - 1240px) / 2 - 96px))", top: 0 }}
     >
-      <BonziAvatar gif={gif} quip={quip} size="md" />
+      {/* Fixed-width anchor: the box is `right`-anchored, so letting it shrink-wrap the
+          bubble would shove the sprite leftward every time a quip mounts. */}
+      <div className="relative w-16">
+        {quip && (
+          <div className="absolute bottom-full right-0 mb-1 w-max max-w-[160px]">
+            <SpeechBubble text={quip} visible />
+          </div>
+        )}
+        <BonziAvatar gif={gif} size="md" showBubble={false} />
+      </div>
     </div>
   );
 }
