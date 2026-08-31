@@ -1,0 +1,31 @@
+/* Win98 values for the shadcn tokens, active only inside the app desktop. */
+.retro.app {
+  --background: var(--r-face);
+  --foreground: var(--r-dark);
+  --card: var(--r-face);
+  --card-foreground: var(--r-dark);
+  --popover: var(--r-face);
+  --popover-foreground: var(--r-dark);
+  --primary: var(--r-title-a);
+  --primary-foreground: var(--r-title-text);
+  --secondary: var(--r-face);
+  --secondary-foreground: var(--r-dark);
+  --muted: var(--r-face-light);
+  --muted-foreground: var(--r-shadow);
+  --accent: var(--r-title-a);
+  --accent-foreground: var(--r-title-text);
+  --destructive: #800000;
+  --border: var(--r-shadow);
+  --input: var(--r-paper);
+  --ring: var(--r-dark);
+  --radius: 0px;
+  --chart-1: #000080;
+  --chart-2: #008080;
+  --chart-3: #808000;
+  --chart-4: #800000;
+  --chart-5: #800080;
+  --r-body-size: 13px;
+  /* font-mono utilities resolve this var (globals.css @theme inline); Geist is gone in-app. */
+  --font-geist-mono: "Courier New", monospace;
+}
+.retro.app .r-body { font-size: var(--r-body-size); }

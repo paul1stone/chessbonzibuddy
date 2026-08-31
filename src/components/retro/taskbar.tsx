@@ -1,15 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
-const MENU_ITEMS: { href: string; label: string; external?: boolean }[] = [
+export interface TaskbarMenuItem {
+  href?: string;
+  label: string;
+  external?: boolean;
+  onSelect?: () => void;
+}
+
+const DEFAULT_MENU_ITEMS: TaskbarMenuItem[] = [
   { href: "/app?view=play-bonzi", label: "Play Bonzi Buddy" },
   { href: "/app", label: "Analyze my games" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
   { href: "https://github.com/paul1stone/chessbonzibuddy", label: "GitHub", external: true },
 ];
+
+const MENU_ITEM_CLASS =
+  "block px-3 py-[6px] no-underline hover:bg-[var(--r-title-a)] hover:text-[var(--r-title-text)]";
 
 function Clock() {
   const [time, setTime] = useState<string | null>(null);
@@ -22,12 +32,18 @@ function Clock() {
   }, []);
   return (
     <time className="tabular-nums" suppressHydrationWarning>
-      {time ?? " "}
+      {time ?? " "}
     </time>
   );
 }
 
-export function Taskbar() {
+export function Taskbar({
+  menuItems = DEFAULT_MENU_ITEMS,
+  children,
+}: {
+  menuItems?: TaskbarMenuItem[];
+  children?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -83,12 +99,23 @@ export function Taskbar() {
             Chess Bonzi Buddy
           </div>
           <ul className="flex-1">
-            {MENU_ITEMS.map((item) => (
-              <li key={item.href}>
-                {item.external ? (
+            {menuItems.map((item) => (
+              <li key={item.label}>
+                {item.onSelect ? (
+                  <button
+                    type="button"
+                    className={`${MENU_ITEM_CLASS} w-full text-left`}
+                    onClick={() => {
+                      item.onSelect!();
+                      setOpen(false);
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ) : item.external ? (
                   <a
                     href={item.href}
-                    className="block px-3 py-[6px] no-underline hover:bg-[var(--r-title-a)] hover:text-[var(--r-title-text)]"
+                    className={MENU_ITEM_CLASS}
                     rel="noreferrer"
                     onClick={() => setOpen(false)}
                   >
@@ -96,8 +123,8 @@ export function Taskbar() {
                   </a>
                 ) : (
                   <Link
-                    href={item.href}
-                    className="block px-3 py-[6px] no-underline hover:bg-[var(--r-title-a)] hover:text-[var(--r-title-text)]"
+                    href={item.href ?? "#"}
+                    className={MENU_ITEM_CLASS}
                     onClick={() => setOpen(false)}
                   >
                     {item.label}
@@ -109,7 +136,9 @@ export function Taskbar() {
         </nav>
       )}
 
-      <div className="r-bevel-in ml-auto flex h-[22px] items-center px-2">
+      <div className="flex min-w-0 flex-1 gap-1 overflow-hidden px-1">{children}</div>
+
+      <div className="r-bevel-in flex h-[22px] items-center px-2">
         <Clock />
       </div>
     </div>

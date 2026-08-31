@@ -16,8 +16,6 @@ interface ProfileState {
   chessComRatings: PlayerRatings | null;
   /** Cached ratings from Lichess */
   lichessRatings: PlayerRatings | null;
-  /** Whether we're currently fetching ratings */
-  isFetching: boolean;
 }
 
 interface ProfileActions {
@@ -25,7 +23,6 @@ interface ProfileActions {
   setLichessUsername: (username: string) => void;
   setChessComRatings: (ratings: PlayerRatings | null) => void;
   setLichessRatings: (ratings: PlayerRatings | null) => void;
-  setIsFetching: (val: boolean) => void;
   clearProfile: () => void;
 }
 
@@ -36,14 +33,12 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
       lichessUsername: "",
       chessComRatings: null,
       lichessRatings: null,
-      isFetching: false,
       setChessComUsername: (username) =>
         set({ chessComUsername: username, chessComRatings: null }),
       setLichessUsername: (username) =>
         set({ lichessUsername: username, lichessRatings: null }),
       setChessComRatings: (ratings) => set({ chessComRatings: ratings }),
       setLichessRatings: (ratings) => set({ lichessRatings: ratings }),
-      setIsFetching: (val) => set({ isFetching: val }),
       clearProfile: () =>
         set({
           chessComUsername: "",
