@@ -49,6 +49,12 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 ## Phase 4: Final review (Fable)
 - [x] Full-diff review: SHIP, 0 blocking. Should-fixes applied: gsap import .catch + dialog unhide (f6b45e1); budget reporting corrected to ~194 KB gzip (not ~151 — my subtraction was wrong). Nits deferred to part 2: drop next-themes+theme-provider, reduced-motion status-bar copy, mid-session motion-toggle canvas idle.
 
+## Follow-up candidates (for final review / later)
+- Wrap retro.css in @layer components so Tailwind utilities win without ! markers (systemic fix for the 3x shorthand-voids-utility bug; touches part-1 cascade too — needs a visual regression pass on / when done)
+- Review-panel tabs roving keyboard nav (import-window has the APG pattern; review-panel doesn't)
+- Body-copy contrast question: --r-shadow (#808080) prompt text on face is ~2.2:1 (plan-prescribed, flagged by two reviewers)
+- analyze.ts init() outside try/finally can leak an engine child on init timeout (upstream)
+
 ## Part 2 (separate /build, user-confirmed 2026-08-28)
 - Refactor the app UI (/app screens: sidebar, import, review, practice, play) to the retro design system
 - Finish out the homepage: walkthrough windows become LIVE interactive demos (Review: mini chessboard scrubbing an analyzed game; Practice: real find-the-best-move puzzle via client-side chess.js; Import: short auto-playing capture) instead of static screenshots
