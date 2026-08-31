@@ -63,8 +63,8 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
   const handleChartClick = useCallback(
     (nextState: MouseHandlerDataParam, _event: SyntheticEvent) => {
       const idx = nextState.activeTooltipIndex;
-      if (typeof idx === "number") {
-        onMoveClick(idx);
+      if (Number.isInteger(Number(idx))) {
+        onMoveClick(Number(idx));
       }
     },
     [onMoveClick]

@@ -53,7 +53,7 @@ function ReviewBody({
   const setActiveMove = useGameStore((s) => s.setActiveMove);
 
   // Controls above the board plus the move info bar below it.
-  const { ref, width } = useBoardSize({ h: 96 });
+  const { ref, width } = useBoardSize({ h: 117 }) // measured: MoveControls 72 + info bar 44 + 1 slack; info bar can wrap taller at very narrow widths;
 
   // Pre-v2 blobs count as absent: their evals were side-to-move relative.
   const analysis = isCurrentAnalysis(game.analysis) ? game.analysis : null;

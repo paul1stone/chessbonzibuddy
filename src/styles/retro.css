@@ -149,6 +149,9 @@
   background: linear-gradient(90deg, var(--r-shadow), var(--r-face-light));
 }
 
+.r-statusbar:empty {
+  display: none;
+}
 .r-statusbar {
   margin: 0 1px 1px;
   padding: 3px 8px;
