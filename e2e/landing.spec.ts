@@ -74,6 +74,16 @@ test.describe("landing page", () => {
     await context.close();
   });
 
+  test("has no horizontal overflow at 1024px", async ({ browser }) => {
+    // Guards the two-column walkthrough at iPad-landscape widths (lg grid tracks are narrower than 560px).
+    const context = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+    const page = await context.newPage();
+    await page.goto("/");
+    const width = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(width).toBeLessThanOrEqual(1024);
+    await context.close();
+  });
+
   test("shows the checkmate dialog after scrolling through the hero", async ({ page }) => {
     await page.goto("/");
     await page.locator("[data-testid=hero-canvas] canvas").waitFor({ timeout: 15000 });

@@ -75,7 +75,7 @@ function StackWindow({ item, index, draggable, z, onRaise }: StackWindowProps) {
   return (
     <RetroWindow
       title={item.title}
-      className={cn("relative w-full md:w-[560px]", STACK_POS, item.place)}
+      className={cn("relative w-full md:w-[560px] lg:w-full lg:max-w-[560px]", STACK_POS, item.place)}
       style={{
         "--i": index,
         "--lgx": `${item.offset?.x ?? 0}px`,

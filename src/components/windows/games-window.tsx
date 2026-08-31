@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { RetroButton } from "@/components/retro";
 import { useGameStore } from "@/stores/game-store";
@@ -92,9 +93,11 @@ export function GamesWindow() {
       const res = await fetch(`/api/games/${gameId}`, { method: "DELETE" });
       if (res.ok || res.status === 204) {
         removeGame(gameId);
+      } else {
+        toast.error("Could not delete game");
       }
     } catch {
-      // Silently fail - the game remains in the list
+      toast.error("Could not delete game");
     } finally {
       setDeletingId(null);
     }

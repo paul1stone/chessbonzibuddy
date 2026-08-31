@@ -101,7 +101,7 @@ export function ImportWindow({
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <label className="flex flex-col gap-1">
-              Chess.com or Lichess game URL
+              Chess.com game URL
               <input
                 placeholder="https://www.chess.com/game/live/..."
                 value={url}

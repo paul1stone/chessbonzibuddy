@@ -39,6 +39,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   removeGame: (id) =>
     set((state) => ({
       games: state.games.filter((g) => g.id !== id),
+      analysisQueue: state.analysisQueue.filter((g) => g.id !== id),
       activeGame: state.activeGame?.id === id ? null : state.activeGame,
       view: state.activeGame?.id === id ? "import" : state.view,
     })),

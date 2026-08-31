@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Taskbar, type TaskbarMenuItem } from "@/components/retro";
 import { cn } from "@/lib/utils";
 import { useWindowStore, WINDOW_IDS } from "@/stores/window-store";
@@ -12,14 +13,26 @@ export function AppTaskbar() {
   const focused = useWindowStore((s) => s.focused);
   const { open, focus, minimize } = useWindowStore.getState();
 
+  // Spec 8: when the last window closes, focus falls to the Start button.
+  const anyOpen = WINDOW_IDS.some((id) => windows[id].open);
+  const prevOpenRef = useRef(anyOpen);
+  useEffect(() => {
+    if (prevOpenRef.current && !anyOpen) {
+      document.querySelector<HTMLElement>('[aria-controls="start-menu"]')?.focus();
+    }
+    prevOpenRef.current = anyOpen;
+  }, [anyOpen]);
+
   const menuItems: TaskbarMenuItem[] = [
     { label: "Play Bonzi Buddy", onSelect: () => open("play") },
     { label: "My games", onSelect: () => open("games") },
     { label: "Import", onSelect: () => open("import") },
+    { label: "Practice", onSelect: () => open("practice") },
     { label: "Profile", onSelect: () => open("profile") },
     { href: "/", label: "Home" },
     { href: "/privacy", label: "Privacy" },
     { href: "/terms", label: "Terms" },
+    { href: "https://github.com/paul1stone/chessbonzibuddy", label: "GitHub", external: true },
   ];
 
   return (

@@ -71,6 +71,10 @@ export default function Home() {
             blackAccuracy: result.blackAccuracy,
           }),
         });
+        if (res.status === 404) {
+          // Game was deleted while analyzing: drop the result quietly.
+          return;
+        }
         if (!res.ok) throw new Error("Failed to save analysis");
         const updatedGame = (await res.json()) as Game;
         // Only refresh the game on screen: setActiveGame resets activeMove, which

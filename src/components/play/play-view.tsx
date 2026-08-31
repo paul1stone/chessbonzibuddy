@@ -150,12 +150,18 @@ export function PlayView({ onExit }: PlayViewProps) {
 
   // Engine move
   const doEngineMove = useCallback(async () => {
-    // Wait out engine init rather than dropping the move (a drop bricked the game).
-    const engine = engineRef.current ?? (await (engineReadyRef.current ?? Promise.resolve(null)));
-    if (!engine || useBonziPlayStore.getState().phase !== "playing") return;
+    if (useBonziPlayStore.getState().phase !== "playing") return;
 
+    // Show the thinking state immediately — engine init may still be running.
     setEngineThinking(true);
     fireBonziReaction("bonzi_thinking");
+
+    // Wait out engine init rather than dropping the move (a drop bricked the game).
+    const engine = engineRef.current ?? (await (engineReadyRef.current ?? Promise.resolve(null)));
+    if (!engine || useBonziPlayStore.getState().phase !== "playing") {
+      setEngineThinking(false);
+      return;
+    }
 
     try {
       const state = useBonziPlayStore.getState();
