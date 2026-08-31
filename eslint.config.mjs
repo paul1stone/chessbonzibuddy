@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "public/stockfish/**",
+    "public/v86/**",
+    "public/terminal/**",
     ".stockfish/**",
     "playwright-report/**",
     "test-results/**",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import type { Arrow } from "react-chessboard";
@@ -28,10 +28,13 @@ export function Board({
 }: BoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
 
-  // Clear selection when position or interactivity changes
-  useEffect(() => {
+  // Clear selection when position or interactivity changes (render-time reset, same
+  // pattern as bonzi-avatar.tsx; an effect here trips react-hooks/set-state-in-effect).
+  const [prevKey, setPrevKey] = useState({ position, interactive });
+  if (prevKey.position !== position || prevKey.interactive !== interactive) {
+    setPrevKey({ position, interactive });
     setSelectedSquare(null);
-  }, [position, interactive]);
+  }
 
   // Compute legal moves for the selected square
   const legalMoves = useMemo(() => {
