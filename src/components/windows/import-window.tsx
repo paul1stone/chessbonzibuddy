@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { RetroButton } from "@/components/retro";
 import { RecentGames, type RecentGameData } from "@/components/import/recent-games";
 
 export type { RecentGameData };
+
+const TABS = [
+  { id: "recent", label: "Recent games" },
+  { id: "url", label: "Paste URL" },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
 
 interface ImportWindowProps {
   onImportUrl: (url: string) => Promise<void>;
@@ -17,9 +24,26 @@ export function ImportWindow({
   onBulkImport,
   importing,
 }: ImportWindowProps) {
-  const [tab, setTab] = useState<"recent" | "url">("recent");
+  const [tab, setTab] = useState<TabId>("recent");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const tabRefs = useRef<Partial<Record<TabId, HTMLButtonElement | null>>>({});
+
+  // Roving tablist: arrows move selection and focus together.
+  function handleTabKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const current = TABS.findIndex((t) => t.id === tab);
+    let next = current;
+    if (e.key === "ArrowRight") next = (current + 1) % TABS.length;
+    else if (e.key === "ArrowLeft") next = (current - 1 + TABS.length) % TABS.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = TABS.length - 1;
+    else return;
+
+    e.preventDefault();
+    const nextId = TABS[next].id;
+    setTab(nextId);
+    tabRefs.current[nextId]?.focus();
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,30 +64,36 @@ export function ImportWindow({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="r-tabs shrink-0" role="tablist">
-        <button
-          role="tab"
-          aria-selected={tab === "recent"}
-          aria-controls="import-pane"
-          className={`r-tab ${tab === "recent" ? "r-tab--active" : ""}`}
-          onClick={() => setTab("recent")}
-        >
-          Recent games
-        </button>
-        <button
-          role="tab"
-          aria-selected={tab === "url"}
-          aria-controls="import-pane"
-          className={`r-tab ${tab === "url" ? "r-tab--active" : ""}`}
-          onClick={() => setTab("url")}
-        >
-          Paste URL
-        </button>
+      <div
+        className="r-tabs shrink-0"
+        role="tablist"
+        aria-label="Import source"
+        onKeyDown={handleTabKeyDown}
+      >
+        {TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            id={`import-tab-${id}`}
+            ref={(el) => {
+              tabRefs.current[id] = el;
+            }}
+            role="tab"
+            aria-selected={tab === id}
+            aria-controls="import-pane"
+            tabIndex={tab === id ? 0 : -1}
+            className={`r-tab ${tab === id ? "r-tab--active" : ""}`}
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div
         id="import-pane"
         role="tabpanel"
+        tabIndex={0}
+        aria-labelledby={`import-tab-${tab}`}
         className="r-face r-bevel-out flex min-h-0 flex-1 flex-col p-3"
       >
         {tab === "recent" ? (

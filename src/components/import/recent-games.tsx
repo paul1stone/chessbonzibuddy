@@ -157,14 +157,12 @@ export function RecentGames({ onImport }: RecentGamesProps) {
             placeholder="Search by player, time control..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="r-input w-full"
-            style={{ paddingLeft: 24 }}
+            className="r-input w-full pl-6!"
             aria-label="Search recent games"
           />
         </div>
         <RetroButton
-          className="shrink-0"
-          style={{ minWidth: 0, padding: "0 8px" }}
+          className="min-w-0! shrink-0 px-2!"
           onClick={fetchGames}
           title="Refresh"
           aria-label="Refresh"
@@ -180,7 +178,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
           {search && ` matching "${search}"`}
         </span>
         {selected.size > 0 && (
-          <RetroButton style={{ minWidth: 0, padding: "0 8px" }} onClick={handleImport}>
+          <RetroButton className="min-w-0! px-2!" onClick={handleImport}>
             <Download className="mr-1 h-3 w-3" />
             Import {selected.size}
           </RetroButton>
@@ -199,6 +197,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
                 key={game.id}
                 onClick={() => !isImported && toggleSelect(game.id)}
                 disabled={isImported}
+                aria-pressed={isImported ? undefined : isSelected}
                 className={`flex w-full items-center gap-3 px-2 py-1.5 text-left ${
                   isImported
                     ? "opacity-40"
@@ -212,12 +211,13 @@ export function RecentGames({ onImport }: RecentGamesProps) {
                 ) : (
                   <span
                     aria-hidden="true"
-                    className={`r-bevel-in h-3.5 w-3.5 shrink-0 ${
-                      isSelected
-                        ? "bg-[var(--r-title-text)]"
-                        : "bg-[var(--r-paper)]"
-                    }`}
-                  />
+                    className="r-bevel-in flex h-3.5 w-3.5 shrink-0 items-center justify-center bg-[var(--r-paper)]"
+                  >
+                    {/* Win98 tick: dark block inside the sunken paper box. 8px keeps the 3px inset integral. */}
+                    {isSelected && (
+                      <span className="h-2 w-2 bg-[var(--r-dark)]" />
+                    )}
+                  </span>
                 )}
 
                 <div className="flex min-w-0 flex-1 flex-col">
