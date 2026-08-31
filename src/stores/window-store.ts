@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type WindowId = "games" | "import" | "review" | "practice" | "play" | "profile";
+export type WindowId = "games" | "import" | "review" | "practice" | "play" | "profile" | "terminal";
 
 export interface WindowState {
   id: WindowId;
@@ -19,9 +19,10 @@ export const WINDOW_SIZES: Record<WindowId, { w: number; h: number }> = {
   practice: { w: 900, h: 560 },
   play: { w: 960, h: 640 },
   profile: { w: 400, h: 380 },
+  terminal: { w: 680, h: 460 },
 };
 
-export const WINDOW_IDS: WindowId[] = ["games", "import", "review", "practice", "play", "profile"];
+export const WINDOW_IDS: WindowId[] = ["games", "import", "review", "practice", "play", "profile", "terminal"];
 
 const CASCADE_ORIGIN = 48;
 const CASCADE_STEP = 24;

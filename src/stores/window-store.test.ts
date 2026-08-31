@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useWindowStore, WINDOW_SIZES } from "./window-store";
+import { useWindowStore, WINDOW_IDS, WINDOW_SIZES } from "./window-store";
 
 const s = () => useWindowStore.getState();
 
@@ -57,9 +57,17 @@ describe("window store", () => {
   });
 
   it("declares a size for every window id", () => {
-    for (const id of ["games", "import", "review", "practice", "play", "profile"] as const) {
+    for (const id of WINDOW_IDS) {
       expect(WINDOW_SIZES[id].w).toBeGreaterThan(300);
       expect(WINDOW_SIZES[id].h).toBeGreaterThan(300);
     }
+  });
+
+  it("registers the terminal window", () => {
+    expect(WINDOW_IDS).toContain("terminal");
+    expect(WINDOW_SIZES.terminal).toEqual({ w: 680, h: 460 });
+    s().open("terminal");
+    expect(s().windows.terminal.open).toBe(true);
+    expect(s().focused).toBe("terminal");
   });
 });

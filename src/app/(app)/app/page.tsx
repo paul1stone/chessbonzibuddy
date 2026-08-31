@@ -15,6 +15,7 @@ import {
   ReviewStatusBar,
   ReviewWindow,
 } from "@/components/windows/review-window";
+import TerminalWindow from "@/components/windows/terminal-window";
 import { useGameStore } from "@/stores/game-store";
 import { useProfileStore } from "@/stores/profile-store";
 import { useWindowStore, type WindowId } from "@/stores/window-store";
@@ -277,6 +278,7 @@ export default function Home() {
     practice: { title: ICON_LABELS.practice, render: () => <PracticeWindow /> },
     play: { title: ICON_LABELS.play, render: () => <PlayWindow /> },
     profile: { title: ICON_LABELS.profile, render: () => <ProfileWindow /> },
+    terminal: { title: ICON_LABELS.terminal, render: () => <TerminalWindow /> },
   };
 
   return <Desktop defs={defs} />;

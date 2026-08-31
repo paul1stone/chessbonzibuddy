@@ -29,6 +29,7 @@ export function AppTaskbar() {
     { label: "Import", onSelect: () => open("import") },
     { label: "Practice", onSelect: () => open("practice") },
     { label: "Profile", onSelect: () => open("profile") },
+    { label: "MS-DOS Prompt", onSelect: () => open("terminal") },
     { href: "/", label: "Home" },
     { href: "/privacy", label: "Privacy" },
     { href: "/terms", label: "Terms" },

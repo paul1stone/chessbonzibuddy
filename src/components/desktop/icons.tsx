@@ -153,6 +153,29 @@ export function ProfileIcon() {
   );
 }
 
+export function TerminalIcon() {
+  return (
+    <svg {...SVG_PROPS}>
+      {/* monitor bezel */}
+      <rect x="1" y="1" width="14" height="11" fill="#000000" />
+      <rect x="2" y="2" width="12" height="9" fill="#c0c0c0" />
+      {/* screen */}
+      <rect x="3" y="3" width="10" height="7" fill="#000000" />
+      {/* C:\> prompt and a block cursor */}
+      <g fill="#00a0a0">
+        <rect x="4" y="4" width="3" height="1" />
+        <rect x="8" y="4" width="1" height="1" />
+        <rect x="4" y="6" width="2" height="1" />
+      </g>
+      <rect x="7" y="6" width="2" height="1" fill="#c0c0c0" />
+      {/* stand */}
+      <rect x="6" y="12" width="4" height="1" fill="#000000" />
+      <rect x="3" y="13" width="10" height="2" fill="#000000" />
+      <rect x="4" y="13" width="8" height="1" fill="#c0c0c0" />
+    </svg>
+  );
+}
+
 export const ICON_LABELS: Record<WindowId, string> = {
   games: "My games",
   import: "Import",
@@ -160,6 +183,7 @@ export const ICON_LABELS: Record<WindowId, string> = {
   practice: "Practice",
   play: "Play Bonzi Buddy",
   profile: "Profile",
+  terminal: "MS-DOS Prompt",
 };
 
 export const WINDOW_ICONS: Record<WindowId, ReactNode> = {
@@ -169,4 +193,5 @@ export const WINDOW_ICONS: Record<WindowId, ReactNode> = {
   practice: <PracticeIcon />,
   play: <PlayIcon />,
   profile: <ProfileIcon />,
+  terminal: <TerminalIcon />,
 };
