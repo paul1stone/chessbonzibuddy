@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "public/stockfish/**",
     "playwright-report/**",
     "test-results/**",
+    ".claude/**",
     "coverage/**",
   ]),
 ]);
