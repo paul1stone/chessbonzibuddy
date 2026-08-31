@@ -24,18 +24,18 @@ export function EvalBar({ eval: evaluation, mate, height = 400 }: EvalBarProps) 
 
   return (
     <div
-      className="relative w-8 flex-shrink-0 overflow-hidden rounded-md"
+      className="r-bevel-in relative w-8 flex-shrink-0 overflow-hidden bg-[var(--r-face)] p-[2px]"
       style={{ height }}
     >
       {/* Black section (top) */}
       <div
-        className="absolute top-0 left-0 right-0 bg-purple-800 transition-all duration-300"
+        className="absolute top-0 left-0 right-0 bg-[#2b2b2b] transition-all duration-300"
         style={{ height: `${blackPercent}%` }}
       />
 
       {/* White section (bottom) */}
       <div
-        className="absolute bottom-0 left-0 right-0 bg-purple-100 transition-all duration-300"
+        className="absolute bottom-0 left-0 right-0 bg-[#f0e6d2] transition-all duration-300"
         style={{ height: `${whitePercent}%` }}
       />
 
@@ -50,7 +50,7 @@ export function EvalBar({ eval: evaluation, mate, height = 400 }: EvalBarProps) 
           className={cn(
             "text-[10px] font-bold leading-none",
             "writing-mode-vertical [writing-mode:vertical-rl] rotate-180",
-            labelOnWhite ? "text-purple-900" : "text-white"
+            labelOnWhite ? "text-[#2b2b2b]" : "text-[#f0e6d2]"
           )}
         >
           {evalText}

@@ -6,6 +6,8 @@ import { Board } from "./board";
 import { MoveControls } from "./move-controls";
 import { MoveBadge } from "@/components/review/move-badge";
 import type { MoveAnalysis } from "@/lib/engine";
+import { classificationArrowColor } from "@/lib/classification-colors";
+import { useWindowStore, type WindowId } from "@/stores/window-store";
 import { ArrowRight } from "lucide-react";
 
 interface BoardPanelProps {
@@ -17,30 +19,13 @@ interface BoardPanelProps {
   boardOrientation?: "white" | "black";
   /** Analysis data for showing arrows and move info during playback */
   moves?: MoveAnalysis[];
+  /** Keyboard nav is active only while this window is focused. Omit for global keys. */
+  windowId?: WindowId;
+  /** Explicit board width in px, from the parent's useBoardSize. */
+  boardWidth?: number;
 }
 
 const PLAY_SPEED_MS = 1500;
-
-/** Map classification to arrow color */
-function classificationArrowColor(
-  classification: MoveAnalysis["classification"]
-): string {
-  switch (classification) {
-    case "blunder":
-      return "rgba(239, 68, 68, 0.8)";
-    case "mistake":
-      return "rgba(249, 115, 22, 0.8)";
-    case "inaccuracy":
-      return "rgba(234, 179, 8, 0.8)";
-    case "brilliant":
-      return "rgba(6, 182, 212, 0.8)";
-    case "great":
-    case "best":
-      return "rgba(34, 197, 94, 0.8)";
-    default:
-      return "rgba(150, 150, 150, 0.5)";
-  }
-}
 
 export function BoardPanel({
   pgn,
@@ -50,6 +35,8 @@ export function BoardPanel({
   onPieceDrop,
   boardOrientation = "white",
   moves,
+  windowId,
+  boardWidth,
 }: BoardPanelProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -116,7 +103,9 @@ export function BoardPanel({
 
   // Keep a ref to currentMove so the interval callback always has the latest value
   const currentMoveRef = useRef(currentMove);
-  currentMoveRef.current = currentMove;
+  useEffect(() => {
+    currentMoveRef.current = currentMove;
+  });
 
   // Advance moves during playback
   useEffect(() => {
@@ -139,16 +128,18 @@ export function BoardPanel({
     };
   }, [isPlaying, totalMoves, onMoveChange, stopPlaying]);
 
-  // Stop playback when reaching the end
-  useEffect(() => {
-    if (isPlaying && currentMove >= totalMoves) {
-      stopPlaying();
-    }
-  }, [isPlaying, currentMove, totalMoves, stopPlaying]);
+  // Stop playback when reaching the end (state adjusted during render, not in an effect)
+  if (isPlaying && currentMove >= totalMoves) {
+    setIsPlaying(false);
+  }
 
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if (windowId && useWindowStore.getState().focused !== windowId) return;
+      const t = e.target as HTMLElement;
+      if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable) return;
+
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         if (isPlaying) stopPlaying();
@@ -173,7 +164,7 @@ export function BoardPanel({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [goToFirst, goToPrevious, goToNext, goToLast, togglePlay, isPlaying, stopPlaying]);
+  }, [goToFirst, goToPrevious, goToNext, goToLast, togglePlay, isPlaying, stopPlaying, windowId]);
 
   // Clamp currentMove to valid range
   const clampedMove = Math.max(0, Math.min(currentMove, totalMoves));
@@ -194,7 +185,7 @@ export function BoardPanel({
       arrows.push([
         best.slice(0, 2),
         best.slice(2, 4),
-        "rgba(34, 197, 94, 0.7)",
+        "rgba(0, 128, 0, 0.7)",
       ]);
     }
 
@@ -207,6 +198,8 @@ export function BoardPanel({
       ]);
     }
   }
+
+  const sizeStyle = boardWidth ? { width: boardWidth } : undefined;
 
   return (
     <div className="flex flex-col items-center gap-0">
@@ -222,24 +215,28 @@ export function BoardPanel({
         onTogglePlay={moves && moves.length > 0 ? togglePlay : undefined}
       />
 
-      {/* Board — 90% of column width, but capped by viewport height so it never overflows */}
-      <div className="w-[90%] max-w-[calc(100vh-14rem)]">
+      {/* Board — sized by the parent container (window body via useBoardSize) */}
+      <div className="w-full" style={sizeStyle}>
         <Board
           position={currentFen}
           interactive={interactive}
           onPieceDrop={onPieceDrop}
           boardOrientation={boardOrientation}
+          boardWidth={boardWidth}
           customArrows={arrows.length > 0 ? arrows : undefined}
         />
       </div>
 
       {/* Move info bar: shows played vs best move with classification */}
       {currentMoveAnalysis && (
-        <div className="mt-2 flex w-[90%] max-w-[calc(100vh-14rem)] items-center justify-center gap-3 rounded-lg bg-purple-900/70 px-4 py-2">
+        <div
+          className="r-bevel-in mt-2 flex w-full items-center justify-center gap-3 bg-[var(--r-face-light)] px-4 py-2"
+          style={sizeStyle}
+        >
           {/* Played move */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-purple-400">Played</span>
-            <span className="font-mono text-sm font-semibold text-purple-100">
+            <span className="text-xs text-[var(--r-shadow)]">Played</span>
+            <span className="font-mono text-sm font-semibold text-[var(--r-dark)]">
               {currentMoveAnalysis.san}
             </span>
             <MoveBadge classification={currentMoveAnalysis.classification} />
@@ -248,10 +245,10 @@ export function BoardPanel({
           {/* Separator + arrow */}
           {currentMoveAnalysis.bestMove !== currentMoveAnalysis.uci && currentMoveAnalysis.bestMoveSan && (
             <>
-              <ArrowRight className="h-3 w-3 text-purple-500" />
+              <ArrowRight className="h-3 w-3 text-[var(--r-shadow)]" />
               <div className="flex items-center gap-2">
-                <span className="text-xs text-purple-400">Best</span>
-                <span className="font-mono text-sm font-semibold text-green-400">
+                <span className="text-xs text-[var(--r-shadow)]">Best</span>
+                <span className="font-mono text-sm font-bold text-[#008000]">
                   {currentMoveAnalysis.bestMoveSan}
                 </span>
               </div>

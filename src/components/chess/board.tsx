@@ -110,7 +110,7 @@ export function Board({
   );
 
   return (
-    <div className="rounded-lg overflow-hidden shadow-xl">
+    <div className="r-bevel-in bg-[var(--r-face)] p-[3px]">
       <Chessboard
         options={{
           position: position ?? "start",
@@ -119,8 +119,8 @@ export function Board({
           allowDragging: interactive,
           arrows,
           squareStyles: clickMoveStyles,
-          lightSquareStyle: { backgroundColor: "#e8dab2" },
-          darkSquareStyle: { backgroundColor: "#4a7c59" },
+          lightSquareStyle: { backgroundColor: "#d9c9a3" },
+          darkSquareStyle: { backgroundColor: "#6e4b2a" },
           dropSquareStyle: { boxShadow: "inset 0 0 1px 6px rgba(0,0,0,.1)" },
           boardStyle: {
             ...(boardWidth ? { width: boardWidth } : {}),
