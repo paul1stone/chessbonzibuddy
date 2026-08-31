@@ -14,7 +14,8 @@ Plan: docs/superpowers/plans/2026-08-31-win98-desktop-app.md
   - [x] Task 3 review: FAIL→fixed (eval-bar bevel + board frame 6px) in 87fa3c5; CLOSED
   - [x] Task 8 8cb17e7 review PASS (fixture replay-verified); picker spec fixed + script polish; CLOSED. Note: analyze.ts init() outside try/finally can leak a child on init timeout (upstream, logged for final review)
   - [ ] In flight: Task 4 0bb4047 + Task 5b 01cb722 landed (reviews running); Task 2 c6d0702 landed (transform check PASS, review dispatched; board start-alias crash fixed by fixer); Task 6 7bc244a landed (review dispatched); Task 5a 97be797 landed (ReviewStatusBar separate export; review dispatched); Task 9 implementing; TASK 7 DISPATCHED (all wave-3 bodies committed) (deps 0/3/8 all closed, files disjoint from wave 3)
-  - [ ] Then: 7/9 (wave 4), 10, 11
+  - [ ] Reviews: Task 4 PASS (fixer dispatched: checkbox visibility, press-shift padding, tabs keyboard); Tasks 2/5a/5b/6 reviews running
+  - [ ] Then: Task 10 (after 9), Task 11, final review
 - [ ] Final Fable review
 - [x] Part 1 pushed to origin/main (9794a8d)
 
