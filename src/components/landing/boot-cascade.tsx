@@ -1,0 +1,97 @@
+"use client";
+
+import { useEffect } from "react";
+import { loadGsap } from "@/lib/gsap-loader";
+import { markBooted, safeSessionStorage } from "./easter/boot-flag";
+
+const BOOT_CLASS = "boot-pending";
+// Scroll counts as input: a programmatic scroll (Playwright, an impatient human) would otherwise
+// let the boot's final writes land after the hero scrub had already taken the window away.
+const SKIP_EVENTS = ["pointerdown", "keydown", "wheel", "scroll"] as const;
+
+// The boot owns the hero window while it plays, so anything else animating that element waits
+// here — a scrub timeline rendering its scroll-0 state would otherwise wipe the zoom mid-flight.
+let gate: Promise<void> | null = null;
+let openGate = () => {};
+let booting = 0;
+
+function holdGate(): Promise<void> {
+  if (!gate) gate = new Promise<void>((resolve) => (openGate = resolve));
+  return gate;
+}
+
+export function whenBootSettled(): Promise<void> {
+  if (gate) return gate;
+  const pending =
+    typeof document !== "undefined" && document.documentElement.classList.contains(BOOT_CLASS);
+  return pending ? holdGate() : Promise.resolve();
+}
+
+// First visit of a session: the taskbar slides up and the hero window zooms open.
+// The pre-paint script in the marketing layout owns the gating, so the class is our only signal.
+export function BootCascade() {
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!root.classList.contains(BOOT_CLASS)) return;
+
+    markBooted(safeSessionStorage());
+    holdGate();
+    booting += 1;
+
+    let cancelled = false;
+    let released = false;
+    let cleanup: (() => void) | undefined;
+
+    const release = () => {
+      if (released) return;
+      released = true;
+      booting -= 1;
+      if (booting <= 0) openGate();
+    };
+
+    loadGsap()
+      .then(({ gsap }) => {
+        const taskbar = document.querySelector("[data-taskbar]");
+        const heroWindow = document.querySelector(".hero-window");
+
+        if (!cancelled && taskbar && heroWindow) {
+          gsap.set(taskbar, { yPercent: 100 });
+          gsap.set(heroWindow, { autoAlpha: 0, scale: 0.2, transformOrigin: "bottom left" });
+        }
+        root.classList.remove(BOOT_CLASS);
+        if (cancelled || !taskbar || !heroWindow) return release();
+
+        const tl = gsap.timeline({ onComplete: () => finish() });
+        tl.to(taskbar, { yPercent: 0, duration: 0.2, ease: "steps(4)" });
+        tl.to(heroWindow, { autoAlpha: 1, scale: 1, duration: 0.35, ease: "steps(8)" }, 0.2);
+
+        const skip = () => {
+          tl.progress(1);
+          finish();
+        };
+        function finish() {
+          SKIP_EVENTS.forEach((type) => window.removeEventListener(type, skip));
+          release();
+        }
+        SKIP_EVENTS.forEach((type) => window.addEventListener(type, skip, { passive: true }));
+
+        cleanup = () => {
+          finish();
+          tl.kill();
+        };
+      })
+      .catch(() => {
+        // Nothing may stay hidden behind a boot that will never run.
+        root.classList.remove(BOOT_CLASS);
+        release();
+      });
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+      release();
+    };
+  }, []);
+
+  return null;
+}

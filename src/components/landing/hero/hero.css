@@ -53,3 +53,9 @@
   object-fit: cover;
   image-rendering: pixelated;
 }
+
+/* Pre-paint boot gate: the inline script in the marketing layout adds this on the landing page only. */
+.boot-pending .hero-window,
+.boot-pending [data-taskbar] {
+  visibility: hidden;
+}

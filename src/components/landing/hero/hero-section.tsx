@@ -7,6 +7,7 @@ import { RetroButton, RetroDialog, RetroWindow } from "@/components/retro";
 import { useDrag } from "@/hooks/use-drag";
 import { QUIP_MAP } from "@/lib/bonzi/quips";
 import { usePrefersReducedMotion } from "@/lib/motion";
+import { useSectionDock } from "../use-section-dock";
 import { HeroCanvasLoader } from "./hero-canvas-loader";
 import { HeroPoster } from "./hero-poster";
 import { useHeroScroll } from "./use-hero-scroll";
@@ -23,6 +24,8 @@ export function HeroSection() {
   const progressRef = useRef(0);
 
   useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef });
+  // The hero docks from its own 35% trigger, so only active tracking comes from here.
+  useSectionDock("hero", sectionRef, { dockOnExit: false });
 
   const isMobile = useIsMobile();
   const reduced = usePrefersReducedMotion();
