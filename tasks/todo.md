@@ -9,7 +9,7 @@ Plan: docs/superpowers/plans/2026-08-31-win98-desktop-app.md
 - [x] Triage + revise done (00660dd); upstream analyzer rework pulled and absorbed into plan/spec (client-side analyzeGame, forced classification, DI-based fixture script)
 - [x] User check-in — approved 2026-08-31; lucide icons stay (no objection)
 - [ ] Build waves:
-  - [x] Task 0 be20fe8 (marketing byte-identical; review in flight); Task 1 6e751e5 PASS + hardening 1f2f167
+  - [x] Task 0 be20fe8 review PASS; nbsp + RetroPanel min-w-0 fixes 9bb7aba; CLOSED. Task 1 6e751e5 PASS + hardening 1f2f167; CLOSED
   - [x] Task 3 d572357 (accepted deviation: render-time stop-playback; review in flight); lint baseline now 1 error (board.tsx) after ignore fixes 7655e58+5f977dc
   - [x] Task 3 review: FAIL→fixed (eval-bar bevel + board frame 6px) in 87fa3c5; CLOSED
   - [x] Task 8 8cb17e7 (resolve-hook deviation, book detection works, fixture deterministic 44.5KB; review in flight)
