@@ -57,21 +57,25 @@ export function BootCascade() {
       released = true;
       booting -= 1;
       queueMicrotask(() => {
-        if (booting <= 0) openGate();
+        if (booting > 0) return;
+        // Last one out: nothing may stay hidden behind a boot that is not going to run.
+        root.classList.remove(BOOT_CLASS);
+        openGate();
       });
     };
 
     loadGsap()
       .then(({ gsap }) => {
+        // The inline failsafe clears the class after 3s. If it beat us here the page is already
+        // showing, and booting now would flash it away and back.
+        const stillPending = root.classList.contains(BOOT_CLASS);
         const taskbar = document.querySelector("[data-taskbar]");
         const heroWindow = document.querySelector(".hero-window");
+        if (cancelled || !stillPending || !taskbar || !heroWindow) return release();
 
-        if (!cancelled && taskbar && heroWindow) {
-          gsap.set(taskbar, { yPercent: 100 });
-          gsap.set(heroWindow, { autoAlpha: 0, scale: 0.2, transformOrigin: "bottom left" });
-        }
+        gsap.set(taskbar, { yPercent: 100 });
+        gsap.set(heroWindow, { autoAlpha: 0, scale: 0.2, transformOrigin: "bottom left" });
         root.classList.remove(BOOT_CLASS);
-        if (cancelled || !taskbar || !heroWindow) return release();
 
         const tl = gsap.timeline({ onComplete: () => finish() });
         tl.to(taskbar, { yPercent: 0, duration: 0.2, ease: "steps(4)" });
@@ -92,11 +96,7 @@ export function BootCascade() {
           tl.kill();
         };
       })
-      .catch(() => {
-        // Nothing may stay hidden behind a boot that will never run.
-        root.classList.remove(BOOT_CLASS);
-        release();
-      });
+      .catch(release);
 
     return () => {
       cancelled = true;
