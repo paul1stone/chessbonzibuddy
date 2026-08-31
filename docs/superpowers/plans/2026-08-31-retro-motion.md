@@ -716,6 +716,7 @@ Call it inside `demoWindow()` (or at the top of the three demo tests) before loc
   - reduced-motion context: all dock buttons present immediately; `.cascade--armed` absent.
 - [ ] **Step 3: Desktop test:** `opens the MS-DOS Prompt from the Start menu` — click Start, click "MS-DOS Prompt", expect a window titled `MS-DOS Prompt` and `data-testid="terminal-xterm"` attached within 10s. Do NOT wait for the full Linux boot.
 - [ ] **Step 4:** Full suite: `npm run typecheck && npm run lint && npm test`; then e2e per the port-3000 guard (Global Constraints). Existing tests that must stay green: overflow at 375/1024px, reduced-motion pair, checkmate dialog, start-menu Escape, all desktop specs.
+- [ ] **Step 4b:** `npm run build` MUST pass (coordinate: it disrupts the shared dev server, run it last): the terminal loads v86 via a runtime `import(/* turbopackIgnore */ "/v86/libv86.mjs")` that is only dev-verified — the production build must confirm it survives; also confirms the marketing/landing pages compile with all new client components.
 - [ ] **Step 5:** Commit: `cover retro motion e2e`
 
 ---
