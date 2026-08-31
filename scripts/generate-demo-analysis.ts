@@ -72,8 +72,11 @@ type ResolveHook = (
 function registerAppResolution(): void {
   // module.registerHooks landed in node 22.15 but is absent from @types/node 20.
   const { registerHooks } = nodeModule as unknown as {
-    registerHooks(hooks: { resolve: ResolveHook }): void;
+    registerHooks?: (hooks: { resolve: ResolveHook }) => void;
   };
+  if (typeof registerHooks !== "function") {
+    throw new Error("node >= 22.15 required: module.registerHooks is unavailable");
+  }
 
   registerHooks({
     resolve(specifier, context, nextResolve) {
@@ -114,7 +117,7 @@ function registerAppResolution(): void {
 /**
  * The node-side twin of `StockfishEngine`: same UCI conversation, but over a
  * child process's stdio instead of a Web Worker. Parsing is delegated to the
- * production `parseUciEvaluation` so the fixture's numbers are byte-identical
+ * production `parseUciEvaluation` so the fixture's numbers are parsed exactly as production parses them (the browser ships the full net, this script the lite build, so evals differ slightly).
  * to what the browser would produce.
  */
 class StockfishProcessEngine implements AnalysisEngine {
