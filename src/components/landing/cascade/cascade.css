@@ -1,0 +1,14 @@
+/* Armed only on lg+ with motion allowed; every window hides until its segment reveals it. */
+.cascade--armed [data-stack-key] {
+  visibility: hidden;
+}
+.cascade--armed [data-stack-key].cascade-open {
+  visibility: visible;
+}
+.cascade-outline {
+  position: fixed;
+  border: 2px solid var(--r-dark);
+  outline: 1px dotted var(--r-highlight);
+  pointer-events: none;
+  z-index: 60;
+}
