@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { useProfileStore } from "@/stores/profile-store";
 import { fetchChessComRatings, fetchLichessRatings } from "@/lib/ratings";
 import { PlayView } from "@/components/play/play-view";
-import type { GameAnalysis } from "@/lib/engine";
+import { isCurrentAnalysis, type GameAnalysis } from "@/lib/engine";
 import type { Game } from "@/db/schema";
 
 interface RecentGameData {
@@ -322,11 +322,13 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   // ---- Parse analysis from the active game's JSONB field ----
-  const analysis: GameAnalysis | null = activeGame?.analysis
-    ? (activeGame.analysis as GameAnalysis)
-    : null;
+  // Pre-v2 blobs are treated as absent: their evals were side-to-move relative.
+  const analysis: GameAnalysis | null =
+    activeGame?.analysis && isCurrentAnalysis(activeGame.analysis)
+      ? activeGame.analysis
+      : null;
 
-  // ---- Server-side analysis via SSE ----
+  // ---- Client-side analysis: run the pipeline in-browser, then persist ----
   const runAnalysis = useCallback(
     async (game: Game) => {
       setIsAnalyzing(true);
@@ -334,51 +336,42 @@ export default function Home() {
       setActiveMove(0);
 
       try {
-        const res = await fetch(`/api/games/${game.id}/analyze`, {
-          method: "POST",
+        // Dynamic import keeps Stockfish and the opening book out of the initial bundle.
+        const { analyzeGame } = await import("@/lib/analyze");
+        toast.info(
+          "Warming up Stockfish — first analysis downloads the engine (~113 MB)"
+        );
+
+        const result = await analyzeGame(game.pgn, {
+          onProgress: (current, total) => {
+            setAnalysisProgress(Math.round((current / total) * 100));
+            // Only drive the board cursor when this game is the one on screen.
+            if (useGameStore.getState().activeGame?.id === game.id) {
+              setActiveMove(current);
+            }
+          },
         });
 
-        if (!res.ok || !res.body) {
-          throw new Error("Failed to start analysis");
+        const res = await fetch(`/api/games/${game.id}/analysis`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            analysis: result,
+            whiteAccuracy: result.whiteAccuracy,
+            blackAccuracy: result.blackAccuracy,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to save analysis");
+        const updatedGame = (await res.json()) as Game;
+        // A queued game finishing in the background must not yank the user out of
+        // whatever they are viewing — setActiveGame forces view: "review".
+        if (useGameStore.getState().activeGame?.id === game.id) {
+          setActiveGame(updatedGame);
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const data = JSON.parse(line.slice(6));
-
-            if (data.type === "progress") {
-              const progress = Math.round(
-                (data.current / data.total) * 100
-              );
-              setAnalysisProgress(progress);
-              setActiveMove(data.current);
-            } else if (data.type === "complete") {
-              // Refresh the game from DB to get the saved analysis
-              const gameRes = await fetch(`/api/games/${game.id}`);
-              if (gameRes.ok) {
-                const updatedGame = (await gameRes.json()) as Game;
-                setActiveGame(updatedGame);
-              }
-              toast.success(
-                `Analysis complete: ${game.whitePlayer} vs ${game.blackPlayer}`
-              );
-            } else if (data.type === "error") {
-              throw new Error(data.error);
-            }
-          }
-        }
+        toast.success(
+          `Analysis complete: ${game.whitePlayer} vs ${game.blackPlayer}`
+        );
       } catch (err) {
         console.error("Analysis failed:", err);
         const errorMessage =
@@ -387,7 +380,9 @@ export default function Home() {
       } finally {
         setIsAnalyzing(false);
         setAnalysisProgress(0);
-        setActiveMove(0);
+        if (useGameStore.getState().activeGame?.id === game.id) {
+          setActiveMove(0);
+        }
       }
     },
     [setIsAnalyzing, setAnalysisProgress, setActiveGame, setActiveMove]
@@ -397,7 +392,15 @@ export default function Home() {
   const processingRef = useRef(false);
 
   useEffect(() => {
-    if (isAnalyzing || analysisQueue.length === 0 || processingRef.current)
+    // Hold the queue while the user is playing Bonzi: analysis and Bonzi each
+    // spin up their own single-threaded engine, and two 113 MB WASM instances
+    // starve the clock (and can kill the tab on mobile).
+    if (
+      isAnalyzing ||
+      view === "play-bonzi" ||
+      analysisQueue.length === 0 ||
+      processingRef.current
+    )
       return;
 
     processingRef.current = true;
@@ -415,6 +418,7 @@ export default function Home() {
     }
   }, [
     isAnalyzing,
+    view,
     analysisQueue,
     dequeueAnalysis,
     runAnalysis,

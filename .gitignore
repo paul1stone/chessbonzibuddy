@@ -35,7 +35,6 @@ yarn-error.log*
 
 # stockfish wasm (copied from node_modules at install time)
 /public/stockfish/
-/.stockfish/
 
 # vercel
 .vercel

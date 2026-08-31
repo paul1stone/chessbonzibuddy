@@ -31,8 +31,7 @@ export function ReviewPanel({
 }: ReviewPanelProps) {
   // Compute eval and mate for the EnginePanel from the current move analysis
   const evaluation = currentMoveAnalysis?.evalAfter ?? 0;
-  // MoveAnalysis doesn't carry a mate field directly, so we pass null
-  const mate: number | null = null;
+  const mate = currentMoveAnalysis?.mateAfter ?? null;
 
   return (
     <div className="flex h-full flex-col">

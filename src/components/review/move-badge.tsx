@@ -12,6 +12,7 @@ const classificationStyles: Record<
   best: { bg: "bg-green-500/20", text: "text-green-400", label: "Best" },
   good: { bg: "bg-purple-500/20", text: "text-purple-300", label: "Good" },
   book: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Book" },
+  forced: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Forced" },
   inaccuracy: {
     bg: "bg-yellow-500/20",
     text: "text-yellow-400",
