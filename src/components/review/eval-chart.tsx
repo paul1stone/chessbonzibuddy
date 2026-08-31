@@ -12,6 +12,7 @@ import {
   CartesianGrid,
   type MouseHandlerDataParam,
 } from "recharts";
+import { formatEval } from "@/lib/analysis-utils";
 import type { MoveAnalysis, MoveClassification } from "@/lib/engine";
 
 interface EvalChartProps {
@@ -42,7 +43,7 @@ interface ChartDataPoint {
   index: number;
   moveLabel: string;
   eval: number;
-  rawEval: number;
+  evalText: string;
   classification: MoveClassification;
   san: string;
   isNotable: boolean;
@@ -57,7 +58,7 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
           ? `${m.moveNumber}.`
           : `${m.moveNumber}...`,
       eval: clampEval(m.evalAfter),
-      rawEval: m.evalAfter / 100,
+      evalText: formatEval(m.evalAfter, m.mateAfter),
       classification: m.classification,
       san: m.san,
       isNotable: NOTABLE_CLASSIFICATIONS.has(m.classification),
@@ -134,8 +135,7 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
                   {point.moveLabel} {point.san}
                 </p>
                 <p className="text-muted-foreground">
-                  Eval: {point.rawEval > 0 ? "+" : ""}
-                  {point.rawEval.toFixed(2)}
+                  Eval: {point.evalText}
                 </p>
                 {point.isNotable && (
                   <p

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { AccuracyRing } from "./accuracy-ring";
 import { EvalChart } from "./eval-chart";
 import { MoveBadge } from "./move-badge";
+import { selectKeyMoments } from "@/lib/analysis-utils";
 import type { MoveAnalysis, MoveClassification } from "@/lib/engine";
 
 interface GameSummaryProps {
@@ -28,6 +29,7 @@ const classificationColors: Record<
   best: { bg: "bg-green-500/20", text: "text-green-400", label: "Best" },
   good: { bg: "bg-purple-500/20", text: "text-purple-300", label: "Good" },
   book: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Book" },
+  forced: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Forced" },
   inaccuracy: { bg: "bg-yellow-500/20", text: "text-yellow-400", label: "Inaccuracy" },
   mistake: { bg: "bg-orange-500/20", text: "text-orange-400", label: "Mistake" },
   blunder: { bg: "bg-red-500/20", text: "text-red-400", label: "Blunder" },
@@ -51,7 +53,6 @@ interface ClassificationCount {
 interface KeyMoment {
   index: number;
   move: MoveAnalysis;
-  evalSwing: number; // absolute centipawn swing
 }
 
 export function GameSummary({
@@ -67,8 +68,15 @@ export function GameSummary({
   const whiteCounts = useMemo(() => countClassifications(moves, "w"), [moves]);
   const blackCounts = useMemo(() => countClassifications(moves, "b"), [moves]);
 
-  // Find key moments (biggest eval swings)
-  const keyMoments = useMemo(() => getKeyMoments(moves, 5), [moves]);
+  // Find key moments (biggest win% losses)
+  const keyMoments = useMemo<KeyMoment[]>(
+    () =>
+      selectKeyMoments(moves).map((move) => ({
+        move,
+        index: moves.indexOf(move),
+      })),
+    [moves]
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -200,7 +208,7 @@ export function GameSummary({
                     {moment.move.san}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatEvalSwing(moment.move.evalBefore, moment.move.evalAfter)}
+                    -{Math.round(moment.move.winPercentLoss)}% win chance
                   </span>
                   <span className="ml-auto">
                     <MoveBadge classification={moment.move.classification} />
@@ -233,30 +241,6 @@ function countClassifications(
   return displayClassifications
     .filter((c) => (counts.get(c) ?? 0) > 0)
     .map((c) => ({ classification: c, count: counts.get(c)! }));
-}
-
-function getKeyMoments(moves: MoveAnalysis[], limit: number): KeyMoment[] {
-  const moments: KeyMoment[] = moves.map((m, i) => ({
-    index: i,
-    move: m,
-    evalSwing: Math.abs(m.evalAfter - m.evalBefore),
-  }));
-
-  // Sort by largest eval swing descending
-  moments.sort((a, b) => b.evalSwing - a.evalSwing);
-
-  // Take top N, then re-sort by move order
-  return moments
-    .slice(0, limit)
-    .sort((a, b) => a.index - b.index);
-}
-
-function formatEvalSwing(evalBefore: number, evalAfter: number): string {
-  const before = evalBefore / 100;
-  const after = evalAfter / 100;
-  const diff = after - before;
-  const sign = diff >= 0 ? "+" : "";
-  return `${sign}${diff.toFixed(2)}`;
 }
 
 function ClassificationBadge({
