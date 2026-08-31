@@ -345,7 +345,10 @@ export default function Home() {
         const result = await analyzeGame(game.pgn, {
           onProgress: (current, total) => {
             setAnalysisProgress(Math.round((current / total) * 100));
-            setActiveMove(current);
+            // Only drive the board cursor when this game is the one on screen.
+            if (useGameStore.getState().activeGame?.id === game.id) {
+              setActiveMove(current);
+            }
           },
         });
 
@@ -377,7 +380,9 @@ export default function Home() {
       } finally {
         setIsAnalyzing(false);
         setAnalysisProgress(0);
-        setActiveMove(0);
+        if (useGameStore.getState().activeGame?.id === game.id) {
+          setActiveMove(0);
+        }
       }
     },
     [setIsAnalyzing, setAnalysisProgress, setActiveGame, setActiveMove]

@@ -90,9 +90,9 @@ export async function analyzeGame(
 
   const engine = opts.engine ?? new StockfishEngine();
   await engine.init();
-  await engine.newGame();
 
   try {
+    await engine.newGame();
     // Book detection is a nicety — a failed opening load must not fail analysis.
     const openings = await loadOpenings().catch(() => new Set<string>());
 
