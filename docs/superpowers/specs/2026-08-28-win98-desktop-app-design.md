@@ -22,13 +22,13 @@ interface WindowStore {
   focused: WindowId | null;
   open(id, opts?: { at?: {x,y} }): void;   // opens (or un-minimizes) and focuses
   close(id): void;
-  minimize(id): void;                       // hides; taskbar button stays
+  minimize(id): void;                       // hides via CSS (window stays MOUNTED so live state — engine worker, clocks, game ref — survives); taskbar button stays
   toggleMaximize(id): void;
   focus(id): void;                          // bumps z to top
   move(id, x, y): void;
 }
 ```
-Default sizes per window (CSS width/height, px): games 360x520, import 520x560, review 960x640, practice 900x560, play 960x640, profile 400x360. Initial cascade: each newly opened window lands at `(48 + 24n, 48 + 24n)` where n counts currently open windows, clamped to the desktop. `z` is a monotonically increasing counter.
+Default sizes per window (CSS width/height, px): games 360x520, import 520x560, review 960x640, practice 900x560, play 960x640, profile 400x380. Initial cascade: each newly opened window lands at `(48 + 24n, 48 + 24n)` where n counts currently open windows, clamped to the desktop. `z` is a monotonically increasing counter.
 
 Reading `?view=play-bonzi` (existing `ViewParamSync`) now calls `open("play")`.
 
@@ -90,7 +90,7 @@ Inside the "Review" walkthrough window: a small read-only `Board` (from `chess/b
 
 ### 5.3 Practice demo (`PracticeDemo`, client)
 
-Inside "Practice": the position before the fixture's worst White-side loss of win% among moves classified mistake/blunder (computed at module load from the JSON; if none, the position before move 12), an interactive `Board` (drag or click-to-move, orientation to the side to move), prompt "Find the best move.", `chess.js` validation against `analysis.moves[i].bestMove`; correct → clap gif + "Correct: {san}." ; wrong → sad gif + "Not quite. Best was {san}." with a Try again button. Fully client-side.
+Inside "Practice": the position before the fixture's worst black-side loss of win% among moves classified mistake/blunder (Morphy's moves grade near-best; the losing side supplies the puzzle) (computed at module load from the JSON; if none, the position before move 12), an interactive `Board` (drag or click-to-move, orientation to the side to move), prompt "Find the best move.", `chess.js` validation against `analysis.moves[i].bestMove`; correct → clap gif + "Correct: {san}." ; wrong → sad gif + "Not quite. Best was {san}." with a Try again button. Fully client-side.
 
 ### 5.4 Import demo (`ImportDemo`, client, scripted)
 
@@ -119,7 +119,7 @@ Inside "Import": a labeled scripted sequence ("Demo" tag in the window status ba
 
 ## 8. Accessibility and responsiveness
 
-- Windows are `role="dialog"` with labelled titles; title-bar buttons have names ("Minimize", "Maximize", "Close"); focus moves into a window when opened and back to the taskbar button when closed.
+- Windows are `role="dialog"` with labelled titles; title-bar buttons have names ("Minimize", "Maximize", "Close"); focus moves into a window when opened ; on close, focus falls to the next top window (or the Start button when none remain).
 - Keyboard window management per 2.3; taskbar buttons are real buttons in tab order.
 - Mobile per 2.4; all boards remain fully usable at 375px (board width from the maximized window body).
 - Contrast: black on face 11.6:1 everywhere for body text; desktop-icon labels white on teal with shadow.
