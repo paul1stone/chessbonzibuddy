@@ -21,6 +21,8 @@ export function classificationToEvent(
       return "review_good";
     case "book":
       return "review_book";
+    case "forced":
+      return "review_book";
     case "inaccuracy":
       return "review_inaccuracy";
     case "mistake":

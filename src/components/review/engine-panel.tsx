@@ -4,6 +4,7 @@ import type { MoveAnalysis, MoveClassification } from "@/lib/engine";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EvalBar } from "@/components/review/eval-bar";
+import { formatEval } from "@/lib/analysis-utils";
 import { cn } from "@/lib/utils";
 
 interface EnginePanelProps {
@@ -22,25 +23,11 @@ const classificationColors: Record<
   best: { bg: "bg-green-500/20", text: "text-green-400", label: "Best" },
   good: { bg: "bg-purple-500/20", text: "text-purple-300", label: "Good" },
   book: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Book" },
+  forced: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Forced" },
   inaccuracy: { bg: "bg-yellow-500/20", text: "text-yellow-400", label: "Inaccuracy" },
   mistake: { bg: "bg-orange-500/20", text: "text-orange-400", label: "Mistake" },
   blunder: { bg: "bg-red-500/20", text: "text-red-400", label: "Blunder" },
 };
-
-function formatEval(cp: number, mate: number | null): string {
-  if (mate !== null) {
-    return mate > 0 ? `M${mate}` : `M${mate}`;
-  }
-  const pawns = cp / 100;
-  const sign = pawns > 0 ? "+" : "";
-  return `${sign}${pawns.toFixed(1)}`;
-}
-
-function formatLineEval(evalCp: number): string {
-  const pawns = evalCp / 100;
-  const sign = pawns > 0 ? "+" : "";
-  return `${sign}${pawns.toFixed(1)}`;
-}
 
 export function EnginePanel({
   currentMoveAnalysis,
@@ -114,10 +101,10 @@ export function EnginePanel({
                 Top lines
               </p>
               <div className="mt-1 flex flex-col gap-1">
-                {topLines.slice(0, 3).map((line, idx) => (
+                {topLines.map((line, idx) => (
                   <div key={idx} className="flex items-baseline gap-2 text-xs">
                     <span className="shrink-0 font-mono font-semibold text-foreground">
-                      {formatLineEval(line.eval)}
+                      {formatEval(line.eval, line.mate)}
                     </span>
                     <span className="truncate text-muted-foreground">
                       {line.moves.join(" ")}
@@ -130,7 +117,7 @@ export function EnginePanel({
 
           {/* Depth */}
           <p className="mt-auto text-xs text-muted-foreground">
-            Depth: {currentMoveAnalysis.moveNumber > 0 ? 18 : "---"}
+            Depth: {currentMoveAnalysis.depth || "—"}
           </p>
         </div>
       </CardContent>
