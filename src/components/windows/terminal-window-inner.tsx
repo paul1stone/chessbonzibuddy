@@ -5,7 +5,12 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { RetroButton } from "@/components/retro";
+import { prefersReducedMotion } from "@/lib/motion";
 import { createVM, type TerminalVM } from "@/lib/terminal/create-vm";
+
+// v86 reports a missing asset by logging and giving up, so nothing ever rejects.
+// A boot that goes this long without a single serial byte is dead, not slow.
+const BOOT_SILENCE_MS = 60_000;
 
 export default function TerminalWindowInner() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -20,7 +25,7 @@ export default function TerminalWindowInner() {
       theme: { background: "#000000", foreground: "#c0c0c0", cursor: "#c0c0c0" },
       fontFamily: '"Courier New", monospace',
       fontSize: 14,
-      cursorBlink: true,
+      cursorBlink: !prefersReducedMotion(),
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -37,14 +42,23 @@ export default function TerminalWindowInner() {
     let vm: TerminalVM | null = null;
     let cancelled = false;
     let stopOutput: (() => void) | undefined;
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
 
+    // Re-armed on every chunk while booting, so a slow-but-progressing boot is safe.
+    const armWatchdog = () => {
+      clearTimeout(watchdog);
+      watchdog = setTimeout(() => setPhase((p) => (p === "booting" ? "error" : p)), BOOT_SILENCE_MS);
+    };
+    armWatchdog();
+
+    const abort = new AbortController();
     const input = term.onData((data) => vm?.send(data));
 
-    createVM()
+    createVM({ signal: abort.signal, attempt })
       .then((created) => {
         // StrictMode (and a fast close) can unmount before the VM resolves.
         if (cancelled) {
-          void created.destroy();
+          created.destroy().catch(() => {});
           return;
         }
         vm = created;
@@ -55,9 +69,11 @@ export default function TerminalWindowInner() {
         stopOutput = created.onOutput((chunk) => {
           term.write(chunk);
           if (tail === null) return;
+          armWatchdog();
           tail = (tail + decoder.decode(chunk, { stream: true })).slice(-16);
           if (tail.includes("C:\\>")) {
             tail = null;
+            clearTimeout(watchdog);
             setPhase("ready");
           }
         });
@@ -70,10 +86,12 @@ export default function TerminalWindowInner() {
 
     return () => {
       cancelled = true;
+      abort.abort();
+      clearTimeout(watchdog);
       input.dispose();
       stopOutput?.();
       observer.disconnect();
-      void vm?.destroy();
+      vm?.destroy().catch(() => {});
       vm = null;
       term.dispose();
     };

@@ -57,6 +57,7 @@ describe("window store", () => {
   });
 
   it("declares a size for every window id", () => {
+    expect(WINDOW_IDS).toHaveLength(Object.keys(WINDOW_SIZES).length);
     for (const id of WINDOW_IDS) {
       expect(WINDOW_SIZES[id].w).toBeGreaterThan(300);
       expect(WINDOW_SIZES[id].h).toBeGreaterThan(300);

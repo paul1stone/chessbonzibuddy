@@ -1,8 +1,14 @@
 // v86's ESM build keeps node-only require("fs")/require("crypto") branches that no
 // browser bundler can resolve, so it is served from public/ (postinstall, like
 // Stockfish) and pulled in at runtime instead of being bundled.
-const loadV86 = (url = "/v86/libv86.mjs") =>
+const loadV86 = (url: string) =>
   import(/* webpackIgnore: true */ /* turbopackIgnore: true */ url) as Promise<typeof import("v86")>;
+
+// A module that fails to load stays failed in the module map, so a retry needs a fresh URL.
+const moduleUrl = (attempt: number) =>
+  attempt > 0 ? `/v86/libv86.mjs?r=${attempt}` : "/v86/libv86.mjs";
+
+const READY_TIMEOUT_MS = 5000;
 
 export interface TerminalVM {
   send(data: string): void;
@@ -10,13 +16,23 @@ export interface TerminalVM {
   destroy(): Promise<void>;
 }
 
+export interface CreateVMOptions {
+  /** Abort before the emulator is constructed, for a caller that unmounted meanwhile. */
+  signal?: AbortSignal;
+  /** Retry counter, used to cache-bust the module URL. */
+  attempt?: number;
+}
+
 /**
  * Boots the committed Alpine 9p image in a v86 VM wired to serial0.
  * Options are copied from scripts/terminal/README.md — `bios` is NOT optional:
  * without it the machine hangs silently and emits no serial output at all.
  */
-export async function createVM(): Promise<TerminalVM> {
-  const { V86 } = await loadV86();
+export async function createVM({ signal, attempt = 0 }: CreateVMOptions = {}): Promise<TerminalVM> {
+  const { V86 } = await loadV86(moduleUrl(attempt));
+  // Nothing is allocated until the constructor runs, so a doomed mount stops here
+  // instead of booting a second 128 MB machine alongside the one that survives.
+  signal?.throwIfAborted();
 
   const emulator = new V86({
     wasm_path: "/v86/v86.wasm",
@@ -79,7 +95,9 @@ export async function createVM(): Promise<TerminalVM> {
       frame = 0;
       pending = [];
       listeners.clear();
-      await ready;
+      // A boot that never reaches "emulator-ready" (missing asset) must not strand
+      // the teardown; past the timeout v86 throws and the caller swallows it.
+      await Promise.race([ready, new Promise((r) => setTimeout(r, READY_TIMEOUT_MS))]);
       await emulator.destroy();
     },
   };
