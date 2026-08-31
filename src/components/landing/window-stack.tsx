@@ -1,17 +1,17 @@
 "use client";
 
-import { useCallback, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { RetroWindow } from "@/components/retro";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/components/desktop/use-is-mobile";
 import { useDrag } from "@/hooks/use-drag";
 import { usePrefersReducedMotion } from "@/lib/motion";
 import type { DockId } from "@/stores/dock-store";
-import { CASCADE_QUERY } from "./cascade/use-cascade-scroll";
 import { useSectionDock } from "./use-section-dock";
 
 export interface StackItem {
-  key: string;
+  /** Also the dock id: every stack window registers a taskbar button. */
+  key: DockId;
   title: string;
   content: ReactNode;
   statusBar?: ReactNode;
@@ -32,11 +32,11 @@ const STACK_POS =
 // cascade (and the window cannot jump left on the first pointer move).
 interface WindowStackProps {
   items: StackItem[];
-  /** The pinning element, when the stack lives inside a pinned section (see use-cascade-scroll). */
-  pinnedContainer?: RefObject<HTMLElement | null>;
+  /** Media query where a scrub owns docked/active for these windows (see use-cascade-scroll). */
+  managedQuery?: string;
 }
 
-export function WindowStack({ items, pinnedContainer }: WindowStackProps) {
+export function WindowStack({ items, managedQuery }: WindowStackProps) {
   const isMobile = useIsMobile();
   const reduced = usePrefersReducedMotion();
   const draggable = !isMobile && !reduced;
@@ -58,7 +58,7 @@ export function WindowStack({ items, pinnedContainer }: WindowStackProps) {
           draggable={draggable}
           z={zMap[item.key]}
           onRaise={raise}
-          pinnedContainer={pinnedContainer}
+          managedQuery={managedQuery}
         />
       ))}
     </div>
@@ -71,19 +71,16 @@ interface StackWindowProps {
   draggable: boolean;
   z?: number;
   onRaise: (key: string) => void;
-  pinnedContainer?: RefObject<HTMLElement | null>;
+  managedQuery?: string;
 }
 
-function StackWindow({ item, index, draggable, z, onRaise, pinnedContainer }: StackWindowProps) {
+function StackWindow({ item, index, draggable, z, onRaise, managedQuery }: StackWindowProps) {
   const [pos, setPos] = useState({ dx: 0, dy: 0 });
   const winRef = useRef<HTMLElement>(null);
 
-  // Every stack key is a DockId today (import/review/practice). Inside the pinned cascade the
-  // scrub owns docked/active, so geometry triggers are suppressed for exactly that media query.
-  useSectionDock(item.key as DockId, winRef, {
-    pinnedContainer: () => pinnedContainer?.current ?? null,
-    managedQuery: pinnedContainer ? CASCADE_QUERY : undefined,
-  });
+  // Inside the pinned cascade the scrub owns docked/active, so geometry triggers are
+  // suppressed for exactly that media query.
+  useSectionDock(item.key, winRef, { managedQuery });
 
   const onMove = useCallback((dx: number, dy: number) => {
     setPos((p) => ({ dx: p.dx + dx, dy: p.dy + dy }));

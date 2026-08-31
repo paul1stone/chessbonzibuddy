@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { useCascadeScroll } from "./cascade/use-cascade-scroll";
+import type { DockId } from "@/stores/dock-store";
+import { CASCADE_QUERY, useCascadeScroll } from "./cascade/use-cascade-scroll";
 import { ImportDemo } from "./demo/import-demo";
 import { PracticeDemo } from "./demo/practice-demo";
 import { ReviewDemo } from "./demo/review-demo";
@@ -9,7 +10,7 @@ import { WindowStack, type StackItem } from "./window-stack";
 import "./cascade/cascade.css";
 
 const ITEMS: {
-  key: string;
+  key: DockId;
   title: string;
   copy: string;
   demo: ReactNode;
@@ -69,7 +70,7 @@ export function AnalyzerWalkthrough() {
         <h2 id="walkthrough-heading" className="mb-6 text-[33px] font-bold leading-tight text-[var(--r-highlight)]">
           Then find out what went wrong.
         </h2>
-        <WindowStack items={items} pinnedContainer={sectionRef} />
+        <WindowStack items={items} managedQuery={CASCADE_QUERY} />
       </div>
     </section>
   );
