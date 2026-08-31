@@ -3,12 +3,15 @@
 import { useEffect, type RefObject } from "react";
 import { loadGsap } from "@/lib/gsap-loader";
 import { prefersReducedMotion } from "@/lib/motion";
-import { useDockStore } from "@/stores/dock-store";
+import { useDockStore, type DockId } from "@/stores/dock-store";
 import { CASCADE_KEYS, OUTLINE_STEPS, SEGMENTS, outlineRect, segmentPhase, type Rect } from "./cascade-timeline";
 
 type CascadeKey = (typeof CASCADE_KEYS)[number];
 
-const CASCADE_QUERY = "(min-width: 1024px) and (prefers-reduced-motion: no-preference)";
+const isCascadeKey = (id: DockId | null): id is CascadeKey =>
+  id !== null && (CASCADE_KEYS as readonly string[]).includes(id);
+
+export const CASCADE_QUERY = "(min-width: 1024px) and (prefers-reduced-motion: no-preference)";
 // The outline grows out of a taskbar-button-sized stub, not the whole slot strip.
 const SLOT_W = 120;
 const SLOT_H = 22;
@@ -35,13 +38,14 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
 
         const mm = gsap.matchMedia();
         mm.add(CASCADE_QUERY, () => {
-          const { registerScrollFn } = useDockStore.getState();
+          const { registerScrollFn, setActive, setDocked } = useDockStore.getState();
           section.classList.add("cascade--armed");
 
           const windows = new Map<CascadeKey, HTMLElement>();
           const outlines = new Map<CascadeKey, HTMLElement>();
           const targets = new Map<CascadeKey, Rect>();
           const drawn = new Map<CascadeKey, { step: number | null; open: boolean }>();
+          let active: CascadeKey | null = null;
 
           // Measured once per refresh, never per frame: the section is pinned, so its layout is
           // static for the whole scrub. Window rects are stored relative to the section top,
@@ -84,6 +88,11 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
           };
 
           const apply = (progress: number) => {
+            // Geometry can't drive `active` here — the pinned windows never move — so the scrub
+            // owns it: the most recently revealed window. Tying it to the reveal (not to the
+            // outline flight) keeps the pressed button one that is actually docked.
+            let nextActive: CascadeKey | null = null;
+
             for (const seg of SEGMENTS) {
               const win = windows.get(seg.key);
               const target = targets.get(seg.key);
@@ -92,6 +101,7 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
               const { outlineT, revealed } = segmentPhase(progress, seg);
               const step = outlineT === null ? null : Math.round(outlineT * OUTLINE_STEPS);
               const prev = drawn.get(seg.key);
+              if (revealed) nextActive = seg.key;
 
               // Only touch styles when the snapped frame actually changed.
               if (!prev || prev.step !== step) {
@@ -102,8 +112,18 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
                   draw(seg.key, outlineRect(slotStub(), target, outlineT));
                 }
               }
-              if (!prev || prev.open !== revealed) win.classList.toggle("cascade-open", revealed);
+              if (!prev || prev.open !== revealed) {
+                win.classList.toggle("cascade-open", revealed);
+                // The taskbar button pops exactly as its window opens, and leaves on the way back.
+                setDocked(seg.key, revealed);
+              }
               drawn.set(seg.key, { step, open: revealed });
+            }
+
+            if (nextActive !== active) {
+              active = nextActive;
+              if (nextActive) setActive(nextActive);
+              else if (isCascadeKey(useDockStore.getState().active)) setActive(null);
             }
           };
 

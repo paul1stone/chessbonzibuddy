@@ -9,12 +9,18 @@ interface SectionDockOptions {
   dockOnExit?: boolean;
   /** Pass the pinning element when the section lives inside a pinned container, so triggers resolve. */
   pinnedContainer?: () => HTMLElement | null;
+  /** Media query where an external driver owns this id's docked/active state (the cascade scrub). */
+  managedQuery?: string;
 }
+
+// matchMedia needs a query for the "nobody else owns this" case; "not all" never matches.
+const NEVER = "not all";
 
 // Docks a taskbar button once the section has scrolled past, and marks it active while the
 // section owns the viewport centre. Under reduced motion every button is simply always docked.
 export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, opts?: SectionDockOptions) {
   const dockOnExit = opts?.dockOnExit;
+  const managedQuery = opts?.managedQuery;
   // Read opts through a ref: an inline pinnedContainer arrow would otherwise rebuild the triggers every render.
   const optsRef = useRef(opts);
   useEffect(() => {
@@ -40,7 +46,11 @@ export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, o
         if (!el) return;
 
         const mm = gsap.matchMedia();
-        mm.add("(prefers-reduced-motion: no-preference)", () => {
+        mm.add({ motion: "(prefers-reduced-motion: no-preference)", managed: managedQuery ?? NEVER }, (ctx) => {
+          // Geometry can't speak for a pinned section: its windows hold fixed viewport positions,
+          // so while the cascade scrub owns this id we create no triggers at all.
+          if (!ctx.conditions?.motion || ctx.conditions.managed) return;
+
           const pinned = optsRef.current?.pinnedContainer?.() ?? undefined;
           const triggers: ReturnType<typeof ScrollTrigger.create>[] = [];
 
@@ -85,5 +95,5 @@ export function useSectionDock(id: DockId, ref: RefObject<HTMLElement | null>, o
       cleanup?.();
       registerTarget(id, null);
     };
-  }, [id, ref, dockOnExit]);
+  }, [id, ref, dockOnExit, managedQuery]);
 }

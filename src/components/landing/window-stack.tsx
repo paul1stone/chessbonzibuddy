@@ -7,6 +7,7 @@ import { useIsMobile } from "@/components/desktop/use-is-mobile";
 import { useDrag } from "@/hooks/use-drag";
 import { usePrefersReducedMotion } from "@/lib/motion";
 import type { DockId } from "@/stores/dock-store";
+import { CASCADE_QUERY } from "./cascade/use-cascade-scroll";
 import { useSectionDock } from "./use-section-dock";
 
 export interface StackItem {
@@ -77,8 +78,12 @@ function StackWindow({ item, index, draggable, z, onRaise, pinnedContainer }: St
   const [pos, setPos] = useState({ dx: 0, dy: 0 });
   const winRef = useRef<HTMLElement>(null);
 
-  // Every stack key is a DockId today (import/review/practice).
-  useSectionDock(item.key as DockId, winRef, { pinnedContainer: () => pinnedContainer?.current ?? null });
+  // Every stack key is a DockId today (import/review/practice). Inside the pinned cascade the
+  // scrub owns docked/active, so geometry triggers are suppressed for exactly that media query.
+  useSectionDock(item.key as DockId, winRef, {
+    pinnedContainer: () => pinnedContainer?.current ?? null,
+    managedQuery: pinnedContainer ? CASCADE_QUERY : undefined,
+  });
 
   const onMove = useCallback((dx: number, dy: number) => {
     setPos((p) => ({ dx: p.dx + dx, dy: p.dy + dy }));
