@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect, useRef, type Ref } from "react";
 import { MoveBadge } from "./move-badge";
+import { CLASSIFICATION_COLORS } from "@/lib/classification-colors";
 import type { MoveAnalysis } from "@/lib/engine";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,11 @@ interface MoveListProps {
   moves: MoveAnalysis[];
   currentMove: number;
   onMoveClick: (moveIndex: number) => void;
+}
+
+interface MoveEntry {
+  move: MoveAnalysis;
+  index: number;
 }
 
 export function MoveList({ moves, currentMove, onMoveClick }: MoveListProps) {
@@ -23,8 +28,8 @@ export function MoveList({ moves, currentMove, onMoveClick }: MoveListProps) {
   // Group moves into pairs: [white, black?] per move number.
   const rows: Array<{
     moveNumber: number;
-    white: { move: MoveAnalysis; index: number } | null;
-    black: { move: MoveAnalysis; index: number } | null;
+    white: MoveEntry | null;
+    black: MoveEntry | null;
   }> = [];
 
   for (let i = 0; i < moves.length; i++) {
@@ -52,10 +57,10 @@ export function MoveList({ moves, currentMove, onMoveClick }: MoveListProps) {
   }
 
   return (
-    <ScrollArea className="h-full">
+    <div className="r-scroll h-full">
       <div className="text-sm">
         {/* Header */}
-        <div className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_1fr] gap-0 border-b border-purple-800 bg-purple-950 px-2 py-1.5 text-xs font-medium text-purple-400">
+        <div className="sticky top-0 z-10 grid grid-cols-[2.5rem_1fr_1fr] gap-0 border-b border-[var(--r-shadow)] bg-[var(--r-face)] px-2 py-1.5 text-xs font-bold text-[var(--r-shadow)]">
           <span>#</span>
           <span>White</span>
           <span>Black</span>
@@ -68,64 +73,75 @@ export function MoveList({ moves, currentMove, onMoveClick }: MoveListProps) {
             className="grid grid-cols-[2.5rem_1fr_1fr] gap-0"
           >
             {/* Move number */}
-            <span className="flex items-center px-2 py-1 text-xs text-purple-500">
+            <span className="flex items-center px-2 py-1 text-xs text-[var(--r-shadow)]">
               {row.moveNumber}.
             </span>
 
-            {/* White move */}
             {row.white ? (
-              <div
-                ref={row.white.index === currentMove ? activeRef : undefined}
-                role="button"
-                tabIndex={0}
-                onClick={() => onMoveClick(row.white!.index)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onMoveClick(row.white!.index);
-                  }
-                }}
-                className={cn(
-                  "flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 font-mono text-sm text-purple-200 hover:bg-purple-800/60",
-                  row.white.index === currentMove &&
-                    "border-l-2 border-blue-500 bg-purple-800"
-                )}
-              >
-                <span>{row.white.move.san}</span>
-                <MoveBadge classification={row.white.move.classification} />
-              </div>
+              <MoveCell
+                entry={row.white}
+                active={row.white.index === currentMove}
+                cellRef={row.white.index === currentMove ? activeRef : undefined}
+                onSelect={onMoveClick}
+              />
             ) : (
-              <div className="px-2 py-1 text-purple-500">&hellip;</div>
+              <div className="px-2 py-1 text-[var(--r-shadow)]">&hellip;</div>
             )}
 
-            {/* Black move */}
             {row.black ? (
-              <div
-                ref={row.black.index === currentMove ? activeRef : undefined}
-                role="button"
-                tabIndex={0}
-                onClick={() => onMoveClick(row.black!.index)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onMoveClick(row.black!.index);
-                  }
-                }}
-                className={cn(
-                  "flex cursor-pointer items-center gap-1.5 rounded-sm px-2 py-1 font-mono text-sm text-purple-200 hover:bg-purple-800/60",
-                  row.black.index === currentMove &&
-                    "border-l-2 border-blue-500 bg-purple-800"
-                )}
-              >
-                <span>{row.black.move.san}</span>
-                <MoveBadge classification={row.black.move.classification} />
-              </div>
+              <MoveCell
+                entry={row.black}
+                active={row.black.index === currentMove}
+                cellRef={row.black.index === currentMove ? activeRef : undefined}
+                onSelect={onMoveClick}
+              />
             ) : (
               <div className="px-2 py-1" />
             )}
           </div>
         ))}
       </div>
-    </ScrollArea>
+    </div>
+  );
+}
+
+function MoveCell({
+  entry,
+  active,
+  cellRef,
+  onSelect,
+}: {
+  entry: MoveEntry;
+  active: boolean;
+  cellRef?: Ref<HTMLDivElement>;
+  onSelect: (moveIndex: number) => void;
+}) {
+  return (
+    <div
+      ref={cellRef}
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(entry.index)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(entry.index);
+        }
+      }}
+      className={cn(
+        "flex cursor-pointer items-center gap-1.5 px-2 py-1 font-mono text-sm hover:bg-[var(--r-face-light)]",
+        active && "bg-[var(--r-title-a)] text-[var(--r-title-text)]"
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className="h-2 w-2 shrink-0 border border-[var(--r-shadow)]"
+        style={{
+          background: CLASSIFICATION_COLORS[entry.move.classification].hex,
+        }}
+      />
+      <span>{entry.move.san}</span>
+      <MoveBadge classification={entry.move.classification} />
+    </div>
   );
 }

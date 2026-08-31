@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { RetroPanel } from "@/components/retro";
 import { AccuracyRing } from "./accuracy-ring";
 import { EvalChart } from "./eval-chart";
 import { MoveBadge } from "./move-badge";
 import { selectKeyMoments } from "@/lib/analysis-utils";
+import { CLASSIFICATION_COLORS } from "@/lib/classification-colors";
 import type { MoveAnalysis, MoveClassification } from "@/lib/engine";
 
 interface GameSummaryProps {
@@ -18,22 +18,6 @@ interface GameSummaryProps {
   currentMove: number;
   onMoveClick: (moveIndex: number) => void;
 }
-
-/** Classification badge color mapping (mirrors move-badge.tsx). */
-const classificationColors: Record<
-  MoveClassification,
-  { bg: string; text: string; label: string }
-> = {
-  brilliant: { bg: "bg-cyan-500/20", text: "text-cyan-400", label: "Brilliant" },
-  great: { bg: "bg-green-500/20", text: "text-green-400", label: "Great" },
-  best: { bg: "bg-green-500/20", text: "text-green-400", label: "Best" },
-  good: { bg: "bg-purple-500/20", text: "text-purple-300", label: "Good" },
-  book: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Book" },
-  forced: { bg: "bg-slate-500/20", text: "text-slate-400", label: "Forced" },
-  inaccuracy: { bg: "bg-yellow-500/20", text: "text-yellow-400", label: "Inaccuracy" },
-  mistake: { bg: "bg-orange-500/20", text: "text-orange-400", label: "Mistake" },
-  blunder: { bg: "bg-red-500/20", text: "text-red-400", label: "Blunder" },
-};
 
 /** The classifications we display in the summary counts. */
 const displayClassifications: MoveClassification[] = [
@@ -79,145 +63,119 @@ export function GameSummary({
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Accuracy section */}
-      <Card className="border-purple-800 bg-purple-900/50">
-        <CardHeader className="pb-0">
-          <CardTitle className="text-sm text-purple-300">Accuracy</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center gap-8">
-            <div className="flex flex-col items-center gap-1">
-              <AccuracyRing
-                accuracy={whiteAccuracy}
-                label="White"
-                color="stroke-purple-100"
-                size={100}
-              />
-              {whiteRating != null && (
-                <span className="mt-1 rounded-md bg-purple-800 px-2 py-0.5 text-[10px] font-medium text-purple-200">
-                  Played like ~{whiteRating}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <AccuracyRing
-                accuracy={blackAccuracy}
-                label="Black"
-                color="stroke-purple-300"
-                size={100}
-              />
-              {blackRating != null && (
-                <span className="mt-1 rounded-md bg-purple-800 px-2 py-0.5 text-[10px] font-medium text-purple-200">
-                  Played like ~{blackRating}
-                </span>
-              )}
-            </div>
+      <RetroPanel caption="Accuracy">
+        <div className="flex items-center justify-center gap-8">
+          <div className="flex flex-col items-center gap-1">
+            <AccuracyRing
+              accuracy={whiteAccuracy}
+              label="White"
+              color="stroke-[#000080]"
+              size={100}
+            />
+            {whiteRating != null && (
+              <span className="r-badge r-badge--flat mt-1">
+                Played like ~{whiteRating}
+              </span>
+            )}
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex flex-col items-center gap-1">
+            <AccuracyRing
+              accuracy={blackAccuracy}
+              label="Black"
+              color="stroke-[#800000]"
+              size={100}
+            />
+            {blackRating != null && (
+              <span className="r-badge r-badge--flat mt-1">
+                Played like ~{blackRating}
+              </span>
+            )}
+          </div>
+        </div>
+      </RetroPanel>
 
       {/* Move classification counts */}
-      <Card className="border-purple-800 bg-purple-900/50">
-        <CardHeader className="pb-0">
-          <CardTitle className="text-sm text-purple-300">
-            Move Classifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            {/* White */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-purple-200">White</p>
-              <div className="flex flex-wrap gap-1.5">
-                {whiteCounts.map((c) => (
-                  <ClassificationBadge
-                    key={c.classification}
-                    classification={c.classification}
-                    count={c.count}
-                  />
-                ))}
-                {whiteCounts.length === 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    No notable moves
-                  </span>
-                )}
-              </div>
-            </div>
-            {/* Black */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-purple-200">Black</p>
-              <div className="flex flex-wrap gap-1.5">
-                {blackCounts.map((c) => (
-                  <ClassificationBadge
-                    key={c.classification}
-                    classification={c.classification}
-                    count={c.count}
-                  />
-                ))}
-                {blackCounts.length === 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    No notable moves
-                  </span>
-                )}
-              </div>
+      <RetroPanel caption="Move quality">
+        <div className="grid grid-cols-2 gap-4">
+          {/* White */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold">White</p>
+            <div className="flex flex-wrap gap-1.5">
+              {whiteCounts.map((c) => (
+                <ClassificationBadge
+                  key={c.classification}
+                  classification={c.classification}
+                  count={c.count}
+                />
+              ))}
+              {whiteCounts.length === 0 && (
+                <span className="text-xs text-muted-foreground">
+                  No notable moves
+                </span>
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+          {/* Black */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold">Black</p>
+            <div className="flex flex-wrap gap-1.5">
+              {blackCounts.map((c) => (
+                <ClassificationBadge
+                  key={c.classification}
+                  classification={c.classification}
+                  count={c.count}
+                />
+              ))}
+              {blackCounts.length === 0 && (
+                <span className="text-xs text-muted-foreground">
+                  No notable moves
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </RetroPanel>
 
       {/* Eval chart */}
-      <Card className="border-purple-800 bg-purple-900/50">
-        <CardHeader className="pb-0">
-          <CardTitle className="text-sm text-purple-300">
-            Evaluation Chart
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EvalChart
-            moves={moves}
-            currentMove={currentMove}
-            onMoveClick={onMoveClick}
-          />
-        </CardContent>
-      </Card>
+      <RetroPanel caption="Evaluation">
+        <EvalChart
+          moves={moves}
+          currentMove={currentMove}
+          onMoveClick={onMoveClick}
+        />
+      </RetroPanel>
 
       {/* Key moments */}
       {keyMoments.length > 0 && (
-        <Card className="border-purple-800 bg-purple-900/50">
-          <CardHeader className="pb-0">
-            <CardTitle className="text-sm text-purple-300">
-              Key Moments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {keyMoments.map((moment) => (
-                <button
-                  key={moment.index}
-                  type="button"
-                  onClick={() => onMoveClick(moment.index)}
-                  className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-purple-800"
-                >
-                  <span className="min-w-[3rem] text-xs text-muted-foreground">
-                    {moment.move.color === "w"
-                      ? `${moment.move.moveNumber}.`
-                      : `${moment.move.moveNumber}...`}
-                  </span>
-                  <span className="min-w-[3.5rem] text-sm font-medium text-purple-100">
-                    {moment.move.san}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    -{Math.round(moment.move.winPercentLoss)}% win chance
-                  </span>
-                  <span className="ml-auto">
-                    <MoveBadge classification={moment.move.classification} />
-                  </span>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <RetroPanel caption="Key moments">
+          <div className="space-y-1">
+            {keyMoments.map((moment) => (
+              <button
+                key={moment.index}
+                type="button"
+                onClick={() => onMoveClick(moment.index)}
+                className="flex w-full items-center gap-3 px-2 py-1.5 text-left hover:bg-[var(--r-face-light)]"
+              >
+                <span className="min-w-[3rem] text-xs text-muted-foreground">
+                  {moment.move.color === "w"
+                    ? `${moment.move.moveNumber}.`
+                    : `${moment.move.moveNumber}...`}
+                </span>
+                <span className="min-w-[3.5rem] text-sm font-bold">
+                  {moment.move.san}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  -{Math.round(moment.move.winPercentLoss)}% win chance
+                </span>
+                <span className="ml-auto">
+                  <MoveBadge classification={moment.move.classification} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </RetroPanel>
       )}
     </div>
   );
@@ -250,13 +208,15 @@ function ClassificationBadge({
   classification: MoveClassification;
   count: number;
 }) {
-  const style = classificationColors[classification];
+  const { hex, label } = CLASSIFICATION_COLORS[classification];
   return (
-    <Badge
-      variant="ghost"
-      className={`${style.bg} ${style.text} border-0 px-1.5 py-0 text-[10px] leading-4`}
-    >
-      {count} {count === 1 ? style.label : `${style.label}s`}
-    </Badge>
+    <span className="r-badge" style={{ background: hex }}>
+      {count} {count === 1 ? label : plural(label)}
+    </span>
   );
+}
+
+/** "Inaccuracy" -> "Inaccuracies"; everything else takes a plain -s. */
+function plural(label: string): string {
+  return label.endsWith("y") ? `${label.slice(0, -1)}ies` : `${label}s`;
 }

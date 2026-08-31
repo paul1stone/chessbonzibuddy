@@ -1,12 +1,12 @@
 "use client";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState } from "react";
 import { MoveList } from "./move-list";
 import { GameSummary } from "./game-summary";
 import { EnginePanel } from "./engine-panel";
 import { BonziReviewMascot } from "@/components/bonzi/bonzi-review-mascot";
 import type { MoveAnalysis } from "@/lib/engine";
+import { cn } from "@/lib/utils";
 
 interface ReviewPanelProps {
   moves: MoveAnalysis[];
@@ -19,6 +19,14 @@ interface ReviewPanelProps {
   currentMoveAnalysis: MoveAnalysis | null;
 }
 
+type ReviewTab = "moves" | "summary" | "engine";
+
+const TABS: Array<{ id: ReviewTab; label: string }> = [
+  { id: "moves", label: "Moves" },
+  { id: "summary", label: "Summary" },
+  { id: "engine", label: "Engine" },
+];
+
 export function ReviewPanel({
   moves,
   currentMove,
@@ -29,45 +37,49 @@ export function ReviewPanel({
   blackRating,
   currentMoveAnalysis,
 }: ReviewPanelProps) {
+  const [tab, setTab] = useState<ReviewTab>("moves");
+
   // Compute eval and mate for the EnginePanel from the current move analysis
   const evaluation = currentMoveAnalysis?.evalAfter ?? 0;
   const mate = currentMoveAnalysis?.mateAfter ?? null;
 
   return (
-    <div className="flex h-full flex-col">
-      <Tabs defaultValue="moves" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="w-full shrink-0 bg-purple-900">
-          <TabsTrigger
-            value="moves"
-            className="text-xs data-[state=active]:bg-purple-800 data-[state=active]:text-purple-100"
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="r-tabs shrink-0 pt-1" role="tablist">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            id={`review-tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`review-pane-${t.id}`}
+            className={cn("r-tab", tab === t.id && "r-tab--active")}
+            onClick={() => setTab(t.id)}
           >
-            Moves
-          </TabsTrigger>
-          <TabsTrigger
-            value="summary"
-            className="text-xs data-[state=active]:bg-purple-800 data-[state=active]:text-purple-100"
-          >
-            Summary
-          </TabsTrigger>
-          <TabsTrigger
-            value="engine"
-            className="text-xs data-[state=active]:bg-purple-800 data-[state=active]:text-purple-100"
-          >
-            Engine
-          </TabsTrigger>
-        </TabsList>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-        <TabsContent value="moves" className="min-h-0 flex-1">
+      {/* Only the active pane is mounted. */}
+      <div
+        className="min-h-0 flex-1"
+        role="tabpanel"
+        id={`review-pane-${tab}`}
+        aria-labelledby={`review-tab-${tab}`}
+      >
+        {tab === "moves" && (
           <MoveList
             moves={moves}
             currentMove={currentMove}
             onMoveClick={onMoveClick}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="summary" className="min-h-0 flex-1">
-          <ScrollArea className="h-full">
-            <div className="p-4">
+        {tab === "summary" && (
+          <div className="r-scroll h-full">
+            <div className="p-3">
               <GameSummary
                 moves={moves}
                 whiteAccuracy={whiteAccuracy}
@@ -78,19 +90,21 @@ export function ReviewPanel({
                 onMoveClick={onMoveClick}
               />
             </div>
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="engine" className="min-h-0 flex-1">
-          <div className="p-4">
-            <EnginePanel
-              currentMoveAnalysis={currentMoveAnalysis}
-              eval={evaluation}
-              mate={mate}
-            />
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+
+        {tab === "engine" && (
+          <div className="r-scroll h-full">
+            <div className="p-3">
+              <EnginePanel
+                currentMoveAnalysis={currentMoveAnalysis}
+                eval={evaluation}
+                mate={mate}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       <BonziReviewMascot
         classification={currentMoveAnalysis?.classification}

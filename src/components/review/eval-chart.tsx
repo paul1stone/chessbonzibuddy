@@ -13,6 +13,7 @@ import {
   type MouseHandlerDataParam,
 } from "recharts";
 import { formatEval } from "@/lib/analysis-utils";
+import { CLASSIFICATION_COLORS } from "@/lib/classification-colors";
 import type { MoveAnalysis, MoveClassification } from "@/lib/engine";
 
 interface EvalChartProps {
@@ -32,12 +33,6 @@ const NOTABLE_CLASSIFICATIONS = new Set<MoveClassification>([
   "mistake",
   "inaccuracy",
 ]);
-
-const classificationDotColor: Partial<Record<MoveClassification, string>> = {
-  blunder: "#ef4444", // red-500
-  mistake: "#f97316", // orange-500
-  inaccuracy: "#eab308", // yellow-500
-};
 
 interface ChartDataPoint {
   index: number;
@@ -87,40 +82,23 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
         onClick={handleChartClick}
         style={{ cursor: "pointer" }}
       >
-        <defs>
-          <linearGradient id="evalGradientPos" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#e9d5ff" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="#e9d5ff" stopOpacity={0.02} />
-          </linearGradient>
-          <linearGradient id="evalGradientNeg" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="#7e22ce" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="#7e22ce" stopOpacity={0.02} />
-          </linearGradient>
-          {/* Split gradient: white above 0, dark below 0 */}
-          <linearGradient id="evalSplit" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#e9d5ff" stopOpacity={0.35} />
-            <stop offset="50%" stopColor="#e9d5ff" stopOpacity={0.05} />
-            <stop offset="50%" stopColor="#7e22ce" stopOpacity={0.05} />
-            <stop offset="100%" stopColor="#7e22ce" stopOpacity={0.35} />
-          </linearGradient>
-        </defs>
         <CartesianGrid
           strokeDasharray="3 3"
-          stroke="#581c87"
+          stroke="#808080"
           vertical={false}
         />
         <XAxis
           dataKey="moveLabel"
-          tick={{ fill: "#a855f7", fontSize: 10 }}
+          tick={{ fill: "#404040", fontSize: 10 }}
           tickLine={false}
-          axisLine={{ stroke: "#6b21a8" }}
+          axisLine={{ stroke: "#808080" }}
           interval="preserveStartEnd"
         />
         <YAxis
           domain={[-5, 5]}
-          tick={{ fill: "#a855f7", fontSize: 10 }}
+          tick={{ fill: "#404040", fontSize: 10 }}
           tickLine={false}
-          axisLine={{ stroke: "#6b21a8" }}
+          axisLine={{ stroke: "#808080" }}
           tickFormatter={(v: number) => (v > 0 ? `+${v}` : `${v}`)}
           ticks={[-5, -2.5, 0, 2.5, 5]}
         />
@@ -130,8 +108,8 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
             const point = payload[0]?.payload as ChartDataPoint | undefined;
             if (!point) return null;
             return (
-              <div className="rounded-md border border-purple-700 bg-purple-900 px-3 py-2 text-xs shadow-lg">
-                <p className="font-medium text-purple-100">
+              <div className="r-face r-bevel-out px-3 py-2 text-xs">
+                <p className="font-bold">
                   {point.moveLabel} {point.san}
                 </p>
                 <p className="text-muted-foreground">
@@ -141,9 +119,7 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
                   <p
                     className="mt-0.5 font-medium capitalize"
                     style={{
-                      color:
-                        classificationDotColor[point.classification] ??
-                        "#a855f7",
+                      color: CLASSIFICATION_COLORS[point.classification].hex,
                     }}
                   >
                     {point.classification}
@@ -154,12 +130,12 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
           }}
         />
         {/* Zero line */}
-        <ReferenceLine y={0} stroke="#7e22ce" strokeWidth={1} />
+        <ReferenceLine y={0} stroke="#808080" strokeWidth={1} />
         {/* Current move indicator */}
         {currentMove >= 0 && currentMove < data.length && (
           <ReferenceLine
             x={data[currentMove]?.moveLabel}
-            stroke="#c084fc"
+            stroke="#800000"
             strokeWidth={1.5}
             strokeDasharray="4 2"
           />
@@ -167,9 +143,10 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
         <Area
           type="monotone"
           dataKey="eval"
-          stroke="#c084fc"
+          stroke="#000080"
           strokeWidth={1.5}
-          fill="url(#evalSplit)"
+          fill="#000080"
+          fillOpacity={0.15}
           baseValue={0}
           isAnimationActive={false}
           dot={(props) => {
@@ -179,24 +156,22 @@ export function EvalChart({ moves, currentMove, onMoveClick }: EvalChartProps) {
               payload: ChartDataPoint;
             };
             if (!payload?.isNotable) return <g key={`dot-${payload?.index}`} />;
-            const dotColor =
-              classificationDotColor[payload.classification] ?? "#a855f7";
             return (
               <circle
                 key={`dot-${payload.index}`}
                 cx={cx}
                 cy={cy}
                 r={3.5}
-                fill={dotColor}
-                stroke="#3b0764"
+                fill={CLASSIFICATION_COLORS[payload.classification].hex}
+                stroke="#000000"
                 strokeWidth={1}
               />
             );
           }}
           activeDot={{
             r: 4,
-            fill: "#e9d5ff",
-            stroke: "#3b0764",
+            fill: "#000080",
+            stroke: "#ffffff",
             strokeWidth: 1.5,
           }}
         />

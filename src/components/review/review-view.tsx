@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, type Ref } from "react";
 import { Chess } from "chess.js";
 import { BoardPanel } from "@/components/chess/board-panel";
 import { ReviewPanel } from "./review-panel";
 import type { MoveAnalysis, GameAnalysis } from "@/lib/engine";
+import type { WindowId } from "@/stores/window-store";
 
 interface ReviewViewProps {
   pgn: string;
@@ -13,6 +14,12 @@ interface ReviewViewProps {
   onMoveChange: (move: number) => void;
   isAnalyzing: boolean;
   analysisProgress: number; // 0-100
+  /** Scopes board keyboard nav to the owning window. */
+  windowId?: WindowId;
+  /** Board column container, measured by the window's useBoardSize. */
+  boardRef?: Ref<HTMLDivElement>;
+  /** Board width in px from useBoardSize; 0 means "not measured yet". */
+  boardWidth?: number;
 }
 
 export function ReviewView({
@@ -22,6 +29,9 @@ export function ReviewView({
   onMoveChange,
   isAnalyzing,
   analysisProgress,
+  windowId,
+  boardRef,
+  boardWidth,
 }: ReviewViewProps) {
   const moves = analysis?.moves ?? [];
   const whiteAccuracy = analysis?.whiteAccuracy ?? 0;
@@ -62,19 +72,27 @@ export function ReviewView({
   );
 
   return (
-    <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
+    <div className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
       {/* Left column: Board */}
-      <div className="flex items-center justify-center">
-        <BoardPanel
-          pgn={pgn}
-          currentMove={currentMove}
-          onMoveChange={onMoveChange}
-          moves={moves.length > 0 ? moves : undefined}
-        />
+      <div
+        ref={boardRef}
+        className="flex min-h-0 min-w-0 items-center justify-center"
+      >
+        {/* boardWidth 0 = ResizeObserver has not measured yet; skip the flash. */}
+        {boardWidth !== 0 && (
+          <BoardPanel
+            pgn={pgn}
+            currentMove={currentMove}
+            onMoveChange={onMoveChange}
+            moves={moves.length > 0 ? moves : undefined}
+            windowId={windowId}
+            boardWidth={boardWidth}
+          />
+        )}
       </div>
 
       {/* Right column: Review panel with optional overlay */}
-      <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-purple-800 bg-purple-950">
+      <div className="r-bevel-in relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--r-face-light)]">
         {/* Review panel content */}
         {analysis ? (
           <ReviewPanel
@@ -89,7 +107,7 @@ export function ReviewView({
           />
         ) : !isAnalyzing ? (
           <div className="flex h-full flex-1 items-center justify-center p-8">
-            <p className="text-center text-sm text-purple-400">
+            <p className="text-center text-sm text-[var(--r-shadow)]">
               Run analysis to see move evaluations
             </p>
           </div>
@@ -97,27 +115,25 @@ export function ReviewView({
 
         {/* Analysis progress overlay */}
         {isAnalyzing && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-purple-950/80">
-            <div className="flex flex-col items-center gap-4">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-[rgba(0,0,0,0.45)]">
+            <div className="r-face r-bevel-out flex flex-col items-center gap-3 p-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/coolmonkey.gif"
                 alt="Loading"
                 className="h-24 w-24"
               />
-              <p className="animate-pulse text-lg font-semibold text-purple-100">
-                Analyzing...
-              </p>
+              <p className="text-lg font-bold">Analyzing...</p>
 
               {/* Progress bar */}
-              <div className="h-2 w-64 overflow-hidden rounded-full bg-purple-800">
+              <div className="r-progress w-64">
                 <div
-                  className="h-full rounded-full bg-blue-500 transition-all duration-300 ease-out"
+                  className="r-progress-fill"
                   style={{ width: `${analysisProgress}%` }}
                 />
               </div>
 
-              <p className="text-sm text-purple-300">
+              <p className="text-sm text-[var(--r-shadow)]">
                 Move {currentAnalysisMove} of {totalMoves}
               </p>
             </div>
