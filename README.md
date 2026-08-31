@@ -25,9 +25,9 @@ There are two ways to bring games into the analyzer:
 
 ### Stockfish Analysis
 
-Every imported game can be analyzed with Stockfish 18 running server-side via WebAssembly (single-threaded WASM build). The analysis pipeline works as follows:
+Every imported game can be analyzed with Stockfish 18 running in your browser via WebAssembly (single-threaded WASM build). The analysis pipeline works as follows:
 
-- **Streamed progress** -- Analysis status is pushed to the client in real time using Server-Sent Events (SSE), so you can watch the progress as each move is evaluated.
+- **Runs on your machine** -- The engine is downloaded once and cached by the browser, then every position is searched locally with a fixed node budget. Progress updates as each move is evaluated, and the finished analysis is saved to your game history. Analysis is not resumable: closing the tab mid-run discards the in-flight game.
 - **Move classifications** -- Each move is categorized into one of six tiers: **best**, **great**, **good**, **inaccuracy**, **mistake**, or **blunder**, based on the centipawn loss relative to the engine's top line.
 - **Win percentage** -- Centipawn evaluations are converted to win probability using a logistic regression curve, giving a more intuitive sense of who is winning at any point in the game.
 - **Per-side accuracy** -- An overall accuracy score is calculated for both White and Black, weighted by position volatility (sharp tactical positions are weighted differently from quiet ones).
@@ -116,7 +116,7 @@ The sidebar serves as the main navigation hub:
    npm install
    ```
 
-   This will also run the `postinstall` script that copies the Stockfish WASM files into the `public/stockfish/` directory.
+   This will also run the `postinstall` script that copies the Stockfish WASM files into the `public/stockfish/` directory, where the browser loads them from at analysis time.
 
 3. **Configure environment variables**
 
