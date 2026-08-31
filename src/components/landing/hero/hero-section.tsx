@@ -1,9 +1,12 @@
 "use client";
 
-import { useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { BonziAvatar } from "@/components/bonzi/bonzi-avatar";
+import { useIsMobile } from "@/components/desktop/use-is-mobile";
 import { RetroButton, RetroDialog, RetroWindow } from "@/components/retro";
+import { useDrag } from "@/hooks/use-drag";
 import { QUIP_MAP } from "@/lib/bonzi/quips";
+import { usePrefersReducedMotion } from "@/lib/motion";
 import { HeroCanvasLoader } from "./hero-canvas-loader";
 import { HeroPoster } from "./hero-poster";
 import { useHeroScroll } from "./use-hero-scroll";
@@ -21,6 +24,26 @@ export function HeroSection() {
 
   useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef });
 
+  const isMobile = useIsMobile();
+  const reduced = usePrefersReducedMotion();
+  const draggable = !isMobile && !reduced;
+  const [pos, setPos] = useState({ dx: 0, dy: 0 });
+
+  const onMove = useCallback((dx: number, dy: number) => {
+    setPos((p) => ({ dx: p.dx + dx, dy: p.dy + dy }));
+  }, []);
+  const { onPointerDown } = useDrag({ onMove, disabled: !draggable });
+
+  // Progress is read at pointerdown, not render: once the scroll choreography has taken
+  // over the window, dragging it would fight GSAP.
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (progressRef.current > 0.05) return;
+      onPointerDown(e);
+    },
+    [onPointerDown]
+  );
+
   return (
     <section ref={sectionRef} className="hero" aria-labelledby="hero-heading">
       <div ref={stageRef} className="hero-stage">
@@ -28,7 +51,18 @@ export function HeroSection() {
           <HeroCanvasLoader progressRef={progressRef} stageRef={stageRef} poster={<HeroPoster />} />
         </div>
 
-        <RetroWindow ref={windowRef} title="Chess Bonzi Buddy" className="hero-window" statusBar="Scroll to watch a game">
+        {/* GSAP animates `transform`; the drag uses the separate `translate` property so the two compose. */}
+        <RetroWindow
+          ref={windowRef}
+          title="Chess Bonzi Buddy"
+          className="hero-window"
+          statusBar="Scroll to watch a game"
+          style={{ translate: pos.dx || pos.dy ? `${pos.dx}px ${pos.dy}px` : undefined }}
+          titleBarProps={{
+            onPointerDown: handlePointerDown,
+            className: draggable ? "cursor-default touch-none" : undefined,
+          }}
+        >
           <div className="grid items-end gap-4 sm:grid-cols-[1fr_auto]">
             <div>
               <h1 id="hero-heading" className="text-[33px] font-bold leading-[1.05] sm:text-[44px]">

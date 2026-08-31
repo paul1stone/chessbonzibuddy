@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode, Ref } from "react";
+import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "@/lib/utils";
 
 interface RetroWindowProps {
@@ -10,6 +10,7 @@ interface RetroWindowProps {
   ref?: Ref<HTMLElement>;
   id?: string;
   "aria-labelledby"?: string;
+  titleBarProps?: HTMLAttributes<HTMLDivElement>;
 }
 
 export function RetroWindow({
@@ -21,6 +22,7 @@ export function RetroWindow({
   ref,
   id,
   "aria-labelledby": labelledBy,
+  titleBarProps,
 }: RetroWindowProps) {
   return (
     <section
@@ -31,7 +33,7 @@ export function RetroWindow({
       aria-labelledby={labelledBy}
       className={cn("r-face r-bevel-out p-[3px]", className)}
     >
-      <div className="r-title">
+      <div {...titleBarProps} className={cn("r-title", titleBarProps?.className)}>
         <span className="truncate">{title}</span>
         <span className="ml-auto flex gap-[2px]" aria-hidden="true">
           <span className="r-title-glyph">_</span>
