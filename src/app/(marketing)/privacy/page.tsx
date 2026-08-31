@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <ul>
         <li>Chess.com and Lichess public APIs are called with the username you enter to fetch ratings and recent games.</li>
         <li>Vercel hosts the site and keeps standard request logs, which can include your IP address, for a limited time.</li>
-        <li>Stockfish runs on the server and, in play mode, inside your browser. No game data is sent anywhere else.</li>
+        <li>Stockfish runs inside your browser, for both analysis and play mode. No game data is sent anywhere else.</li>
       </ul>
       <p>The site sets no cookies, runs no analytics scripts, and shows no ads.</p>
 
