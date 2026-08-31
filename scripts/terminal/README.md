@@ -22,6 +22,9 @@ run Docker. `public/v86/v86.wasm` is *not* committed; `postinstall` copies it ou
 | `public/terminal/vgabios.bin` | 36 KB | VGA BIOS |
 | `public/v86/v86.wasm` | 2.1 MB | gitignored, written by `postinstall` |
 
+Known nit: the committed image still carries a 0-byte `/.dockerenv`, because the strip step
+was a silent no-op on macOS until it was fixed; it is harmless and goes away on the next rebuild.
+
 The kernel and initramfs are **not** separate artifacts. They live at `/boot` inside the
 9p filesystem and v86 pulls them out itself via `bzimage_initrd_from_filesystem: true`.
 

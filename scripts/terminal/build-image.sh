@@ -53,13 +53,16 @@ if ! tar -f "$OUT_TAR" --delete ".dockerenv" >/dev/null 2>&1; then
 import os, sys, tarfile
 src = sys.argv[1]
 tmp = src + ".tmp"
+dropped = 0
 with tarfile.open(src) as inp, tarfile.open(tmp, "w") as out:
     for m in inp.getmembers():
-        if m.name.lstrip("./") == ".dockerenv":
+        if m.name in (".dockerenv", "./.dockerenv"):
+            dropped += 1
             continue
         out.addfile(m, inp.extractfile(m) if m.isreg() else None)
 os.replace(tmp, src)
-print("removed .dockerenv (python fallback)")
+print("removed .dockerenv (python fallback)" if dropped
+      else "warning: no .dockerenv entry found to remove")
 PYEOF
 fi
 
