@@ -74,6 +74,13 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 - Privacy/terms copy needs a read before deploy; ALSO confirm Neon project region is US (copy claims it), and note games API is unauthenticated (copy says games are not private)
 - BonziBuddy trademark status unverified; footer disclaims affiliation
 
+## Review (2026-08-31, part 2 complete)
+- 13 tasks + 13 step reviews + final Fable review (verdict FIX → all fixes applied f044226, 20/20 e2e).
+- Delivered: /app is a Win98 desktop (6 draggable/minimizable/maximizable windows, taskbar, Start menu, icons; mobile = single maximized window); homepage walkthrough = 3 live demos on real committed Stockfish analysis (Opera Game 1858) in a streamlined two-column composition; draggable homepage windows; cleanups (next-themes gone, 8 shadcn files deleted, renames, em-dash sweep).
+- Found + fixed 2 real pre-existing engine bugs: init-race move drop (42ed93e, THE brick) and 30s clock-cap abort at long TCs (60a172d); plus eval-chart dead clicks, bulk-import silent failures, silent delete failures.
+- Gates: typecheck clean; lint = board.tsx baseline only; 63 unit; 20/20 e2e; all routes static; landing bundle 186.8KB gzip (7KB under part 1); Lighthouse /app 97/96, / 82 (WebGL variance)/96.
+- NOT pushed since the last checkpoint. Follow-up candidates listed above.
+
 ## Review (2026-08-28, part 1 complete)
 - 30 commits, all 10 tasks implemented, step-reviewed, and fixed; Fable final review verdict SHIP.
 - Delivered: Win98 landing page at / (scroll-driven pixelated 3D Scholar's mate hero, Bonzi showcase with live quips, walkthrough cascade, footer), /privacy + /terms, retro design system (src/components/retro + retro.css + pixel fonts), app intact at /app with ?view=play-bonzi deep link.
