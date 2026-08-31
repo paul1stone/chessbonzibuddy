@@ -7,8 +7,8 @@ Plan: docs/superpowers/plans/2026-08-31-win98-desktop-app.md
 - [x] App internals explored; spec + plan written and committed (05b8fbd)
 - [ ] Plan review (Fable x3) — simplify DONE: accept Task5 split 5a/5b, 3 file-spec bullets, hoist color map, cut opacity hack, shared useInView, "Start game" case, reword Task2 note + statusbar class; Task 10 stays wave 5 (Task 9 touches window-stack for statusBar — reviewer missed); flag lucide-in-windows at check-in. regression DONE: 3 blocking accepted (import must open review; CSS-hide not unmount for minimize/mobile — worker/gameRef/clock survival; review+practice empty states) + 6 should-fix + 6 nits accepted; "Start game" rename safe (Playwright name match case-insensitive). Correctness pending
 - [x] Triage + revise done (00660dd); upstream analyzer rework pulled and absorbed into plan/spec (client-side analyzeGame, forced classification, DI-based fixture script)
-- [ ] User check-in
-- [ ] Build waves 1-6 (12 tasks)
+- [x] User check-in — approved 2026-08-31; lucide icons stay (no objection)
+- [ ] Build waves: wave1 Task0 + Task1 (parallel, disjoint) DISPATCHED; then 8 (pkg.json after 0), 3 (after 1), then 2/4/5a/5b/6, then 7/9, 10, 11
 - [ ] Final Fable review
 - [x] Part 1 pushed to origin/main (9794a8d)
 
@@ -29,7 +29,7 @@ Pipeline: /build (Fable plan → Fable plan review → Opus build with Opus step
 - [x] Regression risk — accepted: playwright install chromium (blocking), drop next-themes + Toaster theme=dark, remove marketing metadata title, ViewParamSync in (app) layout w/ useLayoutEffect, gzip budget, eslint coverage ignore. COOP/COEP + portals confirmed non-issues
 - [x] Simpler alternatives + brief compliance — 12 findings; accepted: drop Lenis (remount bug + redundant), static stagger for WindowStack, move lib/motion.ts to wave 2, cut visibilitychange, token/comment nits, spec wording (rook rim, non-overlap cascade)
 - [x] Triage findings, revise plan, re-review — delta review confirms all 12 fixes, READY TO BUILD; spec synced
-- [ ] User check-in on final plan
+- [x] User check-in — approved 2026-08-31; lucide icons stay (no objection) on final plan
 
 ## Phase 3: Build (Opus implementers, Opus step reviews)
 - [x] Wave 1: Task 0 tooling — c36fd33, review PASS (pins fixed in 5c8733f)
