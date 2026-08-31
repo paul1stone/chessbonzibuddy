@@ -153,10 +153,14 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
 
           return () => {
             cancelAnimationFrame(refresh);
+            // Release the dock state this scrub owned: on disarm no geometry transition would
+            // ever fire to correct it, so the buttons would stay docked for good.
             for (const key of CASCADE_KEYS) {
               registerScrollFn(key, null);
+              setDocked(key, false);
               windows.get(key)?.classList.remove("cascade-open");
             }
+            if (isCascadeKey(useDockStore.getState().active)) setActive(null);
             outlines.forEach((el) => el.remove());
             outlines.clear();
             st.kill();
