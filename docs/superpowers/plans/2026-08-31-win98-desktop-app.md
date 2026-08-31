@@ -19,6 +19,8 @@
 - Verification commands: `npm run typecheck`, `npx eslint <scope> --quiet`, `npm run test`, `npm run test:e2e`, `npm run build`. Lint baseline: only `src/components/chess/board.tsx` may error after this plan (board-panel's pre-existing error is fixed in Task 3).
 - Dev servers: never kill a server you did not start; pick a free port; the repo `.next` dev lock may be held — use an APFS-cloned devroot in the scratchpad if so (pattern proven in part 1).
 - Part-1 e2e suite (9 tests) must still pass at every task boundary that touches landing files.
+- **Purple→retro mapping (applies to every restyle task):** `text-purple-100/50/200` → default `--r-dark` (drop the class), `text-purple-300/400/500` → `text-[var(--r-shadow)]`, `bg-purple-900/950` panels and `border-purple-800` → `RetroPanel` or `.r-bevel-in bg-[var(--r-face-light)]`, selection/active accents (`blue-500`, `bg-purple-800` active rows) → `bg-[var(--r-title-a)] text-[var(--r-title-text)]`, success greens → `#008000`, warnings → `#c08000`, errors/destructive → `#800000`, every `rounded-*` dropped, every `shadow-*` dropped (bevels only). Classification-related colors always come from `CLASSIFICATION_COLORS` (Task 3).
+- UI copy is sentence case: rename "Start Game" → "Start game" and "New Analysis" → "Import games" where ported. Playwright role-name matching is case-insensitive, so part-1's `getByRole("button", { name: "Start Game" })` still passes unmodified.
 
 ---
 
@@ -38,7 +40,7 @@
 **Interfaces:**
 - Produces: CSS classes `.retro.app` token remap; `.r-input`, `.r-tabs`/`.r-tab`/`.r-tab--active`, `.r-badge`, `.r-scroll`, `.r-skeleton`, `.r-progress`/`.r-progress-fill`, `.r-slider`, `.r-title--inactive`, `.r-group-caption`; component `RetroPanel({ caption?, children, className? })`; `Taskbar({ menuItems?, startLabel?, children? })` where `children` renders in the running-windows strip and `menuItems` defaults to the current marketing list.
 
-- [ ] **Step 1: Append primitives to `src/styles/retro.css`** (before the reduced-motion block):
+- [ ] **Step 1: Append primitives to `src/styles/retro.css`** (before the reduced-motion block). Also add `.r-statusbar { margin: 0 1px 1px; padding: 3px 8px; font-size: 11px; }` combined with `.r-bevel-in` at use sites (both window components use it):
 
 ```css
 .r-title--inactive {
@@ -79,7 +81,11 @@
 }
 .r-badge--flat { background: var(--r-face-light); color: var(--r-dark); }
 
-.r-scroll { overflow: auto; scrollbar-width: auto; scrollbar-color: var(--r-face) var(--r-face-light); }
+.r-scroll { overflow: auto; }
+/* Standard scrollbar properties disable ::-webkit-scrollbar in Chromium; scope them to Firefox. */
+@supports not selector(::-webkit-scrollbar) {
+  .r-scroll { scrollbar-width: auto; scrollbar-color: var(--r-face) var(--r-face-light); }
+}
 .r-scroll::-webkit-scrollbar { width: 16px; height: 16px; }
 .r-scroll::-webkit-scrollbar-track { background: repeating-conic-gradient(var(--r-face-light) 0% 25%, var(--r-highlight) 0% 50%) 0 0 / 2px 2px; }
 .r-scroll::-webkit-scrollbar-thumb {
@@ -160,6 +166,8 @@
   --chart-4: #800000;
   --chart-5: #800080;
   --r-body-size: 13px;
+  /* font-mono utilities resolve this var (globals.css @theme inline); Geist is gone in-app. */
+  --font-geist-mono: "Courier New", monospace;
 }
 .retro.app .r-body { font-size: var(--r-body-size); }
 ```
@@ -207,11 +215,11 @@ export function Taskbar({
 }) {
 ```
 
-In the menu `<ul>`, render `item.onSelect` entries as `<button type="button" onClick={() => { item.onSelect!(); setOpen(false); }}>` with the same classes as the links (plus `w-full text-left`). Render `{children}` between the Start button and the clock spacer (`<div className="flex min-w-0 flex-1 gap-1 overflow-hidden px-1">{children}</div>`; move `ml-auto` off the clock well since flex-1 now fills). Export `TaskbarMenuItem` from `src/components/retro/index.ts` along with `RetroPanel`.
+In the menu `<ul>`, render `item.onSelect` entries as `<button type="button" onClick={() => { item.onSelect!(); setOpen(false); }}>` with the same classes as the links (plus `w-full text-left`). Key list items by `item.label` (onSelect items have no href; keying by href would produce duplicate-undefined keys and React console warnings). Render `{children}` between the Start button and the clock spacer (`<div className="flex min-w-0 flex-1 gap-1 overflow-hidden px-1">{children}</div>`; move `ml-auto` off the clock well since flex-1 now fills). Export `TaskbarMenuItem` from `src/components/retro/index.ts` along with `RetroPanel`.
 
-- [ ] **Step 5: Cleanups.** `rm src/components/theme-provider.tsx src/components/ui/tooltip.tsx`; `npm uninstall next-themes`; in `package.json` set `"name": "chess-bonzi-buddy"`. In `src/stores/profile-store.ts` delete lines 19-20 (`isFetching` field + comment), the `setIsFetching` action (L28, L46), and its initializer (L36) — `partialize` already excludes it. Grep for consumers first: `grep -rn "isFetching\|setIsFetching\|theme-provider\|next-themes" src/` must show zero remaining references after the edits.
+- [ ] **Step 5: Cleanups.** `rm src/components/theme-provider.tsx src/components/ui/tooltip.tsx`; `npm uninstall next-themes`; in `package.json` set `"name": "chess-bonzi-buddy"`. In `src/stores/profile-store.ts` delete the `isFetching` field (L19-20), the `setIsFetching` action (L28, L46), and its initializer (L39) — `partialize` already excludes it. Grep for consumers first: `grep -rn "isFetching\|setIsFetching\|theme-provider\|next-themes" src/` must show zero remaining references after the edits.
 
-- [ ] **Step 6: Verify and commit.** `npm run typecheck && npx eslint src/components/retro src/styles src/stores/profile-store.ts --quiet && npm run test` (13 pass) and part-1 e2e still green: `npm run test:e2e` if :3000 is free, else the cloned-devroot pattern. The marketing pages must be pixel-unchanged (Taskbar defaults preserved).
+- [ ] **Step 6: Verify and commit.** `npm run typecheck && npx eslint src/components/retro src/styles src/stores/profile-store.ts --quiet && npm run test` (13 pass) and part-1 e2e still green: `npm run test:e2e` if :3000 is free, else the cloned-devroot pattern. The marketing pages must be visually unchanged (Taskbar defaults preserved; the new empty flex strip may shift the clock a few px — acceptable, don't gate on pixel identity).
 
 ```bash
 git add src/styles src/components/retro src/app/globals.css package.json package-lock.json src/stores/profile-store.ts
@@ -541,6 +549,7 @@ import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useDrag } from "@/hooks/use-drag";
 import { useWindowStore, WINDOW_SIZES, type WindowId } from "@/stores/window-store";
+import { usePrefersReducedMotion } from "@/lib/motion";
 import { useIsMobile } from "./use-is-mobile";
 
 interface DesktopWindowProps {
@@ -569,9 +578,10 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
     [id, move]
   );
 
+  const reduced = usePrefersReducedMotion();
   const { onPointerDown } = useDrag({
     onMove: clampedMove,
-    disabled: isMobile || win.maximized,
+    disabled: isMobile || win.maximized || reduced,
   });
 
   // Focus the window frame when it becomes the focused window.
@@ -581,8 +591,12 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
     }
   }, [focused]);
 
-  if (!win.open || win.minimized) return null;
-  if (isMobile && !focused) return null;
+  // Closed windows unmount; minimized / mobile-background windows stay MOUNTED and are
+  // hidden with CSS. Unmounting would kill live state (the Stockfish worker, the play
+  // view's game ref, review SSE scrubbing) — hiding preserves it all. useBoardSize sees
+  // 0x0 while hidden; its 200px floor plus the re-measure on restore make that benign.
+  if (!win.open) return null;
+  const hidden = win.minimized || (isMobile && !focused);
 
   const maximized = win.maximized || isMobile;
   const size = WINDOW_SIZES[id];
@@ -593,18 +607,27 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
       role="dialog"
       aria-labelledby={`win-title-${id}`}
       tabIndex={-1}
-      className={cn("r-face r-bevel-out absolute flex flex-col p-[3px] outline-none", !focused && "opacity-[0.985]")}
+      className="r-face r-bevel-out absolute flex flex-col p-[3px] outline-none"
       style={
         maximized
-          ? { inset: 0, zIndex: win.z }
+          ? { inset: 0, zIndex: win.z, display: hidden ? "none" : undefined }
           : {
               width: `min(${size.w}px, calc(100vw - 16px))`,
               height: `min(${size.h}px, calc(100vh - var(--r-taskbar-h) - 16px))`,
               transform: `translate(${win.x}px, ${win.y}px)`,
               zIndex: win.z,
+              display: hidden ? "none" : undefined,
             }
       }
       onPointerDown={() => focus(id)}
+      onKeyDown={(e) => {
+        // Window-level Escape minimizes (spec 2.5); never steal Escape from text fields.
+        if (e.key !== "Escape") return;
+        const t = e.target as HTMLElement;
+        if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable) return;
+        e.preventDefault();
+        minimize(id);
+      }}
     >
       <div
         className={cn("r-title shrink-0 cursor-default touch-none select-none", !focused && "r-title--inactive")}
@@ -630,7 +653,7 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
           <button type="button" className="r-title-glyph" aria-label="Close" onClick={() => close(id)}>×</button>
         </span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col p-2">{children}</div>
+      <div className="r-body flex min-h-0 flex-1 flex-col p-2">{children}</div>
       {statusBar !== undefined && (
         <div className="r-bevel-in mx-[1px] mb-[1px] shrink-0 px-2 py-[3px] text-[11px]">{statusBar}</div>
       )}
@@ -639,7 +662,7 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
 }
 ```
 
-Note: this does NOT reuse `RetroWindow` (the marketing one stays server-compatible and decorative); the chrome classes are shared via CSS.
+Note: this does NOT reuse `RetroWindow` — not for server-compatibility (handler props on it are server-safe, see Task 10) but for prop-surface restraint: unifying would push controls/body/id slots into the marketing component for no visual gain. The chrome look is shared via CSS classes, which is where drift would matter.
 
 - [ ] **Step 4: Create `src/components/desktop/desktop-icon.tsx`:**
 
@@ -693,14 +716,9 @@ import { cn } from "@/lib/utils";
 import { useWindowStore, WINDOW_IDS, type WindowId } from "@/stores/window-store";
 import { WINDOW_ICONS } from "./icons";
 
-const TITLES: Record<WindowId, string> = {
-  games: "My games",
-  import: "Import",
-  review: "Game review",
-  practice: "Practice",
-  play: "Play Bonzi Buddy",
-  profile: "Profile",
-};
+import { ICON_LABELS } from "./desktop";
+// Taskbar buttons use the same static labels as icons (never the dynamic window title).
+const TITLES = ICON_LABELS;
 
 export function AppTaskbar() {
   const windows = useWindowStore((s) => s.windows);
@@ -759,17 +777,32 @@ export interface WindowDef {
   statusBar?: ReactNode;
 }
 
+export const ICON_LABELS: Record<WindowId, string> = {
+  games: "My games",
+  import: "Import",
+  review: "Game review",
+  practice: "Practice",
+  play: "Play Bonzi Buddy",
+  profile: "Profile",
+};
+
 export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
   const windows = useWindowStore((s) => s.windows);
   const { open } = useWindowStore.getState();
   const isMobile = useIsMobile();
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-[var(--r-taskbar-h)] overflow-hidden bg-[var(--r-desktop)]">
+    <div
+      className="fixed inset-x-0 top-0 bottom-[var(--r-taskbar-h)] overflow-hidden bg-[var(--r-desktop)]"
+      onPointerDown={(e) => {
+        // Clicking bare desktop clears focus (spec 2.3); windows stopPropagation via their own handler order.
+        if (e.target === e.currentTarget) useWindowStore.setState({ focused: null });
+      }}
+    >
       {!isMobile && (
         <div className="absolute left-2 top-2 flex flex-col gap-3">
           {WINDOW_IDS.map((id) => (
-            <DesktopIcon key={id} label={defs[id].title} icon={WINDOW_ICONS[id]} onOpen={() => open(id)} />
+            <DesktopIcon key={id} label={ICON_LABELS[id]} icon={WINDOW_ICONS[id]} onOpen={() => open(id)} />
           ))}
         </div>
       )}
@@ -786,7 +819,7 @@ export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
 
 Create `src/components/desktop/index.ts` exporting `Desktop`, `DesktopWindow`, `WindowDef`, `useIsMobile`, `WINDOW_ICONS`.
 
-- [ ] **Step 7: Smoke, verify, commit.** Throwaway page `src/app/(app)/desktop-smoke/page.tsx` (client) rendering `<div className="retro app"><Desktop defs={...six stub defs with <p> bodies...} /></div>`. On a free-port dev server: icons double-click to open cascaded windows; drag by title bar moves; minimize/restore via taskbar; maximize fills; focus brings to front and greys the others' title bars; Escape on a focused title bar minimizes; 375px emulation shows one maximized window and taskbar switching. Screenshot to scratchpad. Delete the smoke page. `npm run typecheck && npx eslint src/components/desktop --quiet`.
+- [ ] **Step 7: Smoke, verify, commit.** Throwaway page `src/app/(app)/desktop-smoke/page.tsx` (client) rendering `<div className="retro app"><Desktop defs={...} /></div>` with five `<p>` stub bodies and ONE real body: the `review` stub renders `<Board position="start" interactive onPieceDrop={() => true} boardWidth={320} />` — this is the promised smoke that react-chessboard drag-and-drop works inside a transform-translated window (drag a piece after dragging the window; if pointer coordinates misalign, STOP and report before the window tasks build on it). On a free-port dev server: icons double-click to open cascaded windows; drag by title bar moves; minimize hides the window but its content stays mounted (add a ticking counter to one stub and confirm it doesn't reset on restore); maximize fills; focus brings to front and greys the others' title bars; Escape minimizes; empty-desktop click clears focus; 375px emulation shows one maximized window and taskbar switching. Screenshot to scratchpad. Delete the smoke page. `npm run typecheck && npx eslint src/components/desktop --quiet`.
 
 ```bash
 git add src/components/desktop
@@ -807,7 +840,7 @@ git commit -m "add desktop window chrome"
 
 **Interfaces:**
 - Consumes: `MoveClassification` from `@/lib/engine`; `useWindowFocused` (Task 1).
-- Produces: `CLASSIFICATION_COLORS: Record<MoveClassification, { hex: string; label: string }>`, `classificationArrowColor(c): string` (rgba of the hex at 0.8); `useBoardSize(reserved?: { w?: number; h?: number }): { ref, width }` — attach `ref` to the board's flex container, `width = max(200, floor(min(cw - (reserved.w ?? 0), ch - (reserved.h ?? 0))))`, observed via ResizeObserver; `BoardPanel` gains prop `windowId?: WindowId` (keyboard active only while that window is focused; when omitted, keyboard behaves as today for the homepage demo reuse).
+- Produces: `CLASSIFICATION_COLORS: Record<MoveClassification, { hex: string; label: string }>`, `classificationArrowColor(c): string` (rgba of the hex at 0.8); `useBoardSize(reserved?: { w?: number; h?: number }): { ref, width }` — attach `ref` to the board's flex container, `width = max(200, floor(min(cw - (reserved.w ?? 0), ch - (reserved.h ?? 0))))`, observed via ResizeObserver; `BoardPanel` gains prop `windowId?: WindowId` (keyboard active only while that window is focused; when omitted, behavior is unchanged). Note `BoardPanel`'s only importer is `review-view.tsx`, so the window-store import here cannot reach the landing bundle (demos use `Board` directly).
 
 - [ ] **Step 1: Failing color-map test** (`src/lib/classification-colors.test.ts`): assert all 8 `MoveClassification` values are keys, every hex matches `/^#[0-9a-f]{6}$/`, and `classificationArrowColor("blunder")` starts with `"rgba(128, 0, 0"`.
 
@@ -864,6 +897,8 @@ export function useBoardSize(reserved: { w?: number; h?: number } = {}) {
 }
 ```
 
+Consumers must render the board only when `width > 0` (first ResizeObserver tick hasn't fired yet; while a window is CSS-hidden the observer reports 0x0 and the 200px floor applies — both benign, but a 0-width board flashes). Pattern: `{width > 0 && <BoardPanel boardWidth={width} .../>}`.
+
 - [ ] **Step 4: `board.tsx` edits.** L113: `"rounded-lg overflow-hidden shadow-xl"` → `"r-bevel-in bg-[var(--r-face)] p-[3px]"`. L122-123: light `#e8dab2` → `#d9c9a3`, dark `#4a7c59` → `#6e4b2a`.
 
 - [ ] **Step 5: `board-panel.tsx` edits.**
@@ -871,11 +906,12 @@ export function useBoardSize(reserved: { w?: number; h?: number } = {}) {
   - Add props `windowId?: WindowId` and `boardWidth?: number`; pass `boardWidth` through to `<Board boardWidth={boardWidth} />`; replace both `w-[90%] max-w-[calc(100vh-14rem)]` (L226, L238) with `w-full` and let the parent (window body via `useBoardSize`) size it — when `boardWidth` is set, wrap board and info bar in `style={{ width: boardWidth }}`.
   - Keyboard effect (L150-176): at the top of `handleKeyDown` add
     ```ts
-    if (windowFocusRef.current === false) return;
+    if (windowId && useWindowStore.getState().focused !== windowId) return;
     const t = e.target as HTMLElement;
     if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable) return;
     ```
-    where `windowFocusRef` mirrors `useWindowFocused(windowId)` via `const focusedNow = useWindowFocused(windowId ?? "review"); const windowFocusRef = useRef(true); windowFocusRef.current = windowId ? focusedNow : true;` — the ref keeps the effect's dep list unchanged. This also fixes the file's pre-existing `react-hooks/refs` error at L119 IF the fix is compatible; read the current error (`npx eslint src/components/chess/board-panel.tsx`) and resolve it with the minimal compliant pattern (likely the adjust-during-render or effect-mirror pattern used in part 1).
+    An imperative `getState()` read — no hook, no subscription, no ref written during render (a render-written ref is exactly what the `react-hooks/refs` rule errors on), and the effect's dep list is unchanged (`windowId` is stable per mount; add it to the deps anyway).
+  - Fix the file's pre-existing `react-hooks/refs` error at L119 with an effect mirror: wrap the offending ref write in `useEffect(() => { <the same assignment>; })` (read the current code at L110-125 first and preserve behavior — the ref must reflect the latest value before the keyboard/interval callbacks read it, which an unconditioned effect guarantees).
   - Move-info bar (L238): `rounded-lg bg-purple-900/70` → `r-bevel-in bg-[var(--r-face-light)]`; text classes `text-purple-400` → `text-[var(--r-shadow)]`, `text-purple-100` → `text-[var(--r-dark)]`, `text-green-400` (L254) → `text-[#008000] font-bold`, `text-purple-500` arrow icon → `text-[var(--r-shadow)]`.
   - Best-move arrow color (L197): `rgba(34, 197, 94, 0.7)` → `rgba(0, 128, 0, 0.7)`.
 - [ ] **Step 6: `eval-bar.tsx`:** replace the private sigmoid (L21-23) with `import { cpToWinPercent } from "@/lib/analysis-utils"` and use it; colors: `bg-purple-800` → `bg-[#2b2b2b]`, `bg-purple-100` → `bg-[#f0e6d2]` (the piece palette), border via `r-bevel-in`.
@@ -899,12 +935,15 @@ git commit -m "board sizing and colors"
 
 **Interfaces:**
 - Consumes: Task 0 primitives; game/profile stores; `useWindowStore` for cross-window opens.
-- Produces: `GamesWindow()`, `ProfileWindow()`, `ImportWindow({ onImportUrl, onBulkImport, importing }: { onImportUrl: (url: string) => Promise<void>; onBulkImport: (games: RecentGameData[]) => Promise<void>; importing: boolean })` — the SSE/queue logic stays in the page (Task 7), which passes these down. `RecentGameData` stays exported from `recent-games.tsx`; `import-window.tsx` re-exports it for the page's handler typing.
+- Produces: `GamesWindow()`, `ProfileWindow()`, `ImportWindow({ onImportUrl, onBulkImport, importing }: { onImportUrl: (url: string) => Promise<void>; onBulkImport: (games: RecentGameData[]) => Promise<void>; importing: boolean })` — the SSE/queue logic stays in the page (Task 7), which passes these down. `RecentGameData` does not exist as an export today — it is a private interface in `page.tsx:26-35` (and `recent-games.tsx` has its own private `RecentGame` at L11). CREATE the export: move the interface from page.tsx into `recent-games.tsx` as `export interface RecentGameData`, reconcile it with the private `RecentGame` shape (they describe the same rows), and have `import-window.tsx` re-export it for the page's handler typing.
 
 Body specs (restyle rules apply: swap shadcn Button→RetroButton, Input→`.r-input` input, Badge→`.r-badge--flat`, ScrollArea→`.r-scroll` div, Skeleton→`.r-skeleton` div, Card→`RetroPanel`; replace every `purple-*` per the mapping: `text-purple-100/50` → default `--r-dark`, `text-purple-300/400` → `text-[var(--r-shadow)]`, `bg-purple-900/950 borders` → `RetroPanel` or `.r-bevel-in bg-[var(--r-face-light)]`, selection accents `blue-500` → `bg-[var(--r-title-a)] text-[var(--r-title-text)]`):
 
-1. **GamesWindow** — port sidebar list verbatim in behavior: fetch on username (keep the cancelled flag), five states (`.r-skeleton` rows, error, no-account with a RetroButton "Open profile" → `open("profile")`, empty, list), rows as full-width flat buttons with the result dot (dot colors: win `#008000`, loss `#800000`, draw `var(--r-shadow)`), accuracy line `W xx.x% / B xx.x%` in 11px, delete via the nested `span[role=button]` pattern (keep it), row click loads the full game (`GET /api/games/${id}` when pgn absent) then `setActiveGame(game)` AND `useWindowStore.getState().open("review")`. Top strip: RetroButton "Import games" → `open("import")`.
-2. **ProfileWindow** — the expanded `profile-settings.tsx` form as the whole body (no collapse state): two `RetroPanel`s captioned "Chess.com" and "Lichess", each an `.r-input` + RetroButton "Link" + rating badges; the toasts stay. Delete the "or paste a game URL" duplicate — URL import lives in the import window.
+1. **GamesWindow** — port sidebar list verbatim in behavior: fetch on username (keep the cancelled flag), five states (`.r-skeleton` rows, error, no-account with a RetroButton "Open profile" → `open("profile")`, empty, list), rows as full-width flat buttons with the result dot (dot colors: win `#008000`, loss `#800000`, draw `var(--r-shadow)`), accuracy line `W xx.x% / B xx.x%` in 11px, delete via the nested `span[role=button]` pattern (keep it), row click loads the full game (`GET /api/games/${id}` when pgn absent) then `setActiveGame(game)` AND `useWindowStore.getState().open("review")`; the active game's row gets the selection accent (`bg-[var(--r-title-a)] text-[var(--r-title-text)]`, replacing sidebar.tsx:220-222). Top strip: RetroButton "Import games" → `open("import")` — unlike the old "New Analysis" it does NOT call `setActiveGame(null)`; in a windowed UX clearing the open review makes no sense (intentional delta, note in commit).
+2. **ProfileWindow** — merge of two sources, ported precisely:
+   - From `profile-settings.tsx` (L30-42): the local input states, the two sync effects mirroring store usernames into inputs, and `handleLinkChessCom` (L44-61) / `handleLinkLichess` (L63-80) — each calls `fetchChessComRatings`/`fetchLichessRatings` from `@/lib/ratings`, stores username + ratings via the profile-store setters, toasts success ("Linked as {username}") and failure exactly as today, Enter submits (L155, L194).
+   - From `page.tsx` LoginScreen: nothing else — its connect logic (L62-88) duplicates the handlers above; the "paste a game URL" fallback form is NOT ported (URL import lives in the import window).
+   - Layout: two `RetroPanel`s captioned "Chess.com" and "Lichess", each `.r-input` + RetroButton "Link" + `.r-badge--flat` rating pills (rapid/blitz/bullet as in `RatingBadge`, profile-settings.tsx:11-18). Ratings are visible ONLY here now (the old collapsed sidebar summary has no new home — intentional, note it in the commit).
 3. **ImportWindow** — `.r-tabs` strip ("Recent games" / "Paste URL"), local `tab` state. Recent tab renders `<RecentGames onImport={onBulkImport} />`. URL tab: `.r-input` + RetroButton "Import" calling `onImportUrl`, disabled while `importing`, error line in `#800000`.
 4. **recent-games.tsx** — restyle in place (13 purple, blue selection, fixed `h-[300px]` list → `min-h-0 flex-1 r-scroll`); root becomes `flex min-h-0 flex-1 flex-col`. `/coolmonkey.gif` loader stays.
 
@@ -917,35 +956,60 @@ git commit -m "add games profile import windows"
 
 ---
 
-### Task 5: Windows B — review and practice bodies restyled
+### Task 5a: Review window restyled
 
 **Files:**
-- Modify: `src/components/review/review-view.tsx`, `review-panel.tsx`, `move-list.tsx`, `game-summary.tsx`, `engine-panel.tsx`, `eval-chart.tsx`, `move-badge.tsx`, `accuracy-ring.tsx`, `bonzi-review-mascot.tsx` (in `src/components/bonzi/`)
-- Modify: `src/components/practice/practice-view.tsx`, `feedback-card.tsx`
-- Modify: `src/components/chess/move-controls.tsx`
-- Create: `src/components/windows/review-window.tsx`, `src/components/windows/practice-window.tsx`
+- Modify: `src/components/review/review-view.tsx`, `review-panel.tsx`, `move-list.tsx`, `game-summary.tsx`, `engine-panel.tsx`, `eval-chart.tsx`, `move-badge.tsx`, `accuracy-ring.tsx`; `src/components/bonzi/bonzi-review-mascot.tsx`
+- Create: `src/components/windows/review-window.tsx`
 
 **Interfaces:**
-- Consumes: Tasks 0/1/3. `ReviewWindow({ onAnalyze, isAnalyzing, analysisProgress })`; `PracticeWindow()` reads `activeGame` + analysis from the game store itself and closes its window on exit.
+- Consumes: Tasks 0/1/3. `ReviewWindow({ onAnalyze, isAnalyzing, analysisProgress })` reads `activeGame`/`analysisQueue`/`activeMove` from the game store.
 - Produces: restyled interiors; `ReviewView` gains `windowId` pass-through to `BoardPanel` and drops its own `h-full` assumptions in favor of the window body flex chain.
 
-Restyle specifics (same mapping as Task 4, plus):
+**Empty state (required):** `ReviewWindow` with `activeGame === null` (opened cold from its icon, or the active game was deleted) renders "No game selected." + RetroButton "Open my games" → `open("games")` — never mounts `ReviewView` without a pgn.
+
+Restyle specifics (the Global Constraints mapping, plus):
+- `review-view.tsx` (7 purple, 1 blue, 3 rounded): progress overlay `bg-purple-950/80` (L100) → `bg-[rgba(0,0,0,0.45)]` with an inner `r-face r-bevel-out` panel; progress bar `bg-blue-500` (L115) → `.r-progress`/`.r-progress-fill`; grid stays `lg:grid-cols-[1fr_400px]`; root `h-full` relies on the window body's flex chain (drop nothing else).
 - `review-window.tsx`: board column uses `useBoardSize({ h: 96 })` (controls + info bar reserve); status bar slot = result + queued count + `.r-progress` (width = `analysisProgress%`) while analyzing + RetroButton "Analyze" / "Practice mistakes" (opens `practice`); title text is computed in the page's `defs` (Task 7).
 - `review-panel.tsx`: shadcn Tabs → `.r-tabs` with three `.r-tab` buttons + conditional panes (keep mounted-on-select semantics: render only the active pane, matching Tabs' default). Mascot bar: `border-purple-800 bg-purple-950` → `.r-sep` top border + face bg.
 - `move-list.tsx`: sticky header `bg-purple-950` → `bg-[var(--r-face)]` + `.r-sep`; active row `border-blue-500 bg-purple-800` → `bg-[var(--r-title-a)] text-[var(--r-title-text)]`; classification dots use `CLASSIFICATION_COLORS[c].hex`.
 - `game-summary.tsx`: four Cards → `RetroPanel`s captioned "Accuracy", "Move quality", "Evaluation", "Key moments"; delete the local `classificationColors` map (L22-34) in favor of the shared module; accuracy ring track `stroke-purple-800` → `stroke-[var(--r-shadow)]`; the value arcs are colored by side — white's ring `stroke-[#000080]`, black's ring `stroke-[#800000]` (passed as the existing color-class prop by game-summary L86,99); number text in `--r-dark`.
 - `engine-panel.tsx`: token classes now remap automatically; replace its 2 purple classes and local color map with the shared one.
-- `eval-chart.tsx`: the 14 hex literals: area fill `var(--chart-1)` at 20% opacity via `fill="#000080" fillOpacity={0.15}`, stroke `#000080`, grid `#808080` dashed, axis text `#404040`, reference line `#800000`, active dot `#000080`, tooltip contentStyle `{ background: "#c0c0c0", border: "2px solid #808080", borderRadius: 0, fontFamily: "inherit" }`. Keep recharts.
+- `eval-chart.tsx` (24 hex occurrences, 10 unique — replace ALL): area fill `#000080` at `fillOpacity={0.15}`, stroke `#000080`, grid `#808080` dashed, axis text `#404040`, reference line `#800000`, active dot `#000080`, tooltip contentStyle `{ background: "#c0c0c0", border: "2px solid #808080", borderRadius: 0, fontFamily: "inherit" }`; the warm classification marker hexes (`#eab308`, `#ef4444`, `#f97316`, and any purple marker) → `CLASSIFICATION_COLORS[classification].hex`. Keep recharts.
 - `move-badge.tsx`: Badge → `<span className="r-badge">` with `style={{ background: CLASSIFICATION_COLORS[c].hex }}`; delete its local map.
+- `review-window.tsx` status bar: "Analyze" hidden while `isAnalyzing` (the progress fill takes its place); queued count text `+N queued` when `analysisQueue.length > 0`.
+
+- [ ] Steps: restyle file-by-file with a harness page check at 960x640 and 375px, then verify: `npm run typecheck && npx eslint src/components/review src/components/windows/review-window.tsx src/components/bonzi --quiet && npm run test`.
+
+```bash
+git add src/components/review src/components/windows/review-window.tsx src/components/bonzi/bonzi-review-mascot.tsx
+git commit -m "restyle review window"
+```
+
+---
+
+### Task 5b: Practice window and move controls restyled
+
+**Files:**
+- Modify: `src/components/practice/practice-view.tsx`, `feedback-card.tsx`
+- Modify: `src/components/chess/move-controls.tsx`
+- Create: `src/components/windows/practice-window.tsx`
+
+**Interfaces:**
+- Consumes: Tasks 0/1/3. `PracticeWindow()` reads `activeGame` + analysis from the game store and closes its window on exit (`close("practice")`).
+
+**Empty state (required):** `PracticeWindow` with `activeGame === null` OR no parsed analysis renders "Analyze a game first." + RetroButton "Open my games" → `open("games")` — never mounts `PracticeView` without moves.
+
+Restyle specifics (the Global Constraints mapping, plus):
 - `practice-view.tsx`: `w-[min(480px,50vh)]` (L241) → `useBoardSize({ h: 40 })` width; header/nav RetroButtons; 17 purple swept.
 - `feedback-card.tsx`: three states → `RetroDialog`-look panels inline: prompt = `RetroPanel caption="Your move"`, correct = panel with `#008000` heading, incorrect = `#800000` heading; 27 purple swept; `bg-purple-700` custom button → RetroButton variant="default".
 - `move-controls.tsx`: 5 icon buttons → RetroButtons (keep lucide icons, size sm equivalent `min-w-[32px] px-1`); the `bg-purple-900/50` pill → `.r-bevel-in bg-[var(--r-face-light)] px-3 text-[11px]`.
 
-- [ ] Steps: restyle file-by-file with a harness page check at 960x640 and 375px, then verify: `npm run typecheck && npx eslint src/components/review src/components/practice src/components/chess src/components/windows src/components/bonzi --quiet && npm run test`.
+- [ ] Steps: restyle file-by-file with a harness page check at 900x560 and 375px, then verify: `npm run typecheck && npx eslint src/components/practice src/components/chess/move-controls.tsx src/components/windows/practice-window.tsx --quiet && npm run test`.
 
 ```bash
-git add src/components/review src/components/practice src/components/chess/move-controls.tsx src/components/windows src/components/bonzi/bonzi-review-mascot.tsx
-git commit -m "restyle review and practice"
+git add src/components/practice src/components/chess/move-controls.tsx src/components/windows/practice-window.tsx
+git commit -m "restyle practice window"
 ```
 
 ---
@@ -958,7 +1022,7 @@ git commit -m "restyle review and practice"
 
 **Interfaces:**
 - Consumes: Tasks 0/1/3. `PlayWindow()` wraps `PlayView` with `onExit={() => useWindowStore.getState().close("play")}`.
-- Produces: `PlayView` fits a window: L366 `flex h-screen flex-col` → `flex h-full min-h-0 flex-1 flex-col`; board container (L388) sized by `useBoardSize({ h: 8 })`; top bar (L368) becomes a slim face strip (`.r-sep` bottom); side panel (L407) `rounded-lg border-purple-800 bg-purple-950` → `.r-bevel-in bg-[var(--r-face-light)]`; `play-setup.tsx` `min-h-screen` (L23) → `h-full`, selection buttons → RetroButton with `aria-pressed` + sunken-when-selected (reuse the taskbar sunken style); `chess-clock.tsx` low-time colors red `#800000` / yellow `#c08000`, clock digits `.r-term`; `game-log.tsx` paper + `.r-scroll`; `game-over-overlay.tsx` `bg-purple-950/90` → `bg-[rgba(0,0,0,0.45)]`, inner panel `r-face r-bevel-out` with title strip, `shadow-xl` dropped. Behavior untouched (engine, clocks, Bonzi reactions, resign, rematch).
+- Produces: `PlayView` fits a window: L366 `flex h-screen flex-col` → `flex h-full min-h-0 flex-1 flex-col`; board container (L388) sized by `useBoardSize({ h: 8 })`; top bar (L368) becomes a slim face strip (`.r-sep` bottom); side panel (L407) `rounded-lg border-purple-800 bg-purple-950` → `.r-bevel-in bg-[var(--r-face-light)]`; `play-setup.tsx` `min-h-screen` (L23) → `h-full`, selection buttons → RetroButton with `aria-pressed` + sunken-when-selected (reuse the taskbar sunken style); button labels to sentence case: "Start game", "Back" (per Global Constraints — part-1 e2e locators still match case-insensitively); `chess-clock.tsx` low-time colors red `#800000` / yellow `#c08000`, clock digits `.r-term`; `game-log.tsx` paper + `.r-scroll`; `game-over-overlay.tsx` `bg-purple-950/90` → `bg-[rgba(0,0,0,0.45)]`, inner panel `r-face r-bevel-out` with title strip, `shadow-xl` dropped. Behavior untouched (engine, clocks, Bonzi reactions, resign, rematch).
 
 - [ ] Steps: restyle, harness-check setup + live game + game-over at 960x640 and 375px (Stockfish worker must boot: watch console), verify scoped lint/typecheck, part-1 unit suite.
 
