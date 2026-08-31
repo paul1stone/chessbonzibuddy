@@ -196,6 +196,9 @@ export default function Home() {
             const game = (await res.json()) as Game;
             addGame(game);
             imported.push(game);
+          } else {
+            // A rejected import resolves the fetch, so only this branch reports it.
+            toast.error(`Failed to import ${g.white} vs ${g.black}`);
           }
         } catch {
           toast.error(`Failed to import ${g.white} vs ${g.black}`);
