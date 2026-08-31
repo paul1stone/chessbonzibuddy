@@ -113,7 +113,8 @@ export function Board({
     <div className="r-bevel-in bg-[var(--r-face)] p-[3px]">
       <Chessboard
         options={{
-          position: position ?? "start",
+          // react-chessboard 5.x no longer accepts the legacy "start" alias.
+          position: position ?? "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
           boardOrientation,
           animationDurationInMs: 200,
           allowDragging: interactive,
