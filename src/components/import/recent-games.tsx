@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { Loader2, Download, Check, RefreshCw, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Download, Check, RefreshCw, Search } from "lucide-react";
+import { RetroButton } from "@/components/retro";
 import { useProfileStore } from "@/stores/profile-store";
 import { toast } from "sonner";
 
-interface RecentGame {
+export interface RecentGameData {
   id: string;
   url: string;
   white: string;
@@ -20,13 +18,13 @@ interface RecentGame {
 }
 
 interface RecentGamesProps {
-  onImport: (games: RecentGame[]) => void;
+  onImport: (games: RecentGameData[]) => void;
 }
 
 function resultColor(result: string) {
-  if (result === "1-0") return "bg-green-500";
-  if (result === "0-1") return "bg-red-500";
-  return "bg-purple-500";
+  if (result === "1-0") return "#008000";
+  if (result === "0-1") return "#800000";
+  return "var(--r-shadow)";
 }
 
 function timeAgo(dateStr: string): string {
@@ -44,7 +42,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
   const chessComUsername = useProfileStore((s) => s.chessComUsername);
   const lichessUsername = useProfileStore((s) => s.lichessUsername);
 
-  const [games, setGames] = useState<RecentGame[]>([]);
+  const [games, setGames] = useState<RecentGameData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [imported, setImported] = useState<Set<string>>(new Set());
@@ -69,14 +67,14 @@ export function RecentGames({ onImport }: RecentGamesProps) {
     setGames([]);
 
     try {
-      const allGames: RecentGame[] = [];
+      const allGames: RecentGameData[] = [];
 
       if (chessComUsername) {
         const res = await fetch(
           `/api/players/games?platform=chesscom&username=${encodeURIComponent(chessComUsername)}`
         );
         if (res.ok) {
-          const data = (await res.json()) as RecentGame[];
+          const data = (await res.json()) as RecentGameData[];
           allGames.push(...data);
         }
       }
@@ -86,7 +84,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
           `/api/players/games?platform=lichess&username=${encodeURIComponent(lichessUsername)}`
         );
         if (res.ok) {
-          const data = (await res.json()) as RecentGame[];
+          const data = (await res.json()) as RecentGameData[];
           allGames.push(...data);
         }
       }
@@ -133,64 +131,64 @@ export function RecentGames({ onImport }: RecentGamesProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 py-8">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-8">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/coolmonkey.gif" alt="Loading" className="h-16 w-16" />
-        <span className="text-sm text-purple-300">
-          Fetching recent games...
-        </span>
+        <span>Fetching recent games...</span>
       </div>
     );
   }
 
   if (games.length === 0) {
     return (
-      <div className="py-8 text-center text-sm text-purple-400">
+      <div className="flex min-h-0 flex-1 items-center justify-center py-8 text-center text-[var(--r-shadow)]">
         No recent games found.
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
       {/* Search + action bar */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-purple-400" />
-          <Input
+          <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--r-shadow)]" />
+          <input
             placeholder="Search by player, time control..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-8 pl-8 text-xs"
+            className="r-input w-full"
+            style={{ paddingLeft: 24 }}
+            aria-label="Search recent games"
           />
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 shrink-0"
+        <RetroButton
+          className="shrink-0"
+          style={{ minWidth: 0, padding: "0 8px" }}
           onClick={fetchGames}
           title="Refresh"
+          aria-label="Refresh"
         >
           <RefreshCw className="h-3.5 w-3.5" />
-        </Button>
+        </RetroButton>
       </div>
 
       {/* Count + import button */}
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-purple-400">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[var(--r-shadow)]">
           {filteredGames.length} game{filteredGames.length !== 1 ? "s" : ""}
           {search && ` matching "${search}"`}
         </span>
         {selected.size > 0 && (
-          <Button size="sm" className="h-6 text-[10px]" onClick={handleImport}>
+          <RetroButton style={{ minWidth: 0, padding: "0 8px" }} onClick={handleImport}>
             <Download className="mr-1 h-3 w-3" />
             Import {selected.size}
-          </Button>
+          </RetroButton>
         )}
       </div>
 
-      {/* Scrollable game list — fixed height */}
-      <div className="h-[300px] overflow-y-auto rounded-md border border-purple-800">
+      {/* Scrollable game list — fills the remaining body height */}
+      <div className="r-scroll r-bevel-in min-h-0 flex-1 bg-[var(--r-paper)] p-[2px]">
         <div className="flex flex-col">
           {filteredGames.map((game) => {
             const isImported = imported.has(game.id);
@@ -201,44 +199,41 @@ export function RecentGames({ onImport }: RecentGamesProps) {
                 key={game.id}
                 onClick={() => !isImported && toggleSelect(game.id)}
                 disabled={isImported}
-                className={`flex w-full items-center gap-3 border-b border-purple-800/50 px-3 py-2 text-left transition-colors last:border-b-0 ${
+                className={`flex w-full items-center gap-3 px-2 py-1.5 text-left ${
                   isImported
                     ? "opacity-40"
                     : isSelected
-                      ? "bg-blue-500/10"
-                      : "hover:bg-purple-800/40"
+                      ? "bg-[var(--r-title-a)] text-[var(--r-title-text)]"
+                      : "hover:bg-[var(--r-face-light)]"
                 }`}
               >
                 {isImported ? (
-                  <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                  <Check className="h-3.5 w-3.5 shrink-0 text-[#008000]" />
                 ) : (
-                  <div
-                    className={`h-3.5 w-3.5 shrink-0 rounded-sm border transition-colors ${
+                  <span
+                    aria-hidden="true"
+                    className={`r-bevel-in h-3.5 w-3.5 shrink-0 ${
                       isSelected
-                        ? "border-blue-500 bg-blue-500"
-                        : "border-purple-600"
+                        ? "bg-[var(--r-title-text)]"
+                        : "bg-[var(--r-paper)]"
                     }`}
                   />
                 )}
 
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-xs font-medium text-purple-100">
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-medium">
                     {game.white} vs {game.black}
                   </span>
                   <div className="flex items-center gap-1.5">
                     <span
-                      className={`inline-block h-1.5 w-1.5 rounded-full ${resultColor(game.result)}`}
+                      className="inline-block h-1.5 w-1.5 shrink-0"
+                      style={{ background: resultColor(game.result) }}
                     />
-                    <span className="text-[10px] text-purple-400">
-                      {game.result}
-                    </span>
-                    <Badge
-                      variant="secondary"
-                      className="h-3.5 px-1 text-[8px] leading-none"
-                    >
+                    <span>{game.result}</span>
+                    <span className="r-badge r-badge--flat">
                       {game.timeControl}
-                    </Badge>
-                    <span className="ml-auto text-[10px] text-purple-500">
+                    </span>
+                    <span className="ml-auto shrink-0">
                       {timeAgo(game.playedAt)}
                     </span>
                   </div>
@@ -248,7 +243,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
           })}
 
           {filteredGames.length === 0 && (
-            <div className="py-8 text-center text-xs text-purple-400">
+            <div className="py-8 text-center text-[var(--r-shadow)]">
               No games match &ldquo;{search}&rdquo;
             </div>
           )}
