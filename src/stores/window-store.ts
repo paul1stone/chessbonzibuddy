@@ -178,15 +178,20 @@ export const useWindowStore = create<WindowStore>((set) => ({
       const vp = viewport ?? viewportSize();
       const cols = Math.ceil(Math.sqrt(ids.length));
       const rows = Math.ceil(ids.length / cols);
-      const windows = { ...s.windows };
+      // Re-stack every tile: a stale huge z would otherwise cover its neighbours. The active
+      // window takes the top of the pass so tiling never moves focus out from under the user.
+      const active = s.focused && ids.includes(s.focused) ? s.focused : null;
+      const stacking = active ? [...ids.filter((id) => id !== active), active] : ids;
       let z = s.nextZ;
+      const zOf = new Map(stacking.map((id) => [id, z++]));
+      const windows = { ...s.windows };
+      // Cells stay in WINDOW_IDS order, so repeated tiles give the same layout.
       ids.forEach((id, i) => {
         const x = Math.round((i % cols) * (vp.w / cols));
         const y = Math.round(Math.floor(i / cols) * (vp.h / rows));
-        // Re-stack as we go: a stale huge z would otherwise cover every tiled neighbour.
-        windows[id] = { ...windows[id], maximized: false, x, y, z: z++ };
+        windows[id] = { ...windows[id], maximized: false, x, y, z: zOf.get(id)! };
       });
-      return { windows, focused: ids[ids.length - 1], nextZ: z };
+      return { windows, focused: active ?? stacking[stacking.length - 1], nextZ: z };
     }),
 
   minimizeAll: () =>

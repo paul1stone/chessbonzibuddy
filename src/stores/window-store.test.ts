@@ -129,14 +129,30 @@ describe("window store", () => {
     expect(s().windows.practice).toMatchObject({ x: 0, y: 300 });
   });
 
-  it("re-stacks the windows it tiles so none stays buried under a stale z", () => {
+  it("re-stacks every tile and keeps the active window focused and on top", () => {
     s().open("games");
     s().open("review");
+    s().open("profile");
     s().focus("games");
     const staleZ = s().windows.games.z;
     s().tileAll({ w: 1000, h: 600 });
+    expect(s().focused).toBe("games");
+    expect(s().windows.games.z).toBeGreaterThan(s().windows.review.z);
+    expect(s().windows.games.z).toBeGreaterThan(s().windows.profile.z);
     expect(s().windows.review.z).toBeGreaterThan(staleZ);
+    expect(s().windows.profile.z).toBeGreaterThan(staleZ);
+    // Cells still follow WINDOW_IDS order, so the layout is stable across repeated tiles.
+    expect(s().windows.games).toMatchObject({ x: 0, y: 0 });
+    expect(s().windows.review).toMatchObject({ x: 500, y: 0 });
+  });
+
+  it("tile focuses the top tile when no tiled window was active", () => {
+    s().open("games");
+    s().open("review");
+    useWindowStore.setState({ focused: null });
+    s().tileAll({ w: 1000, h: 600 });
     expect(s().focused).toBe("review");
+    expect(s().windows.review.z).toBeGreaterThan(s().windows.games.z);
   });
 
   it("tiles without a viewport argument outside the browser", () => {
