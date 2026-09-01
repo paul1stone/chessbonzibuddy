@@ -27,26 +27,20 @@ interface DesktopIconProps {
 const DRAG_THRESHOLD = 4;
 // Matches the .icon-flash keyframes.
 const FLASH_MS = 120;
-// Wider than the drag threshold on purpose: the browser's double-click tolerance is bigger, so
-// a sloppy double-click can both move the icon and fire dblclick. Both are suppressed until the
-// double-click window has passed.
-const DBLCLICK_MS = 500;
 
 export function DesktopIcon({ id, index, label, icon, flash, onOpen, onContextMenu }: DesktopIconProps) {
   const stored = useDesktopStore((s) => s.positions[id]);
   const selected = useDesktopStore((s) => s.selected.has(id));
   const pos: IconPos = stored ?? defaultIconPos(index);
   const [opening, setOpening] = useState(false);
-  const movedRef = useRef(false);
-  const timers = useRef<{ flash?: ReturnType<typeof setTimeout>; moved?: ReturnType<typeof setTimeout> }>({});
+  // A finished drag produces one click the user never meant: it is eaten, and so is the dblclick
+  // it may still grow into, since the browser's double-click tolerance is wider than the 4px drag
+  // threshold. Only those two — every later click selects normally.
+  const dragClick = useRef(false);
+  const dragChain = useRef(false);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(
-    () => () => {
-      clearTimeout(timers.current.flash);
-      clearTimeout(timers.current.moved);
-    },
-    []
-  );
+  useEffect(() => () => clearTimeout(flashTimer.current), []);
 
   const openWithFlash = () => {
     if (prefersReducedMotion()) {
@@ -54,8 +48,8 @@ export function DesktopIcon({ id, index, label, icon, flash, onOpen, onContextMe
       return;
     }
     setOpening(true);
-    clearTimeout(timers.current.flash);
-    timers.current.flash = setTimeout(() => {
+    clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => {
       setOpening(false);
       onOpen();
     }, FLASH_MS);
@@ -64,13 +58,17 @@ export function DesktopIcon({ id, index, label, icon, flash, onOpen, onContextMe
   const onPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
     if (e.button !== 0) return;
     const el = e.currentTarget;
+    const pointerId = e.pointerId;
     const startX = e.clientX;
     const startY = e.clientY;
     let dragging = false;
+    let done = false;
     let next = pos;
-    el.setPointerCapture(e.pointerId);
+    dragClick.current = false;
+    el.setPointerCapture(pointerId);
 
     const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
       if (!dragging && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
@@ -87,24 +85,28 @@ export function DesktopIcon({ id, index, label, icon, flash, onOpen, onContextMe
     };
 
     const finish = (ev: PointerEvent) => {
-      el.removeEventListener("pointermove", move);
-      el.removeEventListener("pointerup", finish);
-      el.removeEventListener("pointercancel", finish);
+      if (ev.pointerId !== pointerId || done) return;
+      done = true;
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerup", finish, true);
+      window.removeEventListener("pointercancel", finish, true);
+      el.removeEventListener("lostpointercapture", finish);
       if (!dragging) return;
       // Cleared in the same tick the store commits, so the two never paint apart.
       el.style.transform = "";
       if (ev.type === "pointercancel") return;
-      movedRef.current = true;
-      clearTimeout(timers.current.moved);
-      timers.current.moved = setTimeout(() => {
-        movedRef.current = false;
-      }, DBLCLICK_MS);
+      dragClick.current = true;
       useDesktopStore.getState().moveIcon(id, next);
     };
 
-    el.addEventListener("pointermove", move);
-    el.addEventListener("pointerup", finish);
-    el.addEventListener("pointercancel", finish);
+    // On window, not the icon: a right-click mid-drag makes Chrome drop the capture, and the
+    // terminating pointerup then lands on the desktop instead — which used to strand the icon
+    // mid-transform with its listeners still attached. lostpointercapture ends the gesture where
+    // it stands, so the drag never outlives its own context menu.
+    window.addEventListener("pointermove", move, true);
+    window.addEventListener("pointerup", finish, true);
+    window.addEventListener("pointercancel", finish, true);
+    el.addEventListener("lostpointercapture", finish);
   };
 
   return (
@@ -120,11 +122,20 @@ export function DesktopIcon({ id, index, label, icon, flash, onOpen, onContextMe
       )}
       onPointerDown={onPointerDown}
       onClick={(e) => {
-        if (movedRef.current) return;
+        if (dragClick.current) {
+          dragClick.current = false;
+          dragChain.current = true;
+          return;
+        }
+        // detail 1 starts a fresh chain, so the drag's dblclick guard is spent.
+        if (e.detail === 1) dragChain.current = false;
         useDesktopStore.getState().select(id, { toggle: e.ctrlKey || e.metaKey });
       }}
       onDoubleClick={() => {
-        if (movedRef.current) return;
+        if (dragChain.current) {
+          dragChain.current = false;
+          return;
+        }
         openWithFlash();
       }}
       onFocus={(e) => {
