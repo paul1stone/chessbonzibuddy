@@ -16,28 +16,84 @@ interface DesktopWindowProps {
 
 const NUDGE = 16;
 
+const translate = (x: number, y: number) => `translate(${x}px, ${y}px)`;
+
 export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowProps) {
   const win = useWindowStore((s) => s.windows[id]);
   const focused = useWindowStore((s) => s.focused === id);
   const { focus, close, minimize, toggleMaximize, move } = useWindowStore.getState();
   const isMobile = useIsMobile();
   const ref = useRef<HTMLElement>(null);
+  // Live drag position and its pending frame. The store stays untouched until release.
+  const dragPos = useRef<{ x: number; y: number } | null>(null);
+  const raf = useRef<number | null>(null);
 
-  const clampedMove = useCallback(
-    (dx: number, dy: number) => {
-      const { x, y } = useWindowStore.getState().windows[id];
+  const clamp = useCallback(
+    (x: number, y: number) => {
       const maxX = window.innerWidth - 60;
       const maxY = window.innerHeight - 60;
       // Clamp against the rendered width, not the nominal one: the frame caps at 100vw - 16px.
       const w = ref.current?.offsetWidth ?? WINDOW_SIZES[id].w;
-      move(id, Math.min(maxX, Math.max(-w + 60, x + dx)), Math.min(maxY, Math.max(0, y + dy)));
+      return { x: Math.min(maxX, Math.max(-w + 60, x)), y: Math.min(maxY, Math.max(0, y)) };
     },
-    [id, move]
+    [id]
   );
+
+  const clampedMove = useCallback(
+    (dx: number, dy: number) => {
+      const { x, y } = useWindowStore.getState().windows[id];
+      const p = clamp(x + dx, y + dy);
+      move(id, p.x, p.y);
+    },
+    [clamp, id, move]
+  );
+
+  // Writes the drag position straight to the DOM. Skipped while maximized, where the frame is
+  // inset-positioned and a transform would displace it.
+  const paintDrag = useCallback(
+    (p: { x: number; y: number }) => {
+      const el = ref.current;
+      if (el && !useWindowStore.getState().windows[id].maximized) el.style.transform = translate(p.x, p.y);
+    },
+    [id]
+  );
+
+  const onDragMove = useCallback(
+    (dx: number, dy: number) => {
+      const base = dragPos.current ?? useWindowStore.getState().windows[id];
+      dragPos.current = clamp(base.x + dx, base.y + dy);
+      if (raf.current !== null) return;
+      raf.current = requestAnimationFrame(() => {
+        raf.current = null;
+        if (dragPos.current) paintDrag(dragPos.current);
+      });
+    },
+    [clamp, id, paintDrag]
+  );
+
+  const onDragEnd = useCallback(() => {
+    // Cancel first: a queued frame landing after the commit would re-apply the drag transform.
+    if (raf.current !== null) {
+      cancelAnimationFrame(raf.current);
+      raf.current = null;
+    }
+    const p = dragPos.current;
+    dragPos.current = null;
+    if (!p) return;
+    // Keep the inline value equal to the one the commit renders: React skips the style write when
+    // x/y are unchanged (dragging into a clamp), and clearing it would strand the frame at 0,0.
+    paintDrag(p);
+    move(id, p.x, p.y);
+  }, [id, move, paintDrag]);
+
+  useEffect(() => () => {
+    if (raf.current !== null) cancelAnimationFrame(raf.current);
+  }, []);
 
   const reduced = usePrefersReducedMotion();
   const { onPointerDown } = useDrag({
-    onMove: clampedMove,
+    onMove: onDragMove,
+    onEnd: onDragEnd,
     disabled: isMobile || win.maximized || reduced,
   });
 
@@ -71,7 +127,7 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
           : {
               width: `min(${size.w}px, calc(100vw - 16px))`,
               height: `min(${size.h}px, calc(100vh - var(--r-taskbar-h) - 16px))`,
-              transform: `translate(${win.x}px, ${win.y}px)`,
+              transform: translate(win.x, win.y),
               zIndex: win.z,
               display: hidden ? "none" : undefined,
             }
