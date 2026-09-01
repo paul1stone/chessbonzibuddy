@@ -94,6 +94,20 @@ describe("window store", () => {
     expect(s().windows.profile.z).toBeGreaterThan(s().windows.review.z);
   });
 
+  it("cascades back-to-front so the top window stays on top", () => {
+    s().open("games");
+    s().open("review");
+    s().open("profile");
+    s().focus("games");
+    s().cascadeAll();
+    expect(s().windows.review).toMatchObject({ x: 48, y: 48 });
+    expect(s().windows.profile).toMatchObject({ x: 72, y: 72 });
+    expect(s().windows.games).toMatchObject({ x: 96, y: 96 });
+    expect(s().focused).toBe("games");
+    expect(s().windows.games.z).toBeGreaterThan(s().windows.profile.z);
+    expect(s().windows.profile.z).toBeGreaterThan(s().windows.review.z);
+  });
+
   it("cascade un-maximizes and leaves minimized windows where they are", () => {
     s().open("games");
     s().toggleMaximize("games");
@@ -113,6 +127,16 @@ describe("window store", () => {
     expect(s().windows.games).toMatchObject({ x: 0, y: 0 });
     expect(s().windows.review).toMatchObject({ x: 500, y: 0 });
     expect(s().windows.practice).toMatchObject({ x: 0, y: 300 });
+  });
+
+  it("re-stacks the windows it tiles so none stays buried under a stale z", () => {
+    s().open("games");
+    s().open("review");
+    s().focus("games");
+    const staleZ = s().windows.games.z;
+    s().tileAll({ w: 1000, h: 600 });
+    expect(s().windows.review.z).toBeGreaterThan(staleZ);
+    expect(s().focused).toBe("review");
   });
 
   it("tiles without a viewport argument outside the browser", () => {

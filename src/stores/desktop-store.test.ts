@@ -212,6 +212,14 @@ describe("desktop rehydrate", () => {
     expect(junk.getState().hydrated).toBe(true);
   });
 
+  it("drops a persisted colour that is not in the palette", () => {
+    const offPalette = createDesktopStore(
+      fakeStorage({ [APPEARANCE_KEY]: JSON.stringify({ color: "#123456", pattern: "checks" }) })
+    );
+    offPalette.getState().rehydrate();
+    expect(offPalette.getState().appearance).toEqual({ color: "#008080", pattern: "none" });
+  });
+
   it("drops persisted entries for unknown ids and non-numeric coords", () => {
     const seeded = createDesktopStore(
       fakeStorage({

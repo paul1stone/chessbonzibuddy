@@ -202,7 +202,7 @@ export const ICON_LABELS: Record<WindowId, string> = {
   play: "Play Bonzi Buddy",
   profile: "Profile",
   terminal: "MS-DOS Prompt",
-  display: "Display",
+  display: "Display Properties",
 };
 
 export const WINDOW_ICONS: Record<WindowId, ReactNode> = {

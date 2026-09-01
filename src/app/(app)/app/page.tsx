@@ -280,7 +280,7 @@ export default function Home() {
     play: { title: ICON_LABELS.play, render: () => <PlayWindow /> },
     profile: { title: ICON_LABELS.profile, render: () => <ProfileWindow /> },
     terminal: { title: ICON_LABELS.terminal, render: () => <TerminalWindow /> },
-    display: { title: "Display Properties", render: () => <DisplayPropertiesWindow /> },
+    display: { title: ICON_LABELS.display, render: () => <DisplayPropertiesWindow /> },
   };
 
   return <Desktop defs={defs} />;

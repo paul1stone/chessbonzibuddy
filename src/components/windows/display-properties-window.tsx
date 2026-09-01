@@ -51,12 +51,13 @@ export default function DisplayPropertiesWindow() {
       </RetroPanel>
 
       <RetroPanel caption="Pattern" className="shrink-0">
-        <div className="r-paper r-bevel-in flex flex-col p-[2px]">
+        <div className="r-paper r-bevel-in flex flex-col p-[2px]" role="listbox" aria-label="Pattern">
           {DESKTOP_PATTERNS.map((p) => (
             <button
               key={p.value}
               type="button"
-              aria-pressed={draft.pattern === p.value}
+              role="option"
+              aria-selected={draft.pattern === p.value}
               className={cn(
                 "px-1 py-[2px] text-left text-[11px]",
                 draft.pattern === p.value && "bg-[var(--r-title-a)] text-[var(--r-title-text)]"

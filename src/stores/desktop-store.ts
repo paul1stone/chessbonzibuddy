@@ -118,8 +118,11 @@ function readPositions(storage: Storage | null): Partial<Record<WindowId, IconPo
 
 function readAppearance(storage: Storage | null): DesktopAppearance {
   const raw = read(storage, APPEARANCE_KEY) as Partial<DesktopAppearance> | null;
-  if (!raw || typeof raw.color !== "string" || !isPattern(raw.pattern)) return { ...DEFAULT_APPEARANCE };
-  return { color: raw.color, pattern: raw.pattern };
+  // Off-palette colours are dropped the same way unknown icon ids are.
+  if (!raw || !isPattern(raw.pattern) || !WIN98_COLORS.some((c) => c.value === raw.color)) {
+    return { ...DEFAULT_APPEARANCE };
+  }
+  return { color: raw.color as string, pattern: raw.pattern };
 }
 
 function read(storage: Storage | null, key: string): unknown {

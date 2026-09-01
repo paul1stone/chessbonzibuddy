@@ -158,7 +158,8 @@ export const useWindowStore = create<WindowStore>((set) => ({
 
   cascadeAll: () =>
     set((s) => {
-      const ids = visibleWindows(s.windows);
+      // Back-to-front, so the window that was on top stays on top of the stair.
+      const ids = visibleWindows(s.windows).sort((a, b) => s.windows[a].z - s.windows[b].z);
       if (ids.length === 0) return s;
       const windows = { ...s.windows };
       let z = s.nextZ;
@@ -178,12 +179,14 @@ export const useWindowStore = create<WindowStore>((set) => ({
       const cols = Math.ceil(Math.sqrt(ids.length));
       const rows = Math.ceil(ids.length / cols);
       const windows = { ...s.windows };
+      let z = s.nextZ;
       ids.forEach((id, i) => {
         const x = Math.round((i % cols) * (vp.w / cols));
         const y = Math.round(Math.floor(i / cols) * (vp.h / rows));
-        windows[id] = { ...windows[id], maximized: false, x, y };
+        // Re-stack as we go: a stale huge z would otherwise cover every tiled neighbour.
+        windows[id] = { ...windows[id], maximized: false, x, y, z: z++ };
       });
-      return { windows };
+      return { windows, focused: ids[ids.length - 1], nextZ: z };
     }),
 
   minimizeAll: () =>
