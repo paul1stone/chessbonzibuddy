@@ -86,6 +86,24 @@ function visibleWindows(windows: Record<WindowId, WindowState>): WindowId[] {
   return WINDOW_IDS.filter((id) => windows[id].open && !windows[id].minimized);
 }
 
+/**
+ * Compacts z to 1..N over the open windows in their current stacking order. Every z-assigning
+ * action runs this, so z tracks the window count instead of growing with every click and can
+ * never climb past the trace and menu layers above the desktop.
+ */
+function normalizeZ(windows: Record<WindowId, WindowState>): {
+  windows: Record<WindowId, WindowState>;
+  nextZ: number;
+} {
+  // WINDOW_IDS order breaks ties, since Array.sort is stable.
+  const open = WINDOW_IDS.filter((id) => windows[id].open).sort((a, b) => windows[a].z - windows[b].z);
+  const next = { ...windows };
+  open.forEach((id, i) => {
+    if (next[id].z !== i + 1) next[id] = { ...next[id], z: i + 1 };
+  });
+  return { windows: next, nextZ: open.length + 1 };
+}
+
 // Injectable in tileAll so node-env tests never reach for `window`.
 function viewportSize(): { w: number; h: number } {
   if (typeof window === "undefined") return { w: 1024, h: 768 - TASKBAR_H };
@@ -101,21 +119,16 @@ export const useWindowStore = create<WindowStore>((set) => ({
     set((s) => {
       const w = s.windows[id];
       if (w.open) {
-        return {
-          windows: { ...s.windows, [id]: { ...w, minimized: false, z: s.nextZ } },
-          focused: id,
-          nextZ: s.nextZ + 1,
-        };
+        return { ...normalizeZ({ ...s.windows, [id]: { ...w, minimized: false, z: s.nextZ } }), focused: id };
       }
       const openCount = WINDOW_IDS.filter((i) => s.windows[i].open).length;
       const offset = CASCADE_ORIGIN + CASCADE_STEP * openCount;
       return {
-        windows: {
+        ...normalizeZ({
           ...s.windows,
           [id]: { ...w, open: true, minimized: false, maximized: false, x: offset, y: offset, z: s.nextZ },
-        },
+        }),
         focused: id,
-        nextZ: s.nextZ + 1,
       };
     }),
 
@@ -136,9 +149,11 @@ export const useWindowStore = create<WindowStore>((set) => ({
     set((s) => {
       if (!s.windows[id].open) return s;
       return {
-        windows: { ...s.windows, [id]: { ...s.windows[id], maximized: !s.windows[id].maximized, z: s.nextZ } },
+        ...normalizeZ({
+          ...s.windows,
+          [id]: { ...s.windows[id], maximized: !s.windows[id].maximized, z: s.nextZ },
+        }),
         focused: id,
-        nextZ: s.nextZ + 1,
       };
     }),
 
@@ -146,11 +161,9 @@ export const useWindowStore = create<WindowStore>((set) => ({
     set((s) => {
       const w = s.windows[id];
       if (!w.open) return s;
-      return {
-        windows: { ...s.windows, [id]: { ...w, minimized: false, z: s.nextZ } },
-        focused: id,
-        nextZ: s.nextZ + 1,
-      };
+      // Every pointerdown inside a window calls this; skip the write when it changes nothing.
+      if (s.focused === id && !w.minimized && topWindow(s.windows) === id) return s;
+      return { ...normalizeZ({ ...s.windows, [id]: { ...w, minimized: false, z: s.nextZ } }), focused: id };
     }),
 
   move: (id, x, y) =>
@@ -167,7 +180,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
         const offset = CASCADE_ORIGIN + CASCADE_STEP * i;
         windows[id] = { ...windows[id], maximized: false, x: offset, y: offset, z: z++ };
       });
-      return { windows, focused: ids[ids.length - 1], nextZ: z };
+      return { ...normalizeZ(windows), focused: ids[ids.length - 1] };
     }),
 
   // Sizes stay fixed (spec 3): tiling only walks the positions across a grid of cells.
@@ -191,7 +204,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
         const y = Math.round(Math.floor(i / cols) * (vp.h / rows));
         windows[id] = { ...windows[id], maximized: false, x, y, z: zOf.get(id)! };
       });
-      return { windows, focused: active ?? stacking[stacking.length - 1], nextZ: z };
+      return { ...normalizeZ(windows), focused: active ?? stacking[stacking.length - 1] };
     }),
 
   minimizeAll: () =>

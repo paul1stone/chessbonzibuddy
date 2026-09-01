@@ -134,16 +134,25 @@ describe("window store", () => {
     s().open("review");
     s().open("profile");
     s().focus("games");
-    const staleZ = s().windows.games.z;
     s().tileAll({ w: 1000, h: 600 });
     expect(s().focused).toBe("games");
-    expect(s().windows.games.z).toBeGreaterThan(s().windows.review.z);
+    // Active window tops the pass; the rest keep WINDOW_IDS order beneath it.
     expect(s().windows.games.z).toBeGreaterThan(s().windows.profile.z);
-    expect(s().windows.review.z).toBeGreaterThan(staleZ);
-    expect(s().windows.profile.z).toBeGreaterThan(staleZ);
+    expect(s().windows.profile.z).toBeGreaterThan(s().windows.review.z);
     // Cells still follow WINDOW_IDS order, so the layout is stable across repeated tiles.
     expect(s().windows.games).toMatchObject({ x: 0, y: 0 });
     expect(s().windows.review).toMatchObject({ x: 500, y: 0 });
+  });
+
+  it("lifts every tile above the windows it leaves minimized", () => {
+    s().open("games");
+    s().open("review");
+    s().open("import");
+    s().minimize("import");
+    s().focus("games");
+    s().tileAll({ w: 1000, h: 600 });
+    expect(s().windows.review.z).toBeGreaterThan(s().windows.import.z);
+    expect(s().windows.games.z).toBeGreaterThan(s().windows.review.z);
   });
 
   it("tile focuses the top tile when no tiled window was active", () => {
@@ -170,6 +179,49 @@ describe("window store", () => {
     expect(s().windows.review.minimized).toBe(true);
     expect(s().focused).toBeNull();
     expect(s().windows.profile.open).toBe(false);
+  });
+
+  it("focus is a no-op for the window already focused and on top", () => {
+    s().open("games");
+    s().open("review");
+    const before = useWindowStore.getState();
+    s().focus("review");
+    expect(useWindowStore.getState()).toBe(before);
+    s().focus("games");
+    expect(useWindowStore.getState()).not.toBe(before);
+    expect(s().focused).toBe("games");
+  });
+
+  it("focus still raises a focused window that is buried", () => {
+    s().open("games");
+    s().open("review");
+    s().toggleMaximize("games");
+    useWindowStore.setState({ focused: "review" });
+    s().focus("review");
+    expect(s().windows.review.z).toBeGreaterThan(s().windows.games.z);
+  });
+
+  it("keeps z compact to 1..N through a long open/focus churn", () => {
+    for (let i = 0; i < 200; i++) {
+      s().open(WINDOW_IDS[i % WINDOW_IDS.length]);
+      s().focus(WINDOW_IDS[(i * 3) % WINDOW_IDS.length]);
+      if (i % 5 === 0) s().toggleMaximize(WINDOW_IDS[i % WINDOW_IDS.length]);
+    }
+    const open = WINDOW_IDS.filter((id) => s().windows[id].open);
+    const zs = open.map((id) => s().windows[id].z).sort((a, b) => a - b);
+    expect(zs).toEqual(open.map((_, i) => i + 1));
+    expect(s().nextZ).toBe(open.length + 1);
+  });
+
+  it("renormalizing preserves the relative order of the windows it does not touch", () => {
+    s().open("games");
+    s().open("import");
+    s().open("review");
+    s().open("practice");
+    s().focus("import");
+    const stack = WINDOW_IDS.filter((id) => s().windows[id].open).sort((a, b) => s().windows[a].z - s().windows[b].z);
+    expect(stack).toEqual(["games", "review", "practice", "import"]);
+    expect(stack.map((id) => s().windows[id].z)).toEqual([1, 2, 3, 4]);
   });
 
   it("cascade, tile and minimizeAll are no-ops with nothing open", () => {
