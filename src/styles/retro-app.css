@@ -29,3 +29,140 @@
   --font-geist-mono: "Courier New", monospace;
 }
 .retro.app .r-body { font-size: var(--r-body-size); }
+
+/* ---- Desktop fidelity: menus, traces, marquee, icon states, boot/peek motion, cursors ---- */
+/* Every class the desktop tasks consume lives here. All of them render inside .retro so the
+   --r-* tokens resolve; the reduced-motion block in retro.css already flattens the animations. */
+
+/* Context menu panel: above every window and the taskbar, whichever stacking context it lands in. */
+.r-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 160px;
+  padding: 2px;
+  background: var(--r-face);
+  user-select: none;
+  outline: none;
+  box-shadow:
+    inset -1px -1px var(--r-dark),
+    inset 1px 1px var(--r-highlight),
+    inset -2px -2px var(--r-shadow),
+    inset 2px 2px var(--r-face-light);
+}
+.r-menu-item {
+  display: block;
+  width: 100%;
+  padding: 3px 20px 3px 18px;
+  background: transparent;
+  color: var(--r-dark);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: default;
+}
+/* The highlight bar is the focus indicator; Win98 menus never drew a dotted ring inside it. */
+.r-menu-item:hover,
+.r-menu-item:focus-visible {
+  background: var(--r-title-a);
+  color: var(--r-title-text);
+  outline: none;
+}
+.r-menu-item[data-disabled] {
+  color: var(--r-disabled);
+  text-shadow: 1px 1px var(--r-highlight);
+}
+.r-menu-item[data-disabled]:hover,
+.r-menu-item[data-disabled]:focus-visible {
+  background: transparent;
+  color: var(--r-disabled);
+}
+.r-menu-sep {
+  height: 2px;
+  margin: 2px 1px;
+  border-top: 1px solid var(--r-shadow);
+  border-bottom: 1px solid var(--r-highlight);
+}
+@keyframes r-menu-in {
+  from { transform: translateY(6px); }
+  to { transform: translateY(0); }
+}
+.r-menu--in { animation: r-menu-in 90ms steps(3); }
+
+@keyframes start-menu-in {
+  from { transform: translateY(12px); }
+  to { transform: translateY(0); }
+}
+.start-menu--in { animation: start-menu-in 120ms steps(4); }
+
+/* Window zoom trace, drawn by runZoomTrace. Same frame the landing cascade flies. */
+.zoom-trace {
+  position: fixed;
+  border: 2px solid var(--r-dark);
+  outline: 1px dotted var(--r-highlight);
+  z-index: 60;
+  pointer-events: none;
+}
+
+.marquee {
+  position: fixed;
+  border: 1px dotted var(--r-highlight);
+  background: rgba(0, 0, 128, 0.18);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.icon-art {
+  position: relative;
+  display: block;
+  line-height: 0;
+}
+/* 2px checkerboard of the title blue: the Win98 icon selection dither, not a flat wash. */
+.icon-selected .icon-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-conic-gradient(var(--r-title-a) 0% 25%, transparent 0% 50%) 0 0 / 4px 4px;
+}
+.icon-selected .icon-label {
+  background: var(--r-title-a);
+  color: var(--r-title-text);
+  text-shadow: none;
+}
+
+/* Open blink: two discrete frames, so jump-none — plain steps(2) would end on a half-blend. */
+@keyframes icon-flash-label {
+  from { background: var(--r-title-a); text-shadow: none; }
+  to { background: transparent; text-shadow: 1px 1px 0 var(--r-dark); }
+}
+.icon-flash .icon-label { animation: icon-flash-label 120ms steps(2, jump-none); }
+
+@keyframes taskbar-boot {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.taskbar-boot { animation: taskbar-boot 200ms steps(4) both; }
+
+/* Staggered by an inline animation-delay; the `both` fill holds each icon back until its turn. */
+@keyframes boot-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.boot-pop { animation: boot-pop 180ms steps(3) both; }
+
+@keyframes bonzi-peek-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes bonzi-peek-out {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+.bonzi-peek--in { animation: bonzi-peek-in 240ms steps(4) both; }
+.bonzi-peek--out { animation: bonzi-peek-out 240ms steps(4) both; }
+
+/* Hourglasses need the descendant sweep: children (xterm especially) set their own cursors. */
+body.cursor-progress,
+body.cursor-progress * { cursor: progress !important; }
+.cursor-wait-all,
+.cursor-wait-all * { cursor: wait !important; }

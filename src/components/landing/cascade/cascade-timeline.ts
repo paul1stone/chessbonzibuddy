@@ -1,9 +1,7 @@
-export interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
+// The zoom-outline geometry is shared with the app's window traces; this module owns the
+// landing-only scroll segmentation and re-exports the rest so its consumers stay put.
+export { OUTLINE_STEPS, outlineRect } from "@/lib/outline-trace";
+export type { Rect } from "@/lib/outline-trace";
 
 export const CASCADE_KEYS: ["import", "review", "practice"] = ["import", "review", "practice"];
 
@@ -20,24 +18,8 @@ export const SEGMENTS: Segment[] = [
   { key: "practice", start: 0.68, end: 0.94 },
 ];
 
-// Win98 drew the zoom-open as a handful of discrete frames, never a smooth tween.
-export const OUTLINE_STEPS = 8;
-
 // Share of a segment spent growing the outline; the rest holds the revealed window.
 const OUTLINE_SHARE = 0.7;
-
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-
-export function outlineRect(from: Rect, to: Rect, t: number): Rect {
-  const step = Math.round(clamp01(t) * OUTLINE_STEPS) / OUTLINE_STEPS;
-  return {
-    x: lerp(from.x, to.x, step),
-    y: lerp(from.y, to.y, step),
-    w: lerp(from.w, to.w, step),
-    h: lerp(from.h, to.h, step),
-  };
-}
 
 export interface SegmentPhase {
   outlineT: number | null;
