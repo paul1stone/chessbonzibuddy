@@ -1,6 +1,14 @@
 import { create } from "zustand";
 
-export type WindowId = "games" | "import" | "review" | "practice" | "play" | "profile" | "terminal";
+export type WindowId =
+  | "games"
+  | "import"
+  | "review"
+  | "practice"
+  | "play"
+  | "profile"
+  | "terminal"
+  | "display";
 
 export interface WindowState {
   id: WindowId;
@@ -20,12 +28,24 @@ export const WINDOW_SIZES: Record<WindowId, { w: number; h: number }> = {
   play: { w: 960, h: 640 },
   profile: { w: 400, h: 380 },
   terminal: { w: 680, h: 460 },
+  display: { w: 404, h: 420 },
 };
 
-export const WINDOW_IDS: WindowId[] = ["games", "import", "review", "practice", "play", "profile", "terminal"];
+export const WINDOW_IDS: WindowId[] = [
+  "games",
+  "import",
+  "review",
+  "practice",
+  "play",
+  "profile",
+  "terminal",
+  "display",
+];
 
 const CASCADE_ORIGIN = 48;
 const CASCADE_STEP = 24;
+// Mirrors --r-taskbar-h: the desktop surface windows sit on stops above the taskbar.
+const TASKBAR_H = 30;
 
 interface WindowStore {
   windows: Record<WindowId, WindowState>;
@@ -37,6 +57,9 @@ interface WindowStore {
   toggleMaximize: (id: WindowId) => void;
   focus: (id: WindowId) => void;
   move: (id: WindowId, x: number, y: number) => void;
+  cascadeAll: () => void;
+  tileAll: (viewport?: { w: number; h: number }) => void;
+  minimizeAll: () => void;
   reset: () => void;
 }
 
@@ -56,6 +79,17 @@ function topWindow(windows: Record<WindowId, WindowState>, except?: WindowId): W
     if (best === null || w.z > windows[best].z) best = id;
   }
   return best;
+}
+
+/** Open, non-minimized windows in WINDOW_IDS order — the ones Cascade and Tile arrange. */
+function visibleWindows(windows: Record<WindowId, WindowState>): WindowId[] {
+  return WINDOW_IDS.filter((id) => windows[id].open && !windows[id].minimized);
+}
+
+// Injectable in tileAll so node-env tests never reach for `window`.
+function viewportSize(): { w: number; h: number } {
+  if (typeof window === "undefined") return { w: 1024, h: 768 - TASKBAR_H };
+  return { w: window.innerWidth, h: window.innerHeight - TASKBAR_H };
 }
 
 export const useWindowStore = create<WindowStore>((set) => ({
@@ -121,6 +155,45 @@ export const useWindowStore = create<WindowStore>((set) => ({
 
   move: (id, x, y) =>
     set((s) => ({ windows: { ...s.windows, [id]: { ...s.windows[id], x, y } } })),
+
+  cascadeAll: () =>
+    set((s) => {
+      const ids = visibleWindows(s.windows);
+      if (ids.length === 0) return s;
+      const windows = { ...s.windows };
+      let z = s.nextZ;
+      ids.forEach((id, i) => {
+        const offset = CASCADE_ORIGIN + CASCADE_STEP * i;
+        windows[id] = { ...windows[id], maximized: false, x: offset, y: offset, z: z++ };
+      });
+      return { windows, focused: ids[ids.length - 1], nextZ: z };
+    }),
+
+  // Sizes stay fixed (spec 3): tiling only walks the positions across a grid of cells.
+  tileAll: (viewport) =>
+    set((s) => {
+      const ids = visibleWindows(s.windows);
+      if (ids.length === 0) return s;
+      const vp = viewport ?? viewportSize();
+      const cols = Math.ceil(Math.sqrt(ids.length));
+      const rows = Math.ceil(ids.length / cols);
+      const windows = { ...s.windows };
+      ids.forEach((id, i) => {
+        const x = Math.round((i % cols) * (vp.w / cols));
+        const y = Math.round(Math.floor(i / cols) * (vp.h / rows));
+        windows[id] = { ...windows[id], maximized: false, x, y };
+      });
+      return { windows };
+    }),
+
+  minimizeAll: () =>
+    set((s) => {
+      const windows = { ...s.windows };
+      for (const id of WINDOW_IDS) {
+        if (windows[id].open) windows[id] = { ...windows[id], minimized: true };
+      }
+      return { windows, focused: null };
+    }),
 
   reset: () => set({ windows: initialWindows(), focused: null, nextZ: 1 }),
 }));

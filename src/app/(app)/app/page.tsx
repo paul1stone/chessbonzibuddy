@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Desktop, ICON_LABELS, type WindowDef } from "@/components/desktop";
+import DisplayPropertiesWindow from "@/components/windows/display-properties-window";
 import { GamesWindow } from "@/components/windows/games-window";
 import {
   ImportWindow,
@@ -279,6 +280,7 @@ export default function Home() {
     play: { title: ICON_LABELS.play, render: () => <PlayWindow /> },
     profile: { title: ICON_LABELS.profile, render: () => <ProfileWindow /> },
     terminal: { title: ICON_LABELS.terminal, render: () => <TerminalWindow /> },
+    display: { title: "Display Properties", render: () => <DisplayPropertiesWindow /> },
   };
 
   return <Desktop defs={defs} />;

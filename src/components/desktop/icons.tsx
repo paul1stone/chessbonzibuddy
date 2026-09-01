@@ -176,6 +176,24 @@ export function TerminalIcon() {
   );
 }
 
+export function DisplayIcon() {
+  return (
+    <svg {...SVG_PROPS}>
+      {/* monitor bezel */}
+      <rect x="1" y="1" width="14" height="11" fill="#000000" />
+      <rect x="2" y="2" width="12" height="9" fill="#c0c0c0" />
+      {/* screen showing a teal desktop with one little window */}
+      <rect x="3" y="3" width="10" height="7" fill="#008080" />
+      <rect x="5" y="4" width="6" height="5" fill="#c0c0c0" />
+      <rect x="5" y="4" width="6" height="1" fill="#000080" />
+      {/* stand */}
+      <rect x="6" y="12" width="4" height="1" fill="#000000" />
+      <rect x="3" y="13" width="10" height="2" fill="#000000" />
+      <rect x="4" y="13" width="8" height="1" fill="#c0c0c0" />
+    </svg>
+  );
+}
+
 export const ICON_LABELS: Record<WindowId, string> = {
   games: "My games",
   import: "Import",
@@ -184,6 +202,7 @@ export const ICON_LABELS: Record<WindowId, string> = {
   play: "Play Bonzi Buddy",
   profile: "Profile",
   terminal: "MS-DOS Prompt",
+  display: "Display",
 };
 
 export const WINDOW_ICONS: Record<WindowId, ReactNode> = {
@@ -194,4 +213,5 @@ export const WINDOW_ICONS: Record<WindowId, ReactNode> = {
   play: <PlayIcon />,
   profile: <ProfileIcon />,
   terminal: <TerminalIcon />,
+  display: <DisplayIcon />,
 };

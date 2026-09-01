@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useWindowStore, WINDOW_IDS, type WindowId } from "@/stores/window-store";
+import { DESKTOP_ICON_IDS } from "@/stores/desktop-store";
 import { useIsMobile } from "./use-is-mobile";
 import { DesktopIcon } from "./desktop-icon";
 import { DesktopWindow } from "./desktop-window";
@@ -34,7 +35,7 @@ export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
     >
       {!isMobile && (
         <div className="absolute left-2 top-2 flex flex-col gap-3">
-          {WINDOW_IDS.map((id) => (
+          {DESKTOP_ICON_IDS.map((id) => (
             <DesktopIcon key={id} label={ICON_LABELS[id]} icon={WINDOW_ICONS[id]} onOpen={() => open(id)} />
           ))}
         </div>

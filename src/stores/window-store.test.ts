@@ -71,4 +71,71 @@ describe("window store", () => {
     expect(s().windows.terminal.open).toBe(true);
     expect(s().focused).toBe("terminal");
   });
+
+  it("registers the display window", () => {
+    expect(WINDOW_IDS).toContain("display");
+    expect(WINDOW_IDS[WINDOW_IDS.length - 1]).toBe("display");
+    expect(WINDOW_SIZES.display).toEqual({ w: 404, h: 420 });
+    s().open("display");
+    expect(s().windows.display.open).toBe(true);
+    expect(s().focused).toBe("display");
+  });
+
+  it("cascades the visible windows in a 24px stair and focuses the top one", () => {
+    s().open("games");
+    s().open("review");
+    s().open("profile");
+    s().move("games", 500, 500);
+    s().cascadeAll();
+    expect(s().windows.games).toMatchObject({ x: 48, y: 48 });
+    expect(s().windows.review).toMatchObject({ x: 72, y: 72 });
+    expect(s().windows.profile).toMatchObject({ x: 96, y: 96 });
+    expect(s().focused).toBe("profile");
+    expect(s().windows.profile.z).toBeGreaterThan(s().windows.review.z);
+  });
+
+  it("cascade un-maximizes and leaves minimized windows where they are", () => {
+    s().open("games");
+    s().toggleMaximize("games");
+    s().open("profile");
+    s().move("profile", 300, 300);
+    s().minimize("profile");
+    s().cascadeAll();
+    expect(s().windows.games).toMatchObject({ x: 48, y: 48, maximized: false });
+    expect(s().windows.profile).toMatchObject({ x: 300, y: 300, minimized: true });
+  });
+
+  it("tiles the visible windows into a grid inside the given viewport", () => {
+    s().open("games");
+    s().open("review");
+    s().open("practice");
+    s().tileAll({ w: 1000, h: 600 });
+    expect(s().windows.games).toMatchObject({ x: 0, y: 0 });
+    expect(s().windows.review).toMatchObject({ x: 500, y: 0 });
+    expect(s().windows.practice).toMatchObject({ x: 0, y: 300 });
+  });
+
+  it("tiles without a viewport argument outside the browser", () => {
+    s().open("games");
+    s().toggleMaximize("games");
+    expect(() => s().tileAll()).not.toThrow();
+    expect(s().windows.games).toMatchObject({ x: 0, y: 0, maximized: false });
+  });
+
+  it("minimizes every open window and clears focus", () => {
+    s().open("games");
+    s().open("review");
+    s().minimizeAll();
+    expect(s().windows.games.minimized).toBe(true);
+    expect(s().windows.review.minimized).toBe(true);
+    expect(s().focused).toBeNull();
+    expect(s().windows.profile.open).toBe(false);
+  });
+
+  it("cascade, tile and minimizeAll are no-ops with nothing open", () => {
+    s().cascadeAll();
+    s().tileAll({ w: 800, h: 600 });
+    s().minimizeAll();
+    expect(s().focused).toBeNull();
+  });
 });
