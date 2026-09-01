@@ -140,7 +140,7 @@ export function useContextMenu(): {
 - `.r-menu` (face bg, bevel-out, min-width 160px, padding 2px), `.r-menu-item` + `[data-disabled]`, `.r-menu-sep`, `.r-menu--in` (steps(3), 90ms, translateY 6px→0)
 - `.start-menu--in` (steps(4), 120ms, translateY 12px→0) — consumed by T6 for the Start menu
 - `.zoom-trace` (fixed, 2px solid `--r-dark`, 1px dotted `--r-highlight` outline, z-index 60, pointer-events none)
-- `.marquee` (fixed, 1px dotted `--r-highlight`, background rgba(0,0,128,0.18), z-index 5, pointer-events none)
+- `.marquee` (fixed, 1px dotted `--r-highlight`, background rgba(0,0,128,0.18), z-index 55 — above windows whose z is normalized to 1..N, below .zoom-trace at 60; originally 5, corrected post-review — pointer-events none)
 - `.icon-flash` (steps(2), 120ms, label invert keyframes) — the SAME 120ms is used by T5's double-click flash and Refresh gag
 - `.icon-art { position: relative }` and `.icon-selected .icon-art::after { position:absolute; inset:0; … }` — selection tint as a 2px checkerboard dither of `--r-title-a` (repeating-conic-gradient, the period-accurate Win98 treatment; a `color-mix` translucent fill is the fallback if the dither reads badly at 32px). `.icon-selected` also sets the label bg `--r-title-a` / white text. T5 puts class `icon-art` on the icon span.
 - `.taskbar-boot` (steps(4), 200ms, translateY 100%→0) — T7 applies to `[data-taskbar]`
