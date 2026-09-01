@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 /** pieceSquares() for the untouched starting position. */
 const START_POSITION_SQUARES =
@@ -11,11 +11,57 @@ function pieceSquares(scope: Locator): Promise<string> {
     .evaluateAll((els) => els.map((el) => el.getAttribute("data-square")).join(","));
 }
 
+/** Same query the cascade arms on: anywhere else the walkthrough is a plain page section. */
+const CASCADE_QUERY = "(min-width: 1024px) and (prefers-reduced-motion: no-preference)";
+
+/**
+ * The armed cascade pins the walkthrough and keeps every window `visibility: hidden` until its
+ * segment reveals it, so park the scrub at the end of the pin (`+=250%`) first. Returns false
+ * when nothing is armed and the caller still owns bringing the window on screen.
+ */
+async function revealCascade(page: Page): Promise<boolean> {
+  if (!(await page.evaluate((q) => matchMedia(q).matches, CASCADE_QUERY))) return false;
+  const section = page.locator("[aria-labelledby='walkthrough-heading']");
+  // Re-targeted every poll: the hero grows to 300vh once its own trigger lands, which moves
+  // the section down after an early measurement.
+  await expect
+    .poll(
+      () =>
+        section.evaluate((el) => {
+          // Pinning parks the section itself at the viewport top; only its pin-spacer still
+          // reports the document position the scroll target is measured from.
+          const holder = el.closest(".pin-spacer") ?? el;
+          window.scrollTo(0, holder.getBoundingClientRect().top + window.scrollY + window.innerHeight * 2.5);
+          return el.querySelectorAll("[data-stack-key].cascade-open").length;
+        }),
+      { timeout: 20_000 }
+    )
+    .toBe(3);
+  return true;
+}
+
 /** Landing demos mount their lazy chunk on first intersection, so bring the window on screen. */
-async function demoWindow(page: import("@playwright/test").Page, name: string): Promise<Locator> {
+async function demoWindow(page: Page, name: string): Promise<Locator> {
+  // The parked pin already holds every window on screen, and scrolling would rewind the scrub.
+  const parked = await revealCascade(page);
   const win = page.getByRole("region", { name, exact: true });
-  await win.scrollIntoViewIfNeeded();
+  if (!parked) await win.scrollIntoViewIfNeeded();
   return win;
+}
+
+/**
+ * First visit of a session zooms the hero window up out of the taskbar. Any pointerdown
+ * fast-forwards that animation, which moves the window between mousedown and mouseup — the
+ * click then lands on an ancestor and never reaches the link. Wait for the zoom to land.
+ */
+async function bootSettled(page: Page) {
+  await expect
+    .poll(() =>
+      page
+        .locator(".hero-window")
+        .evaluate((el) => `${getComputedStyle(el).visibility} ${getComputedStyle(el).opacity}`)
+    )
+    .toBe("visible 1");
 }
 
 test.describe("landing page", () => {
@@ -35,6 +81,7 @@ test.describe("landing page", () => {
 
   test("deep-links into the play view", async ({ page }) => {
     await page.goto("/");
+    await bootSettled(page);
     await page.getByRole("link", { name: "Play Bonzi Buddy" }).first().click();
     await expect(page).toHaveURL(/\/app\?view=play-bonzi/);
     await expect(page.getByRole("button", { name: "Start Game" })).toBeVisible();
@@ -42,6 +89,8 @@ test.describe("landing page", () => {
 
   test("start menu opens with a click and closes with Escape", async ({ page }) => {
     await page.goto("/");
+    // The boot slides the taskbar up; a click that starts mid-slide misses the button.
+    await bootSettled(page);
     const start = page.getByRole("button", { name: "Start" });
     await start.click();
     const menu = page.getByRole("navigation", { name: "Start menu" });
@@ -87,6 +136,9 @@ test.describe("landing page", () => {
   test("shows the checkmate dialog after scrolling through the hero", async ({ page }) => {
     await page.goto("/");
     await page.locator("[data-testid=hero-canvas] canvas").waitFor({ timeout: 15000 });
+    // The section is only 300vh once the scrub is armed, and the first-visit boot gate can
+    // hold that until after the canvas is already up.
+    await page.locator(".hero--motion").waitFor({ timeout: 15000 });
     await page.evaluate(() => {
       const hero = document.querySelector(".hero") as HTMLElement;
       window.scrollTo(0, hero.offsetHeight - window.innerHeight);
@@ -170,6 +222,99 @@ test.describe("landing page", () => {
     await page.waitForTimeout(2000);
     expect(await pieceSquares(review)).toBe(before);
 
+    await context.close();
+  });
+
+  test("docks a taskbar button per section and jumps back to one", async ({ page }) => {
+    await page.goto("/");
+    // Re-scrolled every poll: the hero grows to 300vh once its trigger lands, so the first
+    // "bottom" is not the final one.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            window.scrollTo(0, document.documentElement.scrollHeight);
+            return [...document.querySelectorAll("[data-dock-button]")]
+              .map((el) => el.getAttribute("data-dock-button"))
+              .join(",");
+          }),
+        { timeout: 20_000 }
+      )
+      .toBe("hero,showcase,import,review,practice");
+
+    const dock = page.locator("[data-dock-slots]");
+    for (const label of ["BonziBUDDY.exe", "Import", "Review", "Practice"]) {
+      await expect(dock.getByRole("button", { name: label, exact: true })).toBeVisible();
+    }
+
+    // The jump uses the scroll fn the cascade registered, which lands where the window is
+    // revealed rather than at the top of the pin where everything is still hidden.
+    await dock.getByRole("button", { name: "Review", exact: true }).click();
+    const review = page.getByRole("region", { name: "Review", exact: true });
+    await expect(review).toBeVisible();
+    await expect(review).toBeInViewport();
+  });
+
+  test("the eval bar tracks scroll, and only on wide viewports", async ({ browser }) => {
+    const wide = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await wide.newPage();
+    await page.goto("/");
+    const bar = page.locator("[data-testid=eval-progress]");
+    await expect(bar).toBeVisible();
+    await expect(bar).toContainText("+0.2");
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            window.scrollTo(0, document.documentElement.scrollHeight);
+            return document.querySelector("[data-testid=eval-progress] p")?.textContent;
+          }),
+        { timeout: 20_000 }
+      )
+      .toBe("M4");
+    await wide.close();
+
+    const narrow = await browser.newContext({ viewport: { width: 375, height: 700 } });
+    const phone = await narrow.newPage();
+    await phone.goto("/");
+    await expect(phone.locator("[data-testid=eval-progress]")).toBeHidden();
+    await narrow.close();
+  });
+
+  test("the boot cascade plays once per session", async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    // The pre-paint gate class is transient, so latch it rather than sampling for it.
+    await page.addInitScript(() => {
+      const w = window as unknown as { bootPending: boolean };
+      w.bootPending = document.documentElement?.classList.contains("boot-pending") ?? false;
+      new MutationObserver(() => {
+        if (document.documentElement.classList.contains("boot-pending")) w.bootPending = true;
+      }).observe(document, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    });
+    const sawBootPending = () =>
+      page.evaluate(() => (window as unknown as { bootPending: boolean }).bootPending);
+
+    await page.goto("/");
+    await expect(page.locator(".hero-window")).toBeVisible({ timeout: 2000 });
+    expect(await page.evaluate(() => sessionStorage.getItem("cbb-booted"))).not.toBeNull();
+    expect(await sawBootPending()).toBe(true);
+
+    await page.reload();
+    await expect(page.locator(".hero-window")).toBeVisible();
+    expect(await sawBootPending()).toBe(false);
+    await context.close();
+  });
+
+  test("respects reduced motion: every dock button is there from the start", async ({ browser }) => {
+    const context = await browser.newContext({ reducedMotion: "reduce" });
+    const page = await context.newPage();
+    await page.goto("/");
+    const dock = page.locator("[data-dock-slots]");
+    for (const label of ["Chess Bonzi Buddy", "BonziBUDDY.exe", "Import", "Review", "Practice"]) {
+      await expect(dock.getByRole("button", { name: label, exact: true })).toBeVisible();
+    }
+    await expect(page.locator(".cascade--armed")).toHaveCount(0);
     await context.close();
   });
 });

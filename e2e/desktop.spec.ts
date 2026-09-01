@@ -77,6 +77,18 @@ test.describe("win98 desktop app", () => {
     await expect(dialog).toBeVisible();
   });
 
+  test("opens the MS-DOS Prompt from the Start menu", async ({ page }) => {
+    await page.goto("/app");
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    // Scoped to the menu: there is a desktop icon by the same name.
+    const menu = page.getByRole("navigation", { name: "Start menu" });
+    await menu.getByRole("button", { name: "MS-DOS Prompt" }).click();
+    const dialog = page.getByRole("dialog", { name: "MS-DOS Prompt" });
+    await expect(dialog).toBeVisible();
+    // The xterm host attaching is the wiring under test; the Linux boot behind it takes 15-30s.
+    await expect(dialog.locator("[data-testid=terminal-xterm]")).toBeAttached({ timeout: 10000 });
+  });
+
   test("mobile shows a single maximized window", async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 700 } });
     const page = await ctx.newPage();
