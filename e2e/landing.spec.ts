@@ -261,17 +261,21 @@ test.describe("landing page", () => {
     await page.goto("/");
     const bar = page.locator("[data-testid=eval-progress]");
     await expect(bar).toBeVisible();
-    await expect(bar).toContainText("+0.2");
+    await expect(bar).toContainText("+0.3");
+    // The bar scores the hero game: mate lands at 85% of the 200vh scrub (~1530px here).
     await expect
       .poll(
         () =>
           page.evaluate(() => {
-            window.scrollTo(0, document.documentElement.scrollHeight);
+            window.scrollTo(0, window.innerHeight * 1.75);
             return document.querySelector("[data-testid=eval-progress] p")?.textContent;
           }),
         { timeout: 20_000 }
       )
-      .toBe("M4");
+      .toBe("1-0");
+    // Past the hold the bar fades out and stays gone for the rest of the page.
+    await page.evaluate(() => window.scrollTo(0, window.innerHeight * 3));
+    await expect(bar).toBeHidden({ timeout: 20_000 });
     await wide.close();
 
     const narrow = await browser.newContext({ viewport: { width: 375, height: 700 } });

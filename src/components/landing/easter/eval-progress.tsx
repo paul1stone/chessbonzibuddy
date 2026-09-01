@@ -1,37 +1,40 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePrefersReducedMotion } from "@/lib/motion";
+import { heroProgressRef } from "../hero/hero-progress";
 import { evalAtProgress, type EvalPoint } from "./eval-map";
 
 export function EvalProgress() {
   const [point, setPoint] = useState<EvalPoint>(() => evalAtProgress(0));
+  const reduced = usePrefersReducedMotion();
 
+  // rAF, not a scroll listener: the scrub keeps easing after the wheel stops, and the
+  // bar must ride the smoothed hero progress exactly as the board does.
   useEffect(() => {
+    if (reduced) return;
     let raf = 0;
-    const measure = () => {
-      raf = 0;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      setPoint(evalAtProgress(max > 0 ? window.scrollY / max : 0));
+    let last = -1;
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      const p = heroProgressRef.current;
+      if (p === last) return;
+      last = p;
+      setPoint(evalAtProgress(p));
     };
-    const onScroll = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(measure);
-    };
-    measure();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, []);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [reduced]);
+
+  // No scrub under reduced motion means no game to score.
+  if (reduced) return null;
 
   return (
     <div
       aria-hidden
       data-testid="eval-progress"
       className="pointer-events-none fixed left-3 top-1/2 hidden -translate-y-1/2 lg:block"
+      style={{ opacity: point.opacity, visibility: point.opacity === 0 ? "hidden" : "visible" }}
     >
       <div className="h-[40vh] w-[10px] border border-[var(--r-dark)] bg-black">
         {/* Scaling beats a height write: White's share grows from the bottom every frame. */}

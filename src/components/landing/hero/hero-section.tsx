@@ -9,6 +9,7 @@ import { QUIP_MAP } from "@/lib/bonzi/quips";
 import { usePrefersReducedMotion } from "@/lib/motion";
 import { useSectionDock } from "../use-section-dock";
 import { HeroCanvasLoader } from "./hero-canvas-loader";
+import { heroProgressRef } from "./hero-progress";
 import { HeroPoster } from "./hero-poster";
 import { useHeroScroll } from "./use-hero-scroll";
 import "./hero.css";
@@ -21,7 +22,7 @@ export function HeroSection() {
   const stageRef = useRef<HTMLDivElement>(null);
   const windowRef = useRef<HTMLElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
-  const progressRef = useRef(0);
+  const progressRef = heroProgressRef; // module-level: the eval bar reads the same scrub
 
   useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef });
   // The hero docks from its own 35% trigger, so only active tracking comes from here.
@@ -41,7 +42,7 @@ export function HeroSection() {
   // over the window, dragging it would fight GSAP.
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (progressRef.current > 0.05) return;
+      if (heroProgressRef.current > 0.05) return;
       onPointerDown(e);
     },
     [onPointerDown]

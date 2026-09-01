@@ -32,7 +32,7 @@ The landing page already has: a 300vh scroll-scrubbed 3D Scholar's Mate hero (`s
 
 - **Screensaver**: 45s with no input on the landing page → full-screen black canvas with bouncing solid-color chess glyphs; any input dismisses; disarmed while the tab is hidden; never under reduced motion.
 - **Shut Down…**: new Start-menu item → screen dims in steps, then orange-on-black "It is now safe to turn off your computer." Any click/key "reboots": clears the boot flag, reloads the page so the boot cascade replays. (No scroll-past-footer trigger — menu only.)
-- **Eval-bar scroll progress**: a slim vertical eval bar fixed to the left edge maps page scroll progress to a fake eval that climbs from +0.2 to M4 (Bonzi plays White in the hero's Scholar's Mate). Desktop only, `aria-hidden`.
+- **Eval-bar scroll progress**: a slim vertical eval bar fixed to the left edge scores the HERO GAME itself — anchored to the Scholar's Mate ply boundaries (+0.3 … M1 on 3...Nf6??, "1-0" on Qxf7#), riding the same smoothed scrub as the board, holding a beat past mate, then fading out for the rest of the page (scrub-reversible). Desktop only, `aria-hidden`, absent under reduced motion (no scrub = no game to score). [Amended 2026-09-01 per user request, replacing the whole-page-progress version.]
 - **Boot cascade**: first visit per session (`sessionStorage` flag), landing page only (not `/privacy`/`/terms`), ≤900ms: taskbar slides up, hero window opens with a stepped scale zoom. A pre-paint inline script adds a `boot-pending` class so nothing flashes. Skipped under reduced motion; any input (including scroll) fast-forwards.
 
 ## 5. Linux terminal in the Start menu
