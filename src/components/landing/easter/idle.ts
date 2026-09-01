@@ -14,6 +14,10 @@ export const IDLE_EVENTS = [
   "scroll",
 ] as const;
 
+// Capture phase: xterm's textarea cancels keydown before it bubbles, so a user typing at the
+// DOS prompt would otherwise read as idle. removeEventListener must repeat the flag or it leaks.
+const CAPTURE = { capture: true } as const;
+
 interface IdleWatcher {
   arm: () => void;
   disarm: () => void;
@@ -45,7 +49,8 @@ export function createIdleWatcher(
   const arm = () => {
     if (armed) return;
     armed = true;
-    for (const type of IDLE_EVENTS) target?.addEventListener(type, schedule, { passive: true });
+    for (const type of IDLE_EVENTS)
+      target?.addEventListener(type, schedule, { passive: true, ...CAPTURE });
     doc?.addEventListener("visibilitychange", schedule);
     schedule();
   };
@@ -53,7 +58,7 @@ export function createIdleWatcher(
   const disarm = () => {
     armed = false;
     clear();
-    for (const type of IDLE_EVENTS) target?.removeEventListener(type, schedule);
+    for (const type of IDLE_EVENTS) target?.removeEventListener(type, schedule, CAPTURE);
     doc?.removeEventListener("visibilitychange", schedule);
   };
 

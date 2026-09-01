@@ -26,3 +26,19 @@ test("null storage is safe and never boots", () => {
   markBooted(null); // must not throw
   clearBootFlag(null); // must not throw
 });
+
+test("a custom key is tracked independently of the default", () => {
+  const s = fakeStorage();
+  const key = "cbb-app-booted";
+
+  expect(shouldBoot(s, key)).toBe(true);
+  markBooted(s, key);
+  expect(shouldBoot(s, key)).toBe(false);
+  // The landing's boot is a separate one-shot.
+  expect(shouldBoot(s)).toBe(true);
+
+  markBooted(s);
+  clearBootFlag(s, key);
+  expect(shouldBoot(s, key)).toBe(true);
+  expect(shouldBoot(s)).toBe(false);
+});

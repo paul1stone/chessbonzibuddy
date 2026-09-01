@@ -143,6 +143,13 @@ export default function Home() {
     setActiveGame,
   ]);
 
+  // ---- Hourglass while the engine works ----
+  useEffect(() => {
+    if (!isAnalyzing) return;
+    document.body.classList.add("cursor-progress");
+    return () => document.body.classList.remove("cursor-progress");
+  }, [isAnalyzing]);
+
   const handleAnalyze = useCallback(() => {
     if (activeGame) enqueueAnalysis([activeGame]);
   }, [activeGame, enqueueAnalysis]);

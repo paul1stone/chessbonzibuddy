@@ -5,6 +5,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { RetroButton } from "@/components/retro";
+import { cn } from "@/lib/utils";
 import { prefersReducedMotion } from "@/lib/motion";
 import { createVM, type TerminalVM } from "@/lib/terminal/create-vm";
 
@@ -125,7 +126,8 @@ export default function TerminalWindowInner() {
   }, [attempt, skipRestore]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1">
+    // A class, not an inline cursor: xterm sets its own cursor on the rows it renders.
+    <div className={cn("flex min-h-0 flex-1 flex-col gap-1", phase === "booting" && "cursor-wait-all")}>
       <div
         ref={hostRef}
         data-testid="terminal-xterm"
