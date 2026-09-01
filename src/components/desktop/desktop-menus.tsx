@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { RetroButton, RetroMenu, RetroWindow, type MenuItem } from "@/components/retro";
 import type { ContextMenuState } from "@/components/retro/retro-menu";
 import { useDesktopStore } from "@/stores/desktop-store";
@@ -18,12 +19,18 @@ interface DesktopMenusProps {
 }
 
 /**
- * The desktop and icon context menus plus the per-icon Properties dialog. Rendered at the
- * desktop-container level so nothing lands inside a window's stacking context.
+ * The desktop and icon context menus plus the per-icon Properties dialog. Both mount at the
+ * `.retro` level, like every other overlay: the desktop container is a stacking context, so a
+ * fixed panel inside it would be capped below the traces and menus that live a level up.
  */
 export function DesktopMenus({ menu, close, onRefresh }: DesktopMenusProps) {
   const [propsFor, setPropsFor] = useState<WindowId | null>(null);
+  const [layer, setLayer] = useState<HTMLElement | null>(null);
   const { open } = useWindowStore.getState();
+
+  // The app layout's wrapper is the first `.retro` in document order, so this resolves to the
+  // same element T6's `closest(".retro")` finds from inside a window frame.
+  useEffect(() => setLayer(document.querySelector<HTMLElement>(".retro")), []);
 
   const iconId = menu?.key.startsWith("icon:") ? (menu.key.slice(5) as WindowId) : null;
   const items: MenuItem[] = iconId
@@ -40,10 +47,13 @@ export function DesktopMenus({ menu, close, onRefresh }: DesktopMenusProps) {
         { label: "Properties", onSelect: () => open("display") },
       ];
 
+  if (!layer) return null;
+
   return (
     <>
-      {menu && <RetroMenu items={items} x={menu.x} y={menu.y} onClose={close} />}
-      {propsFor && <IconPropertiesDialog id={propsFor} onClose={() => setPropsFor(null)} />}
+      {menu && createPortal(<RetroMenu items={items} x={menu.x} y={menu.y} onClose={close} />, layer)}
+      {propsFor &&
+        createPortal(<IconPropertiesDialog id={propsFor} onClose={() => setPropsFor(null)} />, layer)}
     </>
   );
 }

@@ -43,10 +43,13 @@ export function useMarquee() {
     const startX = e.clientX;
     const startY = e.clientY;
     let dragging = false;
+    let done = false;
     lastHit.current = null;
-    el.setPointerCapture(e.pointerId);
+    const pointerId = e.pointerId;
+    el.setPointerCapture(pointerId);
 
     const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
       const rect: Rect = {
         left: Math.min(startX, ev.clientX),
         top: Math.min(startY, ev.clientY),
@@ -70,18 +73,30 @@ export function useMarquee() {
       useDesktopStore.getState().setSelection(hit);
     };
 
-    const finish = () => {
+    const finish = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId || done) return;
+      done = true;
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerup", finish);
       el.removeEventListener("pointercancel", finish);
+      el.removeEventListener("lostpointercapture", finish);
+      el.removeEventListener("contextmenu", end);
       // A press that never became a marquee is a plain click on empty desktop.
       if (!dragging) useDesktopStore.getState().clearSelection();
       if (box) box.hidden = true;
     };
 
+    // contextmenu carries no pointerId, so it ends the sweep through the capture's own id.
+    const end = () => finish(new PointerEvent("pointerup", { pointerId }));
+
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", finish);
     el.addEventListener("pointercancel", finish);
+    // A right-click mid-sweep drops the capture, same guard the icon drag uses. Chrome defers
+    // lostpointercapture to the next pointer event, so contextmenu ends the band right away
+    // instead of leaving it frozen under the menu until the mouse moves again.
+    el.addEventListener("lostpointercapture", finish);
+    el.addEventListener("contextmenu", end);
   }, []);
 
   return { ref, onPointerDown };
