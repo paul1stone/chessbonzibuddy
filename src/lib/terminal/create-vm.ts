@@ -10,7 +10,16 @@ const moduleUrl = (attempt: number) =>
 
 const READY_TIMEOUT_MS = 5000;
 
+const STATE_URL = "/terminal/state.bin.zst";
+const STATE_META_URL = "/terminal/state.meta.json";
+const FS_JSON_URL = "/terminal/fs.json";
+
 export interface TerminalVM {
+  /**
+   * Resolves true once the committed snapshot has been restored and the machine started,
+   * false when it cold booted instead. Never rejects.
+   */
+  restored: Promise<boolean>;
   send(data: string): void;
   onOutput(cb: (chunk: Uint8Array) => void): () => void;
   destroy(): Promise<void>;
@@ -21,18 +30,66 @@ export interface CreateVMOptions {
   signal?: AbortSignal;
   /** Retry counter, used to cache-bust the module URL. */
   attempt?: number;
+  /** Cold boot even when a snapshot is available, for a restored session that went silent. */
+  skipRestore?: boolean;
+}
+
+// A snapshot resumes cleanly only once per document. Restore a second time and the guest comes
+// up with its kernel alive — it echoes serial input — but userspace is never scheduled again, so
+// the shell never reprints its prompt. Reproduced against a bare v86 with no React and no
+// teardown involved, and independent of when the guest is poked, so it is a v86 restore limit
+// rather than something this module can hold differently. Later opens cold boot instead, which
+// is what they did before saved state existed; the 5 s echo belt covers the first one.
+let restoreSpent = false;
+
+const sha256Hex = async (bytes: ArrayBuffer) =>
+  [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+/**
+ * The snapshot the guest resumes from still holds 9p handles into the content-addressed
+ * rootfs, so an image rebuilt underneath it would resume against blobs that moved. The
+ * meta records the fs.json the state was taken from; anything else cold boots.
+ * Returns the raw .zst bytes — restore_state sniffs the zstd magic and inflates them itself.
+ */
+async function loadSavedState(signal?: AbortSignal): Promise<ArrayBuffer | null> {
+  // crypto.subtle is secure-context only, and an unverifiable state is not worth restoring.
+  if (!globalThis.crypto?.subtle) return null;
+  const get = (url: string) => fetch(url, { signal }).then((res) => (res.ok ? res : null));
+  const [metaRes, stateRes, fsRes] = await Promise.all([
+    get(STATE_META_URL),
+    get(STATE_URL),
+    get(FS_JSON_URL),
+  ]);
+  if (!metaRes || !stateRes || !fsRes) return null;
+  const [meta, state, fsJson] = await Promise.all([
+    metaRes.json() as Promise<{ fsJsonSha256?: string }>,
+    stateRes.arrayBuffer(),
+    fsRes.arrayBuffer(),
+  ]);
+  return meta.fsJsonSha256 === (await sha256Hex(fsJson)) ? state : null;
 }
 
 /**
- * Boots the committed Alpine 9p image in a v86 VM wired to serial0.
- * Options are copied from scripts/terminal/README.md — `bios` is NOT optional:
- * without it the machine hangs silently and emits no serial output at all.
+ * Boots the committed Alpine 9p image in a v86 VM wired to serial0, resuming from
+ * public/terminal/state.bin.zst when one matches the image (see scripts/terminal/save-state.mjs).
+ * Options are copied from scripts/terminal/README.md — `bios` is NOT optional: without it the
+ * machine hangs silently and emits no serial output at all. They must also stay identical to
+ * save-state.mjs, since a state only restores into the machine it was taken from.
  */
-export async function createVM({ signal, attempt = 0 }: CreateVMOptions = {}): Promise<TerminalVM> {
+export async function createVM({
+  signal,
+  attempt = 0,
+  skipRestore = false,
+}: CreateVMOptions = {}): Promise<TerminalVM> {
   const { V86 } = await loadV86(moduleUrl(attempt));
   // Nothing is allocated until the constructor runs, so a doomed mount stops here
   // instead of booting a second 128 MB machine alongside the one that survives.
   signal?.throwIfAborted();
+
+  // Started before construction so the download overlaps v86's own asset loading.
+  const savedState = skipRestore || restoreSpent ? Promise.resolve(null) : loadSavedState(signal);
 
   const emulator = new V86({
     wasm_path: "/v86/v86.wasm",
@@ -47,7 +104,10 @@ export async function createVM({ signal, attempt = 0 }: CreateVMOptions = {}): P
     bzimage_initrd_from_filesystem: true,
     cmdline:
       "rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci console=ttyS0 tsc=reliable",
-    autostart: true,
+    // The machine waits for the snapshot to get its one chance, then runs either way.
+    // The constructor's own initial_state option restores inside async init where a bad
+    // state can only be reported by a console message, so it is deliberately not used.
+    autostart: false,
     disable_keyboard: true,
     disable_mouse: true,
     disable_speaker: true,
@@ -64,6 +124,7 @@ export async function createVM({ signal, attempt = 0 }: CreateVMOptions = {}): P
   const listeners = new Set<(chunk: Uint8Array) => void>();
   let pending: number[] = [];
   let frame = 0;
+  let destroyed = false;
 
   const flush = () => {
     frame = 0;
@@ -80,7 +141,43 @@ export async function createVM({ signal, attempt = 0 }: CreateVMOptions = {}): P
     if (frame === 0) frame = requestAnimationFrame(flush);
   });
 
+  // One machine, one path: restore if there is something valid to restore, then run. Every
+  // failure (missing file, stale image, bad magic, version mismatch) leaves a cold boot.
+  const restored = (async () => {
+    const state = await savedState.catch((err) => {
+      if (!signal?.aborted) console.warn("Terminal snapshot unavailable, cold booting:", err);
+      return null;
+    });
+    await ready;
+    let ok = false;
+    if (state && !destroyed && !signal?.aborted) {
+      try {
+        await emulator.restore_state(state);
+        ok = true;
+      } catch (err) {
+        console.warn("Terminal snapshot rejected, cold booting:", err);
+      }
+    }
+    // A fetch that lost its race with teardown must not start a machine nobody holds.
+    if (destroyed || signal?.aborted) return ok;
+    await emulator.run();
+    if (ok) {
+      // Spent only once a restored machine actually started, so an aborted StrictMode
+      // double-mount does not cost the surviving one its restore.
+      restoreSpent = true;
+      // The restored guest is parked at a prompt it printed before the snapshot, so it says
+      // nothing until poked — and an unpoked session looks identical to a dead one.
+      emulator.serial0_send("\n");
+    }
+    return ok;
+  })().catch((err) => {
+    if (!destroyed && !signal?.aborted) console.error("Terminal VM failed to start:", err);
+    return false;
+  });
+
   return {
+    restored,
+
     send: (data) => emulator.serial0_send(data),
 
     onOutput(cb) {
@@ -91,6 +188,7 @@ export async function createVM({ signal, attempt = 0 }: CreateVMOptions = {}): P
     },
 
     async destroy() {
+      destroyed = true;
       if (frame !== 0) cancelAnimationFrame(frame);
       frame = 0;
       pending = [];

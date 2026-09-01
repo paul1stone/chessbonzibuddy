@@ -84,3 +84,7 @@ echo "  rootfs-flat  $(du -sh "$OUT_FLAT" | cut -f1) in $(find "$OUT_FLAT" -type
 echo "  bios         $(du -ch "$OUT_DIR"/*.bin | tail -1 | cut -f1)"
 echo "  total        $(du -sh "$OUT_DIR" | cut -f1)"
 echo "  (expected ~25-40MB total, ~1.5-3k flat files; if far above, trim packages)"
+echo
+echo "==> next: node scripts/terminal/save-state.mjs"
+echo "  The committed state.bin.zst was taken from the OLD fs.json and no longer matches this"
+echo "  image, so the terminal will cold boot until it is regenerated."

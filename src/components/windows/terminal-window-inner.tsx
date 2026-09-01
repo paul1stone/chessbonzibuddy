@@ -12,10 +12,22 @@ import { createVM, type TerminalVM } from "@/lib/terminal/create-vm";
 // A boot that goes this long without a single serial byte is dead, not slow.
 const BOOT_SILENCE_MS = 60_000;
 
+// A restored session answers the newline create-vm sends it almost immediately. Silence
+// this long means the snapshot resumed into something wedged, so start over cold.
+const RESTORE_ECHO_MS = 5_000;
+
+const BOOT_NOTICE = {
+  unknown: "Starting MS-DOS\u2026",
+  restored: "Resuming MS-DOS\u2026",
+  cold: "Starting MS-DOS\u2026 (fine, it's Linux \u2014 15-30s)",
+} as const;
+
 export default function TerminalWindowInner() {
   const hostRef = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<"booting" | "ready" | "error">("booting");
+  const [mode, setMode] = useState<keyof typeof BOOT_NOTICE>("unknown");
   const [attempt, setAttempt] = useState(0);
+  const [skipRestore, setSkipRestore] = useState(false);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -43,6 +55,7 @@ export default function TerminalWindowInner() {
     let cancelled = false;
     let stopOutput: (() => void) | undefined;
     let watchdog: ReturnType<typeof setTimeout> | undefined;
+    let echo: ReturnType<typeof setTimeout> | undefined;
 
     // Re-armed on every chunk while booting, so a slow-but-progressing boot is safe.
     const armWatchdog = () => {
@@ -54,7 +67,7 @@ export default function TerminalWindowInner() {
     const abort = new AbortController();
     const input = term.onData((data) => vm?.send(data));
 
-    createVM({ signal: abort.signal, attempt })
+    createVM({ signal: abort.signal, attempt, skipRestore })
       .then((created) => {
         // StrictMode (and a fast close) can unmount before the VM resolves.
         if (cancelled) {
@@ -74,8 +87,21 @@ export default function TerminalWindowInner() {
           if (tail.includes("C:\\>")) {
             tail = null;
             clearTimeout(watchdog);
+            clearTimeout(echo);
             setPhase("ready");
           }
+        });
+        created.restored.then((wasRestored) => {
+          if (cancelled) return;
+          setMode(wasRestored ? "restored" : "cold");
+          // tail is nulled the moment the prompt lands, so a session already at C:\> is fine.
+          if (!wasRestored || tail === null) return;
+          echo = setTimeout(() => {
+            console.warn("Restored terminal session never echoed, cold booting instead.");
+            setMode("unknown");
+            setSkipRestore(true);
+            setAttempt((n) => n + 1);
+          }, RESTORE_ECHO_MS);
         });
       })
       .catch((err) => {
@@ -88,6 +114,7 @@ export default function TerminalWindowInner() {
       cancelled = true;
       abort.abort();
       clearTimeout(watchdog);
+      clearTimeout(echo);
       input.dispose();
       stopOutput?.();
       observer.disconnect();
@@ -95,7 +122,7 @@ export default function TerminalWindowInner() {
       vm = null;
       term.dispose();
     };
-  }, [attempt]);
+  }, [attempt, skipRestore]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1">
@@ -105,7 +132,9 @@ export default function TerminalWindowInner() {
         className="r-bevel-in min-h-0 flex-1 overflow-hidden bg-black p-1"
       />
       {phase === "booting" && (
-        <p className="shrink-0 text-xs">Starting MS-DOS… (fine, it&apos;s Linux — 15-30s)</p>
+        <p data-testid="terminal-boot-notice" className="shrink-0 text-xs">
+          {BOOT_NOTICE[mode]}
+        </p>
       )}
       {phase === "error" && (
         <div className="r-paper r-bevel-in flex shrink-0 items-center gap-2 p-2 text-xs">
@@ -113,6 +142,7 @@ export default function TerminalWindowInner() {
           <RetroButton
             onClick={() => {
               setPhase("booting");
+              setMode("unknown");
               setAttempt((n) => n + 1);
             }}
           >
