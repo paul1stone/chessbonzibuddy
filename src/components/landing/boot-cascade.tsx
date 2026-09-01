@@ -7,7 +7,9 @@ import { markBooted, safeSessionStorage } from "./easter/boot-flag";
 const BOOT_CLASS = "boot-pending";
 // Scroll counts as input: a programmatic scroll (Playwright, an impatient human) would otherwise
 // let the boot's final writes land after the hero scrub had already taken the window away.
-const SKIP_EVENTS = ["pointerdown", "keydown", "wheel", "scroll"] as const;
+// The pointer skip is on release, not press: jumping the timeline mid-click resizes the window out
+// from under the cursor, and the click then lands on an ancestor instead of the button pressed.
+const SKIP_EVENTS = ["pointerup", "keydown", "wheel", "scroll"] as const;
 
 // The boot owns the hero window while it plays, so anything else animating that element waits
 // here — a scrub timeline rendering its scroll-0 state would otherwise wipe the zoom mid-flight.
