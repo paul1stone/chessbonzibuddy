@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { usePrefersReducedMotion } from "@/lib/motion";
 
 export interface MenuItem {
@@ -30,6 +30,9 @@ export function RetroMenu({ items, x, y, onClose }: RetroMenuProps) {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Off before measuring: a running slide would fold its own translateY into the correction
+    // below. The forced layout from getBoundingClientRect also lets the animation replay.
+    el.classList.remove("r-menu--in");
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
     const r = el.getBoundingClientRect();
@@ -48,7 +51,6 @@ export function RetroMenu({ items, x, y, onClose }: RetroMenuProps) {
     // (a dragged window frame has one), so correct by the delta instead of trusting left/top.
     el.style.left = `${x + (wanted.x - r.left)}px`;
     el.style.top = `${y + (wanted.y - r.top)}px`;
-    // Attached only now: the slide's own transform would have skewed the rect measured above.
     if (!reduced) el.classList.add("r-menu--in");
   }, [x, y, reduced]);
 
@@ -61,11 +63,17 @@ export function RetroMenu({ items, x, y, onClose }: RetroMenuProps) {
     const onPointerDown = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) onClose();
     };
+    // Shift+F10 opens a menu without any pointerdown, so watch contextmenu too or two menus stack.
+    const onContextMenu = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) onClose();
+    };
     const onScroll = () => onClose();
     document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("contextmenu", onContextMenu, true);
     window.addEventListener("scroll", onScroll, true);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("contextmenu", onContextMenu, true);
       window.removeEventListener("scroll", onScroll, true);
     };
   }, [onClose]);
@@ -139,7 +147,7 @@ export interface ContextMenuState {
 export function useContextMenu() {
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
 
-  const openAt = useCallback((e: MouseEvent, key: string) => {
+  const openAt = useCallback((e: ReactMouseEvent, key: string) => {
     e.preventDefault();
     e.stopPropagation();
     // Shift+F10 and the menu key synthesize a contextmenu at 0,0; anchor those to the target.
