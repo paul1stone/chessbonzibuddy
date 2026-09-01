@@ -196,7 +196,16 @@ export async function createVM({
       // A boot that never reaches "emulator-ready" (missing asset) must not strand
       // the teardown; past the timeout v86 throws and the caller swallows it.
       await Promise.race([ready, new Promise((r) => setTimeout(r, READY_TIMEOUT_MS))]);
-      await emulator.destroy();
+      try {
+        await emulator.destroy();
+      } finally {
+        // v86's teardown terminates the worker that drives its main loop but leaves the
+        // machine flagged idle, so a 9p reply still in flight raises an interrupt that tries
+        // to wake it and throws on the dead worker. The wake-up is guarded by that very flag
+        // (`idle && next_tick()`), so clearing it turns the late arrival into a no-op.
+        const machine = (emulator as unknown as { v86?: { idle?: boolean } }).v86;
+        if (machine) machine.idle = false;
+      }
     },
   };
 }

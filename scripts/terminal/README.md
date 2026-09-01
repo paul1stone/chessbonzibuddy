@@ -141,6 +141,16 @@ A restored guest prints nothing unprompted — it already printed its prompt bef
 snapshot — so `create-vm.ts` sends a bare newline to make it echo, and the window falls back
 to a cold boot if nothing comes back within 5 s.
 
+### Tearing a machine down
+
+`destroy()` terminates the worker that drives v86's main loop but leaves the machine flagged
+idle, and a 9p blob fetch still in flight will land afterwards, raise an interrupt, and try to
+wake it — throwing `Cannot read properties of null (reading 'postMessage')` from v86's own
+callback, where nothing can catch it. `create-vm.ts` clears the idle flag after destroying,
+which is exactly what v86's wake-up guards on (`idle && next_tick()`). Reproduced by closing
+the window mid-boot with rootfs responses delayed 400 ms: 4 crashes in 5 teardowns before,
+none after. It has nothing to do with saved state — any cold boot torn down mid-fetch hits it.
+
 ### One restore per page
 
 A second restore in the same document comes up broken: the kernel is alive and echoes serial
