@@ -21,6 +21,7 @@ run Docker. `public/v86/v86.wasm` is *not* committed; `postinstall` copies it ou
 | `public/terminal/seabios.bin` | 128 KB | BIOS — **required**, see below |
 | `public/terminal/vgabios.bin` | 36 KB | VGA BIOS |
 | `public/v86/v86.wasm` | 2.1 MB | gitignored, written by `postinstall` |
+| `public/v86/libv86.mjs` | 350 KB | gitignored, written by `postinstall`; loaded at runtime by `create-vm.ts` (bypasses the bundler) |
 
 Known nit: the committed image still carries a 0-byte `/.dockerenv`, because the strip step
 was a silent no-op on macOS until it was fixed; it is harmless and goes away on the next rebuild.

@@ -107,5 +107,5 @@ export function Screensaver({ idleMs = 45000 }: ScreensaverProps) {
 
   if (!showing) return null;
 
-  return <canvas ref={canvasRef} aria-hidden className="fixed inset-0 z-[90] h-screen w-screen bg-black" />;
+  return <canvas ref={canvasRef} data-screensaver aria-hidden className="fixed inset-0 z-[90] h-screen w-screen bg-black" />;
 }

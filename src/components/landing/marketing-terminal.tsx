@@ -26,6 +26,7 @@ export function MarketingTerminal({ onClose }: MarketingTerminalProps) {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (document.getElementById("start-menu")) return;
+      if (document.querySelector("[data-screensaver]")) return;
       if (containerRef.current?.contains(document.activeElement)) return;
       onClose();
     };

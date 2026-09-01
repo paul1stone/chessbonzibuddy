@@ -141,8 +141,9 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
           });
 
           // The hero is only 100svh until its own GSAP hook adds .hero--motion (300vh), which can
-          // land after this trigger measured — leaving the pin ~200vh too early. Both hooks share
-          // one loadGsap promise, so a frame later the document height is final.
+          // land after this trigger measured — leaving the pin ~200vh too early. On boot visits the
+          // hero chain also waits on the boot gate, so this rAF can still run early; the hero's own
+          // ScrollTrigger.refresh(true) after adding the class is what finally settles positions.
           const refresh = requestAnimationFrame(() => ScrollTrigger.refresh());
 
           // Taskbar jumps must land where the window is revealed, not at pin start where

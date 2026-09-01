@@ -729,6 +729,8 @@ All three reviewer verdicts were REVISE; every blocking/important finding was ac
 - Regression: demo e2e breakage owned by T10, pinnedContainer for in-pin triggers, scrollFn jumps, safeSessionStorage everywhere, `scroll` in boot fast-forward, companion gate 1440px, StrictMode VM lifecycle, shutdown z-100, Esc-vs-vi scoping, gitignore /public/v86/.
 - Simplicity: T2 rebased on upstream `tools/docker/alpine` (KERNEL=virt + linux-firmware-none + upstream mkinitfs form), dead doc URL replaced, `bzimage_initrd_from_filesystem` (no duplicate kernel artifacts), exact v86 pin + BIOS fallback protocol, DEFAULT_MENU_ITEMS exported, per-refresh rect caching, spec amended (boot scale-zoom, non-dithered screensaver glyphs).
 
+Post-build drift note: the Task 1/6 interface blocks describe a `pinnedContainer` option on `useSectionDock`; the shipped code replaced it with `managedQuery` (cascade owns dock state while armed — see commits acbf993/b535250). The code is authoritative.
+
 ## Self-review notes
 
 - Spec §1 → T1/T5; §2 → T4/T6; §3 → T8; §4 → T3/T5/T9; §5 → T2/T7 (both entry points: T7 app icon+menu, T9 marketing menu). No uncovered spec sections.
