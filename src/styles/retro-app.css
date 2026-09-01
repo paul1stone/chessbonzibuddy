@@ -103,11 +103,12 @@
   pointer-events: none;
 }
 
+/* Above every window (z is normalized to 1..N), below .zoom-trace: the band drew over all of Win98. */
 .marquee {
   position: fixed;
   border: 1px dotted var(--r-highlight);
   background: rgba(0, 0, 128, 0.18);
-  z-index: 5;
+  z-index: 55;
   pointer-events: none;
 }
 
