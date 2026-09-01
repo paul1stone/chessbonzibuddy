@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 
 export interface TaskbarMenuItem {
   href?: string;
@@ -40,9 +40,11 @@ function Clock() {
 export function Taskbar({
   menuItems = DEFAULT_MENU_ITEMS,
   children,
+  onBarContextMenu,
 }: {
   menuItems?: TaskbarMenuItem[];
   children?: ReactNode;
+  onBarContextMenu?: (e: ReactMouseEvent) => void;
 }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -72,6 +74,7 @@ export function Taskbar({
       ref={rootRef}
       data-taskbar
       className="r-face fixed inset-x-0 bottom-0 z-50 flex h-[var(--r-taskbar-h)] items-center gap-1 border-t-2 border-[var(--r-highlight)] px-[2px]"
+      onContextMenu={onBarContextMenu}
     >
       <button
         ref={buttonRef}
@@ -90,7 +93,7 @@ export function Taskbar({
         <nav
           id="start-menu"
           aria-label="Start menu"
-          className="r-face r-bevel-out absolute bottom-[var(--r-taskbar-h)] left-0 flex w-[220px] p-[3px]"
+          className="start-menu--in r-face r-bevel-out absolute bottom-[var(--r-taskbar-h)] left-0 flex w-[220px] p-[3px]"
         >
           {/* Period-accurate Win98 Start-menu sidebar stripe */}
           <div

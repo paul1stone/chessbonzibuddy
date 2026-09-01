@@ -1,8 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useDrag } from "@/hooks/use-drag";
+import { RetroMenu, useContextMenu, type MenuItem } from "@/components/retro";
+import { runZoomTrace, type Rect } from "@/lib/outline-trace";
 import { useWindowStore, WINDOW_SIZES, type WindowId } from "@/stores/window-store";
 import { usePrefersReducedMotion } from "@/lib/motion";
 import { useIsMobile } from "./use-is-mobile";
@@ -17,6 +28,13 @@ interface DesktopWindowProps {
 const NUDGE = 16;
 
 const translate = (x: number, y: number) => `translate(${x}px, ${y}px)`;
+
+/** Viewport rect of an element, or null when it is absent or hidden (a minimized frame is 0x0). */
+function rectOf(el: Element | null | undefined): Rect | null {
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null;
+}
 
 export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowProps) {
   const win = useWindowStore((s) => s.windows[id]);
@@ -60,6 +78,9 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
 
   const onDragMove = useCallback(
     (dx: number, dy: number) => {
+      // A maximize landing mid-drag would clamp against the full-viewport width, letting the
+      // release commit a position that strands the restored frame off-screen. Freeze instead.
+      if (useWindowStore.getState().windows[id].maximized) return;
       const base = dragPos.current ?? useWindowStore.getState().windows[id];
       dragPos.current = clamp(base.x + dx, base.y + dy);
       if (raf.current !== null) return;
@@ -86,10 +107,6 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
     move(id, p.x, p.y);
   }, [id, move, paintDrag]);
 
-  useEffect(() => () => {
-    if (raf.current !== null) cancelAnimationFrame(raf.current);
-  }, []);
-
   const reduced = usePrefersReducedMotion();
   const { onPointerDown } = useDrag({
     onMove: onDragMove,
@@ -108,11 +125,98 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
   // hidden with CSS. Unmounting would kill live state (the Stockfish worker, the play
   // view's game ref, review scrubbing) — hiding preserves it all. useBoardSize sees
   // 0x0 while hidden; its 200px floor plus the re-measure on restore make that benign.
-  if (!win.open) return null;
   const hidden = win.minimized || (isMobile && !focused);
+
+  // Zoom traces and the system menu mount at the .retro level. The frame itself carries a
+  // transform and a z-index, so anything fixed inside it is positioned against the frame and
+  // stacked below the sibling windows above it.
+  const overlayLayer = useCallback(() => ref.current?.closest<HTMLElement>(".retro") ?? null, []);
+
+  const lastVisibleRect = useRef<Rect | null>(null);
+  const prev = useRef<{ minimized: boolean; maximized: boolean } | null>(null);
+  const traceCancel = useRef<(() => void) | null>(null);
+
+  const trace = useCallback(
+    (from: Rect | null, to: Rect | null) => {
+      const parent = overlayLayer();
+      if (!from || !to || !parent) return;
+      // Cancelling drops the outline without firing onDone, so the ref below stays truthful.
+      traceCancel.current?.();
+      traceCancel.current = runZoomTrace({
+        from,
+        to,
+        parent,
+        onDone: () => {
+          traceCancel.current = null;
+        },
+      });
+    },
+    [overlayLayer]
+  );
+
+  // Decoration only: the store change already landed, the outline just flies after it. Runs on
+  // every commit because the from-rect has to be read while the frame is still on screen —
+  // a minimized frame measures 0x0 and a maximized one has already resized.
+  useLayoutEffect(() => {
+    if (!win.open) return;
+    const el = ref.current;
+    const p = prev.current;
+    const taskbarRect = () => rectOf(document.querySelector(`[data-taskbar-button="${id}"]`));
+
+    if (!isMobile) {
+      if (p === null) {
+        // Fly out of the desktop icon, falling back to the taskbar button for windows that have
+        // no icon ("display") and for deep links that open before the icons are on screen.
+        trace(rectOf(document.querySelector(`[data-desktop-icon="${id}"]`)) ?? taskbarRect(), rectOf(el));
+      } else if (!p.minimized && win.minimized) {
+        trace(lastVisibleRect.current, taskbarRect());
+      } else if (p.minimized && !win.minimized) {
+        trace(taskbarRect(), rectOf(el));
+      } else if (p.maximized !== win.maximized) {
+        trace(lastVisibleRect.current, rectOf(el));
+      }
+    }
+
+    prev.current = { minimized: win.minimized, maximized: win.maximized };
+    if (!hidden) lastVisibleRect.current = rectOf(el) ?? lastVisibleRect.current;
+  });
+
+  useEffect(
+    () => () => {
+      if (raf.current !== null) cancelAnimationFrame(raf.current);
+      traceCancel.current?.();
+      traceCancel.current = null;
+      // Clearing the history makes a StrictMode remount replay the open trace, not swallow it.
+      prev.current = null;
+      lastVisibleRect.current = null;
+    },
+    []
+  );
+
+  const { menu, openAt, close: closeMenu } = useContextMenu();
+  const [menuLayer, setMenuLayer] = useState<HTMLElement | null>(null);
+
+  const openSystemMenu = useCallback(
+    (e: ReactMouseEvent) => {
+      setMenuLayer(overlayLayer());
+      openAt(e, "system");
+    },
+    [openAt, overlayLayer]
+  );
+
+  if (!win.open) return null;
 
   const maximized = win.maximized || isMobile;
   const size = WINDOW_SIZES[id];
+
+  const systemItems: MenuItem[] = [
+    { label: "Minimize", onSelect: () => minimize(id) },
+    ...(isMobile
+      ? []
+      : [{ label: win.maximized ? "Restore" : "Maximize", onSelect: () => toggleMaximize(id) }]),
+    { label: "", separator: true },
+    { label: "Close", onSelect: () => close(id) },
+  ];
 
   return (
     <section
@@ -146,6 +250,7 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
         className={cn("r-title shrink-0 cursor-default touch-none select-none", !focused && "r-title--inactive")}
         onPointerDown={onPointerDown}
         onDoubleClick={() => !isMobile && toggleMaximize(id)}
+        onContextMenu={openSystemMenu}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.target !== e.currentTarget) return;
@@ -170,6 +275,12 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
       {statusBar !== undefined && (
         <div className="r-bevel-in r-statusbar shrink-0">{statusBar}</div>
       )}
+      {menu &&
+        menuLayer &&
+        createPortal(
+          <RetroMenu items={systemItems} x={menu.x} y={menu.y} onClose={closeMenu} />,
+          menuLayer
+        )}
     </section>
   );
 }
