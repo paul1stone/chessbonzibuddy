@@ -100,8 +100,9 @@ export default function TerminalWindowInner() {
           echo = setTimeout(() => {
             console.warn("Restored terminal session never echoed, cold booting instead.");
             setMode("unknown");
+            // Flipping skipRestore re-runs the effect on its own; bumping attempt too would
+            // only re-fetch the 357 KB module under a fresh URL for nothing.
             setSkipRestore(true);
-            setAttempt((n) => n + 1);
           }, RESTORE_ECHO_MS);
         });
       })

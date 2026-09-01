@@ -117,10 +117,18 @@ node scripts/terminal/save-state.mjs
 ```
 
 The script serves `public/` on an ephemeral port, boots the image in headless Chromium with
-the config above, waits for `C:\>`, settles 3 s, stops the machine, and writes the state
-zstd-compressed at level 19 (72 MB raw → 20 MB). Anything over 60 MB is refused rather than
-written, since it has to be committed and served; the fix would be dropping `memory_size` to
-64 MB in **both** the script and `create-vm.ts`.
+the config above, waits for `C:\>`, settles 3 s, stops the machine, and compresses the state
+with zstd level 19 (72 MB raw → 20 MB). Anything over 60 MB is refused rather than written,
+since it has to be committed and served; the fix would be dropping `memory_size` to 64 MB in
+**both** the script and `create-vm.ts`.
+
+Before anything reaches disk the script restores the candidate back into a fresh machine on a
+fresh page and waits for it to echo a prompt, serving the bytes from memory so an unusable
+snapshot is never written, let alone committed. A snapshot that does not resume is worse than
+no snapshot at all — it bills the download and then cold boots anyway. Verified in both
+directions: a good state passes, and one with a single flipped byte fails with
+`the snapshot did not resume to a prompt within 15s — nothing written`, leaving the committed
+artifact untouched.
 
 **Regenerate whenever the image or the v86 pin changes.** A state carries v86's own format
 version, and it holds 9p handles into the content-addressed rootfs, so a rebuilt `fs.json`
@@ -162,3 +170,13 @@ machine in that document ever ran. Root cause unknown; it is inside v86's restor
 `create-vm.ts` therefore restores at most once per page load and cold boots on later opens,
 which is exactly what they did before saved state existed. Reopening the terminal in one
 session is the only path that pays the ~17 s boot.
+
+Two things it is **not**, both measured rather than assumed. It is not scoped to the module
+instance: giving every machine a fresh `libv86.mjs?r=N` URL, which is a fresh module and a
+fresh wasm compile, changes nothing — ten rounds went ok, ok, ok, then wedged for the
+remaining seven, the same shape as reusing one module. And it is not the teardown fix above:
+clearing the idle flag makes no difference to it either way. What the timings do suggest is
+accumulation across VM lifecycles in one document rather than any hard once-only rule — time
+to prompt degraded 213 ms, 1965 ms, 5498 ms before failing outright, which looks more like
+resources piling up than a switch being thrown. Whatever the mechanism, restoring repeatedly
+in one document is not dependable, so the flag stays.

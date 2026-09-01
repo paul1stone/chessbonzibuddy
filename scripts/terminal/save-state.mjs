@@ -85,9 +85,18 @@ const TYPES = new Map([
   [".wasm", "application/wasm"],
 ]);
 
+// Holds the freshly compressed state so the verification pass can restore it without the
+// artifact ever touching disk: nothing unusable should be written, let alone committed.
+let candidate = null;
+
 const serve = createServer((req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
   void (async () => {
+    if (url.pathname === "/__candidate.zst" && candidate) {
+      res.writeHead(200, { "content-type": "application/octet-stream", "content-length": candidate.length });
+      res.end(candidate);
+      return;
+    }
     if (url.pathname === "/") {
       res.writeHead(200, { "content-type": "text/html" });
       res.end(PAGE);
@@ -178,6 +187,38 @@ try {
         `Drop memory_size to 64 MB here AND in create-vm.ts, then re-run.`,
     );
   }
+
+  // A snapshot that does not resume is worse than none: it costs the download and then cold
+  // boots anyway. Restore it into a fresh machine on a fresh page and make it prove it echoes.
+  candidate = packed;
+  console.log("==> verifying the snapshot restores");
+  const check = await browser.newPage();
+  await check.goto(origin, { waitUntil: "domcontentloaded" });
+  const echoed = await check.evaluate(async (options) => {
+    const { V86 } = await import("/v86/libv86.mjs");
+    const state = await (await fetch("/__candidate.zst")).arrayBuffer();
+    const emulator = new V86(options);
+    let out = "";
+    emulator.add_listener("serial0-output-byte", (b) => (out += String.fromCharCode(b)));
+    await new Promise((res) => emulator.add_listener("emulator-ready", res));
+    try {
+      await emulator.restore_state(state);
+    } catch {
+      return false;
+    }
+    await emulator.run();
+    emulator.serial0_send("\n");
+    const deadline = performance.now() + 15000;
+    while (performance.now() < deadline && !out.includes("C:\\>")) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return out.includes("C:\\>");
+  }, { ...V86_OPTIONS, autostart: false });
+  await check.close();
+  if (!echoed) {
+    throw new Error("the snapshot did not resume to a prompt within 15s — nothing written");
+  }
+  console.log("    restored to a prompt, ok");
 
   const meta = {
     fsJsonSha256: createHash("sha256").update(await readFile(FS_JSON)).digest("hex"),

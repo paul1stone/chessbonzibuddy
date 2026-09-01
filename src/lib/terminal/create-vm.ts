@@ -10,6 +10,15 @@ const moduleUrl = (attempt: number) =>
 
 const READY_TIMEOUT_MS = 5000;
 
+// Nothing re-arms the caller's boot-silence watchdog while the snapshot downloads — autostart
+// is off, so not a single serial byte flows until run(). A slow link has to fall through to a
+// cold boot well inside that budget, and a stale state must not bill the user 20 MB first.
+const STATE_DEADLINE_MS = 8000;
+
+// Past this the caller has long since given up (its own silence watchdog is 60 s), so settle
+// rather than pinning the snapshot and the emulator inside a promise that never returns.
+const READY_DEADLINE_MS = 60_000;
+
 const STATE_URL = "/terminal/state.bin.zst";
 const STATE_META_URL = "/terminal/state.meta.json";
 const FS_JSON_URL = "/terminal/fs.json";
@@ -17,7 +26,8 @@ const FS_JSON_URL = "/terminal/fs.json";
 export interface TerminalVM {
   /**
    * Resolves true once the committed snapshot has been restored and the machine started,
-   * false when it cold booted instead. Never rejects.
+   * false when it cold booted instead or when the emulator never became ready at all.
+   * Never rejects.
    */
   restored: Promise<boolean>;
   send(data: string): void;
@@ -56,7 +66,12 @@ const sha256Hex = async (bytes: ArrayBuffer) =>
 async function loadSavedState(signal?: AbortSignal): Promise<ArrayBuffer | null> {
   // crypto.subtle is secure-context only, and an unverifiable state is not worth restoring.
   if (!globalThis.crypto?.subtle) return null;
-  const get = (url: string) => fetch(url, { signal }).then((res) => (res.ok ? res : null));
+  // Cancel the download on the deadline rather than racing it: 20 MB left in flight behind a
+  // machine that has already moved on is bandwidth the cold boot needs for its own blobs.
+  const deadline = AbortSignal.timeout(STATE_DEADLINE_MS);
+  const fetchSignal = signal ? AbortSignal.any([signal, deadline]) : deadline;
+  const get = (url: string) =>
+    fetch(url, { signal: fetchSignal }).then((res) => (res.ok ? res : null));
   const [metaRes, stateRes, fsRes] = await Promise.all([
     get(STATE_META_URL),
     get(STATE_URL),
@@ -148,7 +163,12 @@ export async function createVM({
       if (!signal?.aborted) console.warn("Terminal snapshot unavailable, cold booting:", err);
       return null;
     });
-    await ready;
+    const started = await Promise.race([
+      ready.then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), READY_DEADLINE_MS)),
+    ]);
+    // A machine that never announced itself is not going to run; let the snapshot go.
+    if (!started) return false;
     let ok = false;
     if (state && !destroyed && !signal?.aborted) {
       try {
