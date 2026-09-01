@@ -198,10 +198,12 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
 
   const openSystemMenu = useCallback(
     (e: ReactMouseEvent) => {
+      // Mobile gets no retro menu at all, and bailing before openAt leaves the native one intact.
+      if (isMobile) return;
       setMenuLayer(overlayLayer());
       openAt(e, "system");
     },
-    [openAt, overlayLayer]
+    [isMobile, openAt, overlayLayer]
   );
 
   if (!win.open) return null;
@@ -211,9 +213,7 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
 
   const systemItems: MenuItem[] = [
     { label: "Minimize", onSelect: () => minimize(id) },
-    ...(isMobile
-      ? []
-      : [{ label: win.maximized ? "Restore" : "Maximize", onSelect: () => toggleMaximize(id) }]),
+    { label: win.maximized ? "Restore" : "Maximize", onSelect: () => toggleMaximize(id) },
     { label: "", separator: true },
     { label: "Close", onSelect: () => close(id) },
   ];
@@ -275,7 +275,8 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
       {statusBar !== undefined && (
         <div className="r-bevel-in r-statusbar shrink-0">{statusBar}</div>
       )}
-      {menu &&
+      {!isMobile &&
+        menu &&
         menuLayer &&
         createPortal(
           <RetroMenu items={systemItems} x={menu.x} y={menu.y} onClose={closeMenu} />,

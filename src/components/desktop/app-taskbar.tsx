@@ -6,6 +6,7 @@ import { RetroMenu, Taskbar, useContextMenu, type MenuItem, type TaskbarMenuItem
 import { cn } from "@/lib/utils";
 import { useWindowStore, WINDOW_IDS, type WindowId } from "@/stores/window-store";
 import { ICON_LABELS, WINDOW_ICONS } from "./icons";
+import { useIsMobile } from "./use-is-mobile";
 
 // Taskbar buttons use the same static labels as the desktop icons (never the dynamic window title).
 
@@ -15,6 +16,7 @@ export function AppTaskbar() {
   const windows = useWindowStore((s) => s.windows);
   const focused = useWindowStore((s) => s.focused);
   const { open, focus, close, minimize, cascadeAll, tileAll, minimizeAll } = useWindowStore.getState();
+  const isMobile = useIsMobile();
 
   // Spec 8: when the last window closes, focus falls to the Start button.
   const anyOpen = WINDOW_IDS.some((id) => windows[id].open);
@@ -32,6 +34,8 @@ export function AppTaskbar() {
   const [menuLayer, setMenuLayer] = useState<HTMLElement | null>(null);
 
   const openMenu = (e: ReactMouseEvent, key: string) => {
+    // Mobile gets no retro menu at all, and bailing before openAt leaves the native one intact.
+    if (isMobile) return;
     setMenuLayer(e.currentTarget.closest<HTMLElement>(".retro"));
     openAt(e, key);
   };
@@ -95,7 +99,8 @@ export function AppTaskbar() {
           );
         })}
       </Taskbar>
-      {menu &&
+      {!isMobile &&
+        menu &&
         menuLayer &&
         createPortal(<RetroMenu items={items} x={menu.x} y={menu.y} onClose={closeMenu} />, menuLayer)}
     </>
