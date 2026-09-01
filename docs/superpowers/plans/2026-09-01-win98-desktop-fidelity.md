@@ -2,22 +2,26 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+Revision 2 — incorporates the 2026-09-01 three-lens plan review (correctness, regression, simplicity).
+
 **Goal:** Make `/app` mirror a Windows 98 desktop 1:1 (marquee selection, draggable icons, four context-menu targets, Display Properties) plus zoom-trace window animations, boot cascade, Bonzi peek, hourglass cursors, a drag-perf fix, and instant terminal boot via a v86 saved state.
 
-**Architecture:** A new zustand desktop store (selection, icon positions, appearance) beside the existing window store; one reusable retro context-menu primitive; the landing cascade's stepped-outline math extracted into a shared lib and driven by a rAF runner for window zoom traces; the terminal restores a committed compressed v86 state with cold boot as fallback.
+**Architecture:** A new zustand desktop store (selection, icon positions, appearance) beside the existing window store; one reusable retro context-menu primitive; the landing cascade's stepped-outline math extracted into a shared lib and driven by a rAF runner for window zoom traces; the terminal restores a committed zstd v86 state on the same instance that cold-boots on any failure.
 
-**Tech Stack:** Next.js 16 App Router, React 19, zustand 5, retro.css tokens, v86 0.5.451 (pinned), Playwright, vitest (node env — DOM-injectable modules only).
+**Tech Stack:** Next.js 16 App Router, React 19, zustand 5, retro.css tokens, v86 0.5.451 (pinned), node zlib zstd (node 24), Playwright, vitest (node env — DOM-injectable modules only).
 
 **Spec:** `docs/superpowers/specs/2026-09-01-win98-desktop-fidelity-design.md`
 
 ## Global Constraints
 
-- Everything from the previous plan's Global Constraints carries over verbatim (reduced-motion policy, gsap-loader rule — though this round needs NO gsap: use rAF + CSS steps, node-env vitest, commit-message style, single-line comments, per-task gates typecheck/lint/vitest, e2e port guard via `E2E_PORT`, dev server at `http://localhost:4110`, retro tokens/no-radius/stepped easings, `safeSessionStorage` for sessionStorage, localStorage access ONLY through a guarded accessor).
+- Everything from the previous plan's Global Constraints carries over verbatim (reduced-motion policy, node-env vitest, commit-message style, single-line comments, per-task gates typecheck/lint/vitest, e2e via `E2E_PORT`, dev server at `http://localhost:4110`, retro tokens/no-radius/stepped easings, `safeSessionStorage`, localStorage ONLY through a guarded accessor). This round needs NO gsap: rAF + CSS steps only.
 - Mobile (`useIsMobile()`, max-width 767px): every new pointer interaction is skipped; mobile rendering byte-identical to today.
-- New CSS classes are ALL defined in Task 2 (`src/styles/retro-app.css`); later tasks only consume them. No other task edits CSS files.
-- Right-click: call `preventDefault()` only where a retro menu opens; browser menu stays available elsewhere (e.g., inside window bodies, the xterm).
-- The `/app` desktop is rendered inside `.retro` — fixed-position overlays (menus, traces, marquee) must be appended/rendered within it so tokens resolve (lesson from round 1).
+- New CSS classes are ALL defined in Task 2 (`src/styles/retro-app.css`) — the complete inventory is enumerated there; later tasks only consume. No other task edits CSS files.
+- Right-click: `preventDefault()` only where a retro menu opens; the desktop's own `onContextMenu` must guard `e.target === e.currentTarget` so right-clicks inside window bodies keep the native menu.
+- Fixed-position overlays (menus, traces, marquee) render/append inside `.retro` so tokens resolve.
+- Persistence NEVER loads at store/module creation — defaults first, rehydrate in a client effect (SSR hydration must match; the repo patterns are use-is-mobile's useSyncExternalStore and the Clock's suppressHydrationWarning).
 - StrictMode-safe effects; no `git add -A`; stage listed files only; index.lock retry.
+- Zustand collections are replaced immutably (new `Set`/objects per update) — reference equality drives re-renders.
 
 ---
 
@@ -25,8 +29,8 @@
 
 | Wave | Tasks | Rationale |
 |---|---|---|
-| 1 | T1 (stores + Display Properties), T2 (outline lib + retro menu + CSS), T3 (terminal snapshot), T4 (drag perf) | Disjoint: T1 = stores/icons/display-window/page defs + 1-line desktop.tsx icon-list swap; T2 = lib/retro/css + cascade-timeline import swap; T3 = scripts/terminal + create-vm + inner; T4 = desktop-window.tsx only |
-| 2 | T5 (desktop surface: marquee/selection/icon drag/menus), T6 (window+taskbar chrome: system menu, traces, taskbar menus, start-menu slide), T7 (app boot + Bonzi peek + hourglass) | T5: desktop.tsx/desktop-icon.tsx/new files; T6: desktop-window.tsx/app-taskbar.tsx/retro/taskbar.tsx; T7: (app)/layout.tsx/new components/(app)/app/page.tsx/terminal-window-inner.tsx — disjoint sets |
+| 1 | T1 (stores + Display Properties), T2 (outline lib + retro menu + ALL CSS), T3 (terminal snapshot), T4 (drag perf) | Disjoint: T1 = stores/icons.tsx/display-window/page defs + 1-line desktop.tsx swap; T2 = lib/retro-menu/css + cascade-timeline import swap; T3 = scripts/terminal + create-vm + inner; T4 = desktop-window.tsx only |
+| 2 | T5 (desktop surface), T6 (window+taskbar chrome), T7 (app boot + peek + hourglass + idle capture fix) | Disjoint: T5 = desktop.tsx/desktop-icon.tsx/new files; T6 = desktop-window.tsx/app-taskbar.tsx/retro/taskbar.tsx; T7 = (app)/layout.tsx/new comps/(app)/app/page.tsx/terminal-window-inner.tsx/easter/idle.ts. T6/T7 icon-rect-dependent manual checks re-run in T8 if T5 lands after them. |
 | 3 | T8 (e2e + full verification + `npm run build`) | Needs everything |
 
 ---
@@ -39,135 +43,156 @@
 - Modify: `src/components/desktop/icons.tsx` (DisplayIcon + label/icon entries)
 - Create: `src/components/windows/display-properties-window.tsx`
 - Modify: `src/app/(app)/app/page.tsx` (defs entry)
-- Modify: `src/components/desktop/desktop.tsx` (ONE line: icon loop iterates `DESKTOP_ICON_IDS` instead of `WINDOW_IDS` — nothing else; T5 owns the rest of this file next wave)
+- Modify: `src/components/desktop/desktop.tsx` (ONE line: icon loop iterates `DESKTOP_ICON_IDS` — nothing else; T5 owns the rest next wave)
 
 **Interfaces (later tasks compile against these):**
 ```ts
 // desktop-store.ts
 export interface IconPos { x: number; y: number }
-export const GRID = { x: 8, y: 8, stepY: 76 }; // default column geometry, matches today's layout
-export const DESKTOP_ICON_IDS: WindowId[]; // the six original ids — excludes "display"
+export const GRID = { x: 8, y: 8, stepY: 76 }; // uniform column; APPROXIMATES today's flex layout (which
+// had variable per-icon heights) — implementer eyeballs the pitch, no pixel-equality claim
+export const DESKTOP_ICON_IDS: WindowId[]; // the SEVEN current ids (games, import, review, practice, play, profile, terminal) — excludes "display"
 export const WIN98_COLORS: { name: string; value: string }[]; // teal #008080 first, then 5-6 Win98 palette colors
 export type DesktopPattern = "none" | "checks" | "weave";
 interface DesktopStore {
-  selected: Set<WindowId>;
+  selected: ReadonlySet<WindowId>;
   positions: Partial<Record<WindowId, IconPos>>; // absent = default grid slot
   appearance: { color: string; pattern: DesktopPattern };
-  select: (id: WindowId, opts?: { toggle?: boolean }) => void; // toggle = ctrl/cmd-click semantics
-  setSelection: (ids: WindowId[]) => void; // marquee result, replaces
+  hydrated: boolean; // false until rehydrate() ran (SSR/first client render use defaults)
+  select: (id: WindowId, opts?: { toggle?: boolean }) => void;
+  setSelection: (ids: WindowId[]) => void;
   clearSelection: () => void;
   moveIcon: (id: WindowId, pos: IconPos) => void;
-  lineUpIcons: () => void; // clears positions back to grid
+  lineUpIcons: () => void;
   setAppearance: (a: { color: string; pattern: DesktopPattern }) => void;
+  rehydrate: () => void; // loads positions+appearance from safeLocalStorage; called from a client effect, NEVER at module scope
   reset: () => void;
 }
 export const useDesktopStore: …;
-export function defaultIconPos(index: number): IconPos; // grid slot for the i-th icon
-export function safeLocalStorage(): Storage | null; // same try/catch shape as safeSessionStorage
-// persistence: positions + appearance load once at store creation (guarded), save on change
-// (subscribe in the store module, debounced ~250ms); selection is never persisted.
+export function defaultIconPos(index: number): IconPos;
+export function desktopBackgroundStyle(a: { color: string; pattern: DesktopPattern }): CSSProperties;
+export function safeLocalStorage(): Storage | null;
+// RULES: every selection update creates a NEW Set (tested via reference inequality).
+// Persistence: positions + appearance saved SYNCHRONOUSLY on each mutating action (no debounce —
+// each is a discrete user action); last-writer-wins across tabs (one-line comment).
+// Build as createDesktopStore(storage: Storage | null) factory + singleton export, so node-env
+// tests inject a fake storage and never touch window.
 ```
 ```ts
 // window-store.ts additions
 export type WindowId = … | "display";
-// WINDOW_IDS gains "display" (order: last); WINDOW_SIZES.display = { w: 404, h: 420 };
-cascadeAll: () => void;   // repositions all open windows in the classic 24px stair, focuses top
-tileAll: () => void;      // arranges open windows in a viewport grid (positions only, sizes fixed)
+// WINDOW_IDS gains "display" (last); WINDOW_SIZES.display = { w: 404, h: 420 };
+cascadeAll: () => void;   // 24px stair over open windows, focuses top
+tileAll: (viewport?: { w: number; h: number }) => void; // grid of positions, sizes fixed; viewport
+// injectable (defaults to window dims via a guarded helper) so node-env tests pass one explicitly
 minimizeAll: () => void;
 ```
-- `display-properties-window.tsx`: default export `<DisplayPropertiesWindow />`; local draft state; swatch grid + pattern picker + a small preview div; OK = apply+close, Apply = apply, Cancel = close without applying (uses `useWindowStore.getState().close("display")`).
-- `icons.tsx`: `ICON_LABELS.display = "Display"`, `WINDOW_ICONS.display` = monitor pixel icon (16×16 rect grid, matches neighbors).
-- The desktop surface reads `appearance` and renders `backgroundColor: color` plus a `backgroundImage` for the two patterns (tiny inline data-URI or repeating-gradient — patterns are generated, no assets). Wiring the desktop div itself happens in T5; THIS task only ships the store + window, so build the preview in the window with the same helper: export `desktopBackgroundStyle(appearance): CSSProperties` from desktop-store.ts.
+- `display-properties-window.tsx`: default export; local draft state; swatches + pattern picker + preview using `desktopBackgroundStyle`; OK = apply+close, Apply = apply, Cancel = close.
+- `icons.tsx`: `ICON_LABELS.display = "Display"`, `WINDOW_ICONS.display` = monitor pixel icon (16×16 rect grid).
 
 **Steps (condensed TDD):**
-- [ ] 1. Failing tests: desktop-store (selection semantics incl. toggle, marquee replace, clear; moveIcon/lineUp; appearance set; persistence via injected fake storage — export a `createDesktopStore(storage: Storage | null)` factory used by the singleton so tests never touch window; defaultIconPos math), window-store (`"display"` present, sizes, cascadeAll/tileAll/minimizeAll reposition/focus semantics with 2–3 windows open, `WINDOW_IDS.length === Object.keys(WINDOW_SIZES).length`).
-- [ ] 2. Implement both stores; run green.
-- [ ] 3. DisplayIcon + entries; DisplayPropertiesWindow; defs entry in page.tsx; the one-line `DESKTOP_ICON_IDS` swap in desktop.tsx (icon column renders exactly the six original icons).
-- [ ] 4. Manual: open via `useWindowStore.getState().open("display")` in the console at :4110/app — window renders, Apply changes the PREVIEW (desktop surface wiring lands in T5), taskbar button appears, no desktop icon.
+- [ ] 1. Failing tests: selection semantics (single, toggle, marquee replace, clear, NEW-Set reference inequality on every update), moveIcon/lineUp, appearance, rehydrate-from-fake-storage (positions+appearance restored, `hydrated` flips; empty storage = defaults), synchronous persistence writes observed on the fake storage, defaultIconPos math; window-store: "display" present, sizes, cascadeAll/tileAll (explicit viewport)/minimizeAll semantics with 2-3 open windows, length invariant already present stays green.
+- [ ] 2. Implement; green.
+- [ ] 3. DisplayIcon + entries; DisplayPropertiesWindow; defs entry; the one-line `DESKTOP_ICON_IDS` swap (icon column renders exactly the SEVEN current icons, unchanged visually).
+- [ ] 4. Manual at :4110/app: `useWindowStore.getState().open("display")` from console — window renders, Apply changes the preview, taskbar button appears, no desktop icon, no hydration warnings in console.
 - [ ] 5. Gates; commit `add desktop store and display window`.
 
 ---
 
-### Task 2: Outline-trace lib, retro menu primitive, all new CSS
+### Task 2: Outline-trace lib, retro menu primitive, the COMPLETE CSS inventory
 
 **Files:**
 - Create: `src/lib/outline-trace.ts` + Test: `src/lib/outline-trace.test.ts`
-- Modify: `src/components/landing/cascade/cascade-timeline.ts` (import `outlineRect`/`Rect` from the lib, re-export for its existing consumers/tests — behavior identical, its tests stay green)
+- Modify: `src/components/landing/cascade/cascade-timeline.ts` (import `outlineRect`/`Rect`/`OUTLINE_STEPS` from the lib and re-export them — its tests and use-cascade-scroll stay byte-untouched)
 - Create: `src/components/retro/retro-menu.tsx`
-- Modify: `src/styles/retro-app.css` (ALL new classes)
+- Modify: `src/styles/retro-app.css`
 
 **Interfaces:**
 ```ts
-// outline-trace.ts — pure math + a DOM runner
+// outline-trace.ts
 export interface Rect { x: number; y: number; w: number; h: number }
 export const OUTLINE_STEPS = 8;
-export function outlineRect(from: Rect, to: Rect, t: number): Rect; // moved from cascade-timeline verbatim (same snapping)
+export function outlineRect(from: Rect, to: Rect, t: number): Rect; // moved verbatim from cascade-timeline
 export function runZoomTrace(opts: {
   from: Rect; to: Rect; parent: HTMLElement; durationMs?: number; // default 180
   className?: string; // default "zoom-trace"
   onDone?: () => void;
-}): () => void; // returns cancel; rAF-driven, appends one div, steps through OUTLINE_STEPS, removes itself
-// NO-OP under prefers-reduced-motion (checks prefersReducedMotion() itself and calls onDone immediately).
+}): () => void; // cancel fn; rAF-driven; NO-OP (immediate onDone) under prefersReducedMotion()
 ```
 ```ts
 // retro-menu.tsx
 export interface MenuItem { label: string; onSelect?: () => void; separator?: boolean; disabled?: boolean }
-export function RetroMenu(props: {
-  items: MenuItem[]; x: number; y: number; onClose: () => void;
-}): JSX.Element;
-// bevel-out .r-menu panel, fixed at (x,y) clamped to viewport (measure after mount, flip up/left near edges),
-// role="menu"/"menuitem", arrow-key navigation + Enter + Escape, closes on outside pointerdown and on scroll,
-// stepped slide-in via .r-menu--in (skipped under reduced motion), item hover/focus = blue bar.
-// Rendered by the caller INSIDE .retro (no portal to body — tokens are scoped).
-export function useContextMenu(): { menu: { x: number; y: number; key: string } | null; openAt: (e: React.MouseEvent, key: string) => void; close: () => void };
-// helper: preventDefault + stopPropagation, records position + which target key was hit
+export function RetroMenu(props: { items: MenuItem[]; x: number; y: number; onClose: () => void }): JSX.Element;
+// .r-menu panel, fixed, viewport-clamped (flip near edges), role=menu/menuitem, arrow keys + Enter,
+// Escape closes AND calls e.stopPropagation() (the desktop window's own Escape handler would
+// otherwise minimize the window as the menu closes), closes on outside pointerdown + scroll,
+// .r-menu--in stepped slide (skipped under reduced motion). Rendered by callers INSIDE .retro.
+export function useContextMenu(): {
+  menu: { x: number; y: number; key: string } | null;
+  openAt: (e: React.MouseEvent, key: string) => void; // preventDefault + stopPropagation; when
+  // clientX/Y are 0 (keyboard-synthesized contextmenu: Shift+F10/menu key) falls back to
+  // e.currentTarget.getBoundingClientRect() bottom-left
+  close: () => void;
+};
 ```
-- CSS added (all consumed later): `.r-menu` (face bg, bevel-out, min-width 160px, padding 2px), `.r-menu-item` (+ `[data-disabled]`), `.r-menu-sep`, `.r-menu--in` (steps(3) 90ms translateY), `.zoom-trace` (fixed, 2px solid `--r-dark`, dotted `--r-highlight` outline, z 60, pointer-events none), `.marquee` (fixed, 1px dotted `--r-highlight`, background rgba(0,0,128,0.18), z 5, pointer-events none), `.icon-flash` (steps(2) 120ms invert keyframes on the label), `.cursor-wait-all * { cursor: wait !important }` helper, icon blue-tint selection class `.icon-selected` (label bg `--r-title-a`; icon span gets a blue overlay via CSS mask-free technique: `filter: sepia(1) hue-rotate(190deg) saturate(3) brightness(0.9)` is NOT period — instead overlay a semi-transparent `--r-title-a` rectangle over the icon span via `.icon-selected .icon-art::after`; keep simple + reversible).
+
+**COMPLETE CSS inventory (every class any later task consumes — nothing else may add CSS):**
+- `.r-menu` (face bg, bevel-out, min-width 160px, padding 2px), `.r-menu-item` + `[data-disabled]`, `.r-menu-sep`, `.r-menu--in` (steps(3), 90ms, translateY 6px→0)
+- `.start-menu--in` (steps(4), 120ms, translateY 12px→0) — consumed by T6 for the Start menu
+- `.zoom-trace` (fixed, 2px solid `--r-dark`, 1px dotted `--r-highlight` outline, z-index 60, pointer-events none)
+- `.marquee` (fixed, 1px dotted `--r-highlight`, background rgba(0,0,128,0.18), z-index 5, pointer-events none)
+- `.icon-flash` (steps(2), 120ms, label invert keyframes) — the SAME 120ms is used by T5's double-click flash and Refresh gag
+- `.icon-art { position: relative }` and `.icon-selected .icon-art::after { position:absolute; inset:0; … }` — selection tint as a 2px checkerboard dither of `--r-title-a` (repeating-conic-gradient, the period-accurate Win98 treatment; a `color-mix` translucent fill is the fallback if the dither reads badly at 32px). `.icon-selected` also sets the label bg `--r-title-a` / white text. T5 puts class `icon-art` on the icon span.
+- `.taskbar-boot` (steps(4), 200ms, translateY 100%→0) — T7 applies to `[data-taskbar]`
+- `.boot-pop` (steps(3), ~180ms, scale 0.6→1 + opacity 0→1) — T7 staggers on `[data-desktop-icon]`
+- `.bonzi-peek--in` / `.bonzi-peek--out` (stepped translateY rise/drop for the peek sprite)
+- `body.cursor-progress, body.cursor-progress * { cursor: progress !important }` and `.cursor-wait-all, .cursor-wait-all * { cursor: wait !important }`
 
 **Steps:**
-- [ ] 1. Failing tests for `outlineRect` move (copy the cascade tests' semantics: snapping, exact endpoints) + `runZoomTrace` step math via an injectable `now`/raf? Keep the runner untested in node (DOM) — test only the pure parts; the runner gets a manual check in T6.
-- [ ] 2. Implement lib; swap cascade-timeline to import + re-export (`export { outlineRect, OUTLINE_STEPS, type Rect } from "@/lib/outline-trace"`); `npm test -- cascade-timeline` must stay green untouched.
-- [ ] 3. RetroMenu + useContextMenu + CSS; manual check with a scratch usage (not committed).
+- [ ] 1. Failing tests for outlineRect (same semantics as the cascade tests: snapping, exact endpoints); the DOM runner is NOT unit-tested (node env) — manual in T6.
+- [ ] 2. Implement lib; swap cascade-timeline to import + re-export; `npm test -- cascade-timeline` stays green with zero edits to that test file.
+- [ ] 3. RetroMenu + useContextMenu + the full CSS inventory.
 - [ ] 4. Gates; commit `add outline lib and retro menu`.
 
 ---
 
-### Task 3: Terminal instant boot (saved state)
+### Task 3: Terminal instant boot (saved state) — SINGLE-PATH design
+
+Review-verified v86 facts (v86 0.5.451; types at `node_modules/v86/v86.d.ts`, source `build/libv86.mjs`): `restore_state(ArrayBuffer)` detects zstd by MAGIC NUMBER and inflates internally — raw `.zst` bytes are accepted directly, no client decompression; it throws synchronously catchable errors on bad magic AND on version mismatch (free staleness guard). The constructor `initial_state` path restores inside async init with NO catchable surface — do NOT use it. Node 24 has `zlib.zstdCompressSync` — the script emits real `.zst`.
 
 **Files:**
 - Create: `scripts/terminal/save-state.mjs`
 - Modify: `scripts/terminal/build-image.sh` (final echo reminds to re-run save-state), `scripts/terminal/README.md`
-- Create (generated, committed): `public/terminal/state.bin.gz` (name may differ per findings below — record in README)
+- Create (generated, committed): `public/terminal/state.bin.zst` + `public/terminal/state.meta.json` (`{ fsJsonSha256, v86Version, createdAt }`)
 - Modify: `src/lib/terminal/create-vm.ts`, `src/components/windows/terminal-window-inner.tsx`
 
-**Decision tree the implementer must verify against `node_modules/v86/build/libv86.d.ts` + Readme (record findings in scripts/terminal/README.md):**
-1. Preferred: construct with the EXISTING config plus `initial_state: { url: "/terminal/state.bin.zst" }` if the pinned build auto-decompresses zstd state URLs (upstream demos do this — verify in libv86 source, search "zst").
-2. Else: fetch `/terminal/state.bin.gz` in create-vm, decompress via `DecompressionStream("gzip")`, pass buffer: `initial_state: { buffer }` if the option accepts buffers, else construct normally with `autostart: false` and call `emulator.restore_state(buffer)` on `emulator-ready`, then `emulator.run()`.
-3. Cold boot stays the fallback on ANY failure (fetch non-200, decompress throw, restore throw): log once, proceed with the current path unchanged.
+**The one runtime path (create-vm.ts):**
+1. Construct the emulator with the EXISTING config but `autostart: false`. In parallel, fetch `/terminal/state.meta.json` + `/terminal/state.bin.zst`.
+2. Before restoring: compare `meta.fsJsonSha256` against a hash of the live `/terminal/fs.json` (fetch it — it is 120KB and already needed by v86; hash via `crypto.subtle.digest`). Mismatch → skip restore entirely (stale image).
+3. On `emulator-ready`: `try { await emulator.restore_state(zstBytes); restored = true } catch { /* log once */ }` then `emulator.run()` either way — success resumes at the prompt; any failure (fetch non-200, magic, version mismatch, skipped-stale) runs the SAME instance as a cold boot. No second VM, no reconstruction.
+4. Abort correctness: the existing `signal?.throwIfAborted()` before construction stays; state-fetch rejection caused by teardown must NOT be treated as "fall back and boot" — check `signal?.aborted` before `run()`.
+5. After a successful restore, send a bare `"\n"` so the prompt echoes (the restored guest prints nothing unprompted — without this the 60s silence watchdog in terminal-window-inner would fatal a healthy session). Belt: if no `C:\>` appears within 5s of that newline, destroy and recreate cold (respecting the abort signal).
+6. `TerminalVM` gains `restored: boolean` (or a `mode: "restored" | "cold"` resolved value) so the inner shows `Resuming MS-DOS…` vs the existing boot copy.
 
-**save-state.mjs:** serve `public/` on a local port (node http), launch Playwright chromium headless, a data:/temp HTML page loading `/v86/libv86.mjs` with the EXACT create-vm config (minus initial_state), wait for `C:\>` in accumulated serial output (10 min timeout — emulated boot under CI load), let the guest settle 3s, `await emulator.save_state()` → ArrayBuffer → gzip (node zlib, level 9) → write artifact; print raw + compressed sizes. HARD GATE: if the compressed artifact exceeds 60 MB, do NOT commit — report to team-lead instead (memory_size may need lowering to 64 MB for BOTH the snapshot and create-vm — they must match — and that change needs a fresh smoke boot).
-
-**terminal-window-inner.tsx:** while restoring show `Resuming MS-DOS…` instead of the boot line; on restored boot the prompt-detection/watchdog logic still applies (the restored guest prints nothing until a key — send a bare `\n` after restore so the prompt echoes and the watchdog clears). Cold-boot fallback keeps today's copy.
+**save-state.mjs:** serve `public/` (node http, ephemeral port); Playwright chromium headless; page loads `/v86/libv86.mjs` with the exact create-vm config (autostart true, no state); wait for `C:\>` in serial (10 min ceiling); settle 3s; `save_state()` → ArrayBuffer → `zlib.zstdCompressSync` → write `state.bin.zst` + meta (hash the fs.json it served). Print raw + compressed sizes. HARD GATE: compressed > 60 MB → do NOT commit; report to team-lead (contingency: lower memory_size to 64 MB in BOTH the script and create-vm — they must match — and re-run the full smoke matrix; keep 128 MB unless the gate trips).
 
 **Steps:**
-- [ ] 1. Verify the decision tree against the pinned v86; record findings.
-- [ ] 2. Write + run save-state.mjs; verify artifact size gate; commit artifact.
-- [ ] 3. Wire create-vm restore path + fallback; inner copy changes.
-- [ ] 4. Manual at :4110/app: open MS-DOS Prompt — measure time to `C:\>` (target ≤ 3s), run `ls /home/bonzi` + `bonzi`; kill the state file locally (rename) → cold boot still works end-to-end; restore file.
-- [ ] 5. README: new artifact row, regen instructions, "regenerate when image OR v86 pin changes" warning. Gates; commit `restore terminal from state`.
+- [ ] 1. save-state.mjs; run; verify gate; commit artifacts.
+- [ ] 2. create-vm single path + meta guard + abort handling + restored flag; inner copy + `Resuming MS-DOS…`.
+- [ ] 3. Manual at :4110/app: open MS-DOS Prompt — measure time to prompt (target ≤ 3s); `ls /home/bonzi` + `bonzi` work on the restored session; rename state.bin.zst locally → cold boot end-to-end unchanged → restore file; corrupt the meta hash → cold boot (stale path); StrictMode double-mount boots exactly one VM.
+- [ ] 4. README: artifact rows, regen instructions, "regenerate when the image OR the v86 pin changes", the single-path rationale. Gates; commit `restore terminal from state`.
 
 ---
 
 ### Task 4: Window drag performance
 
-**Files:**
-- Modify: `src/components/desktop/desktop-window.tsx`
+**Files:** `src/components/desktop/desktop-window.tsx` only.
 
-Today `clampedMove` writes the store per pointermove → every open window re-renders per frame. Change: during a title-bar drag, accumulate delta in a ref and write `transform: translate(x+dx, y+dy)` directly on the section element (rAF-batched); on `onEnd` (useDrag already supports it) commit ONCE via `move(id, finalX, finalY)` with the existing clamping, and clear the inline override so the store value takes over seamlessly. Keyboard nudges keep writing the store directly (they're discrete). Maximized/mobile unchanged.
+During a title-bar drag: accumulate delta in a ref, write `transform` directly on the section element rAF-batched (clamped with the SAME bounds as the commit so the visual never exceeds what release would snap to); on `onEnd` cancel any pending rAF FIRST (a queued write landing after commit would re-apply the drag transform), then commit ONCE via `move(id, x, y)` and clear the inline override (values identical → no jump). Keyboard nudges keep writing the store. Maximized/mobile unchanged.
 
 **Steps:**
-- [ ] 1. Implement; make sure the element's styled transform during drag and the store-driven transform after commit are the same value (no jump on release), including the clamp (clamp during drag too so the visual never exceeds bounds the commit would snap back from).
-- [ ] 2. Manual at :4110/app with Review open on a long analysis chart: drag — no content re-render jank (React DevTools highlight or console.count in ReviewWindow), no jump on release, clamps hold at edges.
+- [ ] 1. Implement.
+- [ ] 2. Manual at :4110/app with Review open on a long chart: drag = no per-frame re-render (React DevTools highlight or console.count in ReviewWindow), no jump on release, clamps hold, maximize-during-drag edge left sane (rAF cancelled).
 - [ ] 3. Gates; commit `commit window drag on release`.
 
 ---
@@ -178,86 +203,87 @@ Today `clampedMove` writes the store per pointermove → every open window re-re
 - Modify: `src/components/desktop/desktop.tsx`, `src/components/desktop/desktop-icon.tsx`
 - Create: `src/components/desktop/desktop-marquee.tsx`, `src/components/desktop/desktop-menus.tsx`
 
-**Consumes:** desktop-store (T1), RetroMenu/useContextMenu + CSS classes (T2), `desktopBackgroundStyle` (T1).
+**Consumes:** desktop-store (T1), RetroMenu/useContextMenu + CSS inventory (T2), `desktopBackgroundStyle` (T1).
 
 **Behavior contracts:**
-- Icons: absolutely positioned from `positions[id] ?? defaultIconPos(i)`; `data-desktop-icon={id}` on the root (T6/T7 read rects from this). Click → `select(id, { toggle: e.ctrlKey || e.metaKey })`; selected via store (`.icon-selected`); double-click → `.icon-flash` for 120ms then `open(id)` (immediately under reduced motion); drag = pointerdown + 4px threshold, moves via inline transform, commits `moveIcon` on release, suppresses the click/select that follows (a moved icon stays where dropped, selection unchanged).
-- Marquee: pointerdown on the bare desktop div (not an icon/window/taskbar) starts it (button 0 only, desktop only); renders `.marquee` div INSIDE the desktop container; on move, `setSelection` of every icon whose rect intersects; pointerup removes it; a sub-4px drag = plain click = `clearSelection()`.
-- Desktop right-click (`onContextMenu` on the desktop div): RetroMenu with Arrange Icons (`lineUpIcons` — alias), Line up Icons (`lineUpIcons`), Refresh (clearSelection + a 150ms `.icon-flash` on all icons — the gag), separator, Properties (`open("display")`).
-- Icon right-click: select it first (Win98 does), then menu: Open (`open(id)`), separator, Properties → a small `RetroDialog`-style popup rendered by desktop-menus.tsx (icon at 32px, label, "Type: BonziWare application", "Size: 4.09 MB", "Installed: 4/23/1999") with an OK button.
-- Desktop background div: apply `desktopBackgroundStyle(appearance)` (this makes T1's Display Properties actually change the desktop).
-- All of it `!isMobile` only.
+- Icons stay `<button>`s (e2e queries `getByRole("button", { name: … })`), absolutely positioned from `positions[id] ?? defaultIconPos(i)`, `data-desktop-icon={id}` on the root, class `icon-art` on the icon span.
+- Selection: click → `select(id, { toggle: e.ctrlKey || e.metaKey })`; selected renders `.icon-selected`. KEYBOARD focus only (`:focus-visible` or modality tracking) also selects — pointer-down focus must NOT trigger the focus-select (a drag would otherwise change selection at press).
+- Double-click: `.icon-flash` 120ms then `open(id)` (immediate under reduced motion). Drag: 4px threshold; inline transform while dragging; commit `moveIcon` on release; a completed drag suppresses the following click-select AND the dblclick-open (browser dblclick tolerance can exceed 4px — the movedRef guards both).
+- Marquee: pointerdown (button 0, `e.target === e.currentTarget`) on the desktop div starts it; `.marquee` div rendered inside the desktop container; live `setSelection` by rect intersection with icon rects; sub-4px release = plain click = `clearSelection()`. Mount the desktop's `rehydrate()` effect here too (store hydration, T1 contract).
+- Desktop `onContextMenu`: guard `e.target === e.currentTarget` (right-clicks inside windows keep the native menu); menu: Arrange Icons (`lineUpIcons`), Line up Icons (`lineUpIcons`), Refresh (clearSelection + `.icon-flash` on all icons, 120ms), separator, Properties (`open("display")`).
+- Icon `onContextMenu`: select it first, then Open / separator / Properties (small dialog: 32px icon, label, "Type: BonziWare application", "Size: 4.09 MB", "Installed: 4/23/1999", OK).
+- Desktop background div gets `desktopBackgroundStyle(appearance)` (only after `hydrated` — pre-hydration renders the default so SSR matches; this is what makes Display Properties real).
+- Everything `!isMobile`.
 
 **Steps:**
-- [ ] 1. Rework desktop-icon.tsx: controlled selection from the store (drop local state/blur), absolute positioning, drag, flash, data attr. Keep keyboard behavior (Enter opens; add focus → select).
-- [ ] 2. Marquee component + desktop wiring + background style + context menus.
-- [ ] 3. Manual matrix at :4110/app (Playwright script): marquee sweep selects 3 icons live; ctrl+click adds/removes; empty click clears; drag icon → persists across reload; Line up snaps back; Refresh flickers; right-click menus all open clamped in-viewport and close on Escape/outside; double-click flashes then opens; icon drag does not open or re-select; native context menu still available inside an open window body. Reduced motion: no flash/slide, everything functional. 375px: unchanged (no icons).
+- [ ] 1. Rework desktop-icon.tsx (controlled selection, positioning, drag, flash, data attr, keyboard-only focus-select). 2. Marquee + desktop wiring + background + menus + rehydrate effect.
+- [ ] 3. Manual matrix (Playwright at :4110/app): marquee sweeps select live; ctrl+click toggles; empty click clears; icon drag persists across reload WITH ZERO console errors (hydration); a 5px sloppy double-click does not both move and open; Line up snaps; Refresh flickers; both menus open clamped, Escape closes menu WITHOUT minimizing anything; native menu inside window bodies intact; double-click flash→open; reduced motion functional without flash/slide; 375px unchanged.
 - [ ] 4. Gates; commit `add marquee selection and icon drag`.
 
 ---
 
 ### Task 6: Window & taskbar chrome — system menu, zoom traces, taskbar menus, start-menu slide
 
-**Files:**
-- Modify: `src/components/desktop/desktop-window.tsx`, `src/components/desktop/app-taskbar.tsx`, `src/components/retro/taskbar.tsx`
+**Files:** `src/components/desktop/desktop-window.tsx`, `src/components/desktop/app-taskbar.tsx`, `src/components/retro/taskbar.tsx`
 
-**Consumes:** RetroMenu/useContextMenu, `runZoomTrace` (T2), window-store actions (T1), `[data-desktop-icon]` attr (T5).
+**Consumes:** RetroMenu/useContextMenu, `runZoomTrace` (T2), window-store actions (T1), `[data-desktop-icon]` (T5 — if not yet merged, use the taskbar-rect fallback during development and re-verify icon-origin traces in T8).
 
 **Behavior contracts:**
 - `data-taskbar-button={id}` on each app-taskbar window button.
-- Zoom traces (desktop only, reduced-motion no-op is inside runZoomTrace): in DesktopWindow, watch transitions with prev-refs — on open-mount: trace from the icon rect (`[data-desktop-icon="${id}"]`, fallback: taskbar rect) to the window rect; minimized false→true: window → its `[data-taskbar-button]` rect; true→false: reverse; maximize toggle: window ↔ viewport rect. Parent for the trace div: the desktop container (`section.closest(".retro")` fallback). Traces are fire-and-forget (~180ms) and never delay the actual state change (the window appears/disappears immediately, matching Win98 — the trace is decoration ON TOP).
-- Title-bar right-click → system menu: Minimize, Maximize/Restore (label per state, hidden on mobile), separator, Close.
-- Taskbar-button right-click → Restore/Minimize (per state), Close. Taskbar-bar right-click (not on a button/start/clock) → Cascade Windows, Tile Windows, Minimize All Windows, separator, Properties (`open("display")`). App taskbar only — the marketing taskbar gets none of this.
-- Start-menu slide: in retro/taskbar.tsx, the menu nav gets `.r-menu--in`-style stepped slide-up on open (reuse the class or a dedicated `.start-menu--in`; both taskbars inherit; skipped under reduced motion).
-- system/taskbar menus render inside `.retro`.
+- Zoom traces (desktop only; reduced-motion no-op lives inside runZoomTrace): maintain a `lastVisibleRect` ref updated via layout effect on every commit WHILE the window is visible — the post-commit DOM is useless for minimize (already display:none → 0×0 rect) and maximize (already resized). Transitions via prev-refs: open-mount → trace `[data-desktop-icon="${id}"]` rect (fallback: taskbar button rect; deep-link `?view=play-bonzi` may trace from the fallback — acceptable, note it) → window rect; minimized false→true → lastVisibleRect → `[data-taskbar-button]` rect; true→false → reverse; maximize toggle → lastVisibleRect ↔ viewport. Trace parent: the desktop container (fallback `closest(".retro")`). Traces are decoration ON TOP — state changes stay instant.
+- Title-bar `onContextMenu` → system menu: Minimize, Maximize/Restore (hidden on mobile), separator, Close.
+- Taskbar-button `onContextMenu` → Restore/Minimize (per state), Close. Taskbar BAR: add an optional `onBarContextMenu?: (e: React.MouseEvent) => void` prop to `Taskbar` (retro/taskbar.tsx root div; default undefined so the marketing taskbar is untouched); AppTaskbar passes a handler (guard: not on a button/start/menu) → Cascade Windows, Tile Windows, Minimize All Windows, separator, Properties (`open("display")`).
+- Start-menu slide: apply `.start-menu--in` (T2, 120ms) to the menu nav on open in retro/taskbar.tsx — both taskbars inherit; Escape/focus behavior untouched (landing e2e guards it).
 
 **Steps:**
-- [ ] 1. Traces + prev-ref transition detection (StrictMode-safe: refs seeded on first commit, no trace on initial mount EXCEPT the open-trace which is exactly the initial mount — seed a module-level "app just booted" guard? No: open-trace on mount is wanted every time a window opens; suppress only for windows already open on hydration — there are none, windows open post-mount. Verify the deep-link `?view=play-bonzi` path: window opens in the first effect; icon rect exists; acceptable to trace or skip via a `performance.now() < bootMs` guard — implementer's call, note it).
-- [ ] 2. Menus (system + taskbar) + data attrs.
-- [ ] 3. Start-menu slide in retro/taskbar.tsx (marketing regression check: landing start menu still opens/closes with Escape — the existing e2e covers it).
-- [ ] 4. Manual matrix: open from icon → trace runs icon→window; minimize → trace into the exact button; restore ← back; maximize trace; all three context menus; cascade/tile/minimize-all reposition correctly with 3 windows open; reduced motion: no traces/slide, menus fine; mobile: nothing new.
+- [ ] 1. lastVisibleRect + transition detection + traces (StrictMode-safe; no spurious trace on hydration).
+- [ ] 2. System + taskbar menus + data attrs + Taskbar prop.
+- [ ] 3. Start-menu slide; run landing e2e start-menu test if port free, else note.
+- [ ] 4. Manual matrix: icon→window trace on open; minimize traces into the exact button; restore back; maximize trace; menus correct per state; cascade/tile/minimize-all with 3 windows; Escape in system menu closes menu only (window NOT minimized); reduced motion = no traces/slide; mobile unchanged.
 - [ ] 5. Gates; commit `add zoom traces and system menus`.
 
 ---
 
-### Task 7: App boot cascade, Bonzi peek, hourglass cursors
+### Task 7: App boot cascade, Bonzi peek, hourglass cursors, idle-capture fix
 
 **Files:**
 - Create: `src/components/desktop/app-boot.tsx`, `src/components/desktop/bonzi-peek.tsx`
-- Modify: `src/app/(app)/layout.tsx` (mount both), `src/app/(app)/app/page.tsx` (analysis cursor), `src/components/windows/terminal-window-inner.tsx` (boot cursor)
-
-**Consumes:** `createIdleWatcher` (existing easter lib), `safeSessionStorage` + flag helpers (existing), `[data-taskbar]`, `[data-desktop-icon]` attrs.
+- Modify: `src/app/(app)/layout.tsx` (mount both inside the retro wrapper), `src/app/(app)/app/page.tsx` (analysis cursor), `src/components/windows/terminal-window-inner.tsx` (boot cursor), `src/components/landing/easter/idle.ts` (+ its test), `src/components/landing/easter/boot-flag.ts` (+ its test)
 
 **Behavior contracts:**
-- App boot: session flag `cbb-app-booted` (reuse boot-flag helpers with a second key — generalize `shouldBoot(storage, key)`? boot-flag helpers are single-key; add optional key param defaulting to BOOT_FLAG, existing callers untouched). Runs only with motion + desktop + flag unset: rAF/CSS-driven (no gsap): add a class to `[data-taskbar]` (translateY slide, steps(4), 200ms) and stagger `.boot-pop` on each `[data-desktop-icon]` (60ms apart, steps(3) scale/opacity pop). Elements are VISIBLE by default — the component adds hidden state only when it actually runs (no pre-paint gate needed; a one-frame flash is acceptable here per spec §5d "additive"). Any pointerdown/keydown/wheel/scroll fast-forwards (remove classes). Total ≤ 700ms.
-- Bonzi peek: desktop + motion only; idle watcher 180s; on idle, render a fixed img (`/bonzi/peek.gif`, ~100px) rising from the bottom-right corner just above the taskbar (translateY steps in, holds 2.5s, steps out), then re-arm with a 180s floor; ANY watched input dismisses instantly; `aria-hidden`, pointer-events none, z 45 (under taskbar 50); never while `document.visibilityState === "hidden"`.
-- Hourglass: terminal-window-inner root gets `cursor: wait` style while `phase === "booting"` (or restoring); analysis: in (app)/app/page.tsx an effect toggles `document.body.classList` `cursor-progress` (define in T2's CSS: `body.cursor-progress, body.cursor-progress * { cursor: progress !important }`) while `isAnalyzing` — cleared on unmount.
-- (app)/layout.tsx: read it first; mount `<AppBoot />` + `<BonziPeek />` inside the retro wrapper.
+- boot-flag: add optional key param (`shouldBoot(storage, key = BOOT_FLAG)` etc.) — existing callers untouched; new key `cbb-app-booted`.
+- App boot (desktop + motion + flag unset): apply `.taskbar-boot` to `[data-taskbar]` and stagger `.boot-pop` on `[data-desktop-icon]` nodes (60ms apart), total ≤ 700ms; elements visible by default (truth note: the pre-hydration paint shows the final state for potentially hundreds of ms before the animation runs — accepted by spec §5d as the additive trade-off). Fast-forward on `pointerup | keydown | wheel | scroll` (POINTERUP, not down — the landing learned this the hard way: a down-skip moves elements mid-click and eats the click). StrictMode: module-level ran-guard for the double effect; the session flag is written at completion/fast-forward, not at start.
+- Bonzi peek (desktop + motion): `createIdleWatcher(180_000)`; on idle, fixed `peek.gif` (~100px) bottom-right just above the taskbar, `.bonzi-peek--in`, hold 2.5s, `.bonzi-peek--out`; any watched input dismisses instantly; re-arm with a 180s floor; `aria-hidden`, pointer-events none, z-45.
+- **idle.ts fix (required for the peek):** register the idle listeners with `capture: true` — xterm's textarea cancels keydown before it bubbles (verified in xterm source), so a user typing in the DOS prompt would count as idle; capture-phase listeners run first. Landing screensaver inherits the fix harmlessly. Update the idle test's fake-target expectations if the options object changes shape.
+- Hourglass: terminal-window-inner root gets the `.cursor-wait-all` CLASS while phase is booting/restoring (inline cursor style does not cascade past xterm's own cursor rules); analysis: effect in (app)/app/page.tsx toggles `body.cursor-progress` while `isAnalyzing`, cleared on unmount.
 
 **Steps:**
-- [ ] 1. Generalize boot-flag key param (+ test line); app-boot + CSS-class choreography; fast-forward; session-once.
-- [ ] 2. Bonzi peek with idle watcher (inject nothing — component code, not unit-tested; keep logic thin).
-- [ ] 3. Hourglass wiring both places.
-- [ ] 4. Manual: fresh session → taskbar slides, icons pop staggered once; reload → nothing; input mid-boot fast-forwards; idle 5s (temporarily lower, restore 180s before commit — verify the committed value) → Bonzi peeks and any input dismisses; terminal shows wait cursor while booting, normal at prompt; analysis run shows progress cursor. Reduced motion: no boot/peek. Mobile: no boot/peek.
+- [ ] 1. boot-flag key param (+ test); idle capture fix (+ test); app-boot choreography + fast-forward + session-once.
+- [ ] 2. Bonzi peek. 3. Hourglass both places.
+- [ ] 4. Manual: fresh session boots once (reload = nothing; input mid-boot fast-forwards on release without eating the click); idle 5s (temporarily lowered — RESTORE 180000 and verify the committed value) → peek, any input dismisses, typing inside the xterm PREVENTS the peek; wait-cursor during terminal boot, normal at prompt; progress cursor during analysis; reduced motion/mobile: none of it.
 - [ ] 5. Gates; commit `add app boot and bonzi peek`.
 
 ---
 
 ### Task 8: E2E + full verification
 
-**Files:**
-- Modify: `e2e/desktop.spec.ts` (+ `e2e/landing.spec.ts` only if a regression fix needs it)
+**Files:** `e2e/desktop.spec.ts` (+ `e2e/landing.spec.ts` only if a regression fix requires it)
 
 **Steps:**
-- [ ] 1. New tests (desktop-only viewport 1280×720 default): marquee drag on empty desktop selects two icons (assert `.icon-selected` count); ctrl+click toggles; right-click desktop shows the menu and Escape closes it; Properties opens the Display window and Apply changes the desktop background color (assert computed style); icon drag persists across reload (localStorage); taskbar right-click → Minimize All minimizes open windows; title-bar right-click → Close closes; MS-DOS Prompt reaches `C:\>` in ≤ 8s (instant-boot path; keep a generous ceiling for CI noise — cold boot was 15-30s so this still proves the state restored).
-- [ ] 2. Existing desktop tests must stay green (icon single/double click semantics changed subtly — update ONLY if behavior legitimately changed, never weaken).
-- [ ] 3. Full gates + full e2e (worktree trick if the repo's `.next` is dev-locked) + `npm run build` LAST + a prod-server spot check of marquee + traces + instant boot.
-- [ ] 4. Commit `cover desktop fidelity e2e`.
+- [ ] 1. FIRST: make existing desktop tests immune to the new boot cascade — seed `cbb-app-booted` via `page.addInitScript` in the shared setup/goto helper (pattern: landing.spec.ts's latch), keeping ONE dedicated boot test that runs without the seed and latches the animation classes.
+- [ ] 2. New tests: marquee drag selects two icons (`.icon-selected` count); ctrl+click toggles; desktop right-click menu opens, Escape closes it AND no window minimized; Properties → Display window → Apply changes the desktop background (computed style); icon drag persists across reload with ZERO console errors; taskbar right-click → Minimize All; title-bar right-click → Close; instant boot: the boot notice ("Starting/Resuming MS-DOS…") disappears within 8s (xterm renders to canvas — never assert on terminal text).
+- [ ] 3. Existing tests: update ONLY where behavior legitimately changed (icons are absolutely positioned now; single-click select semantics via store) — never weaken; T6/T7 icon-origin traces re-verified here if their waves ran before T5 merged.
+- [ ] 4. Full gates + full e2e (worktree if `.next` is dev-locked) + `npm run build` LAST + prod spot-check (marquee, traces, instant boot, boot cascade).
+- [ ] 5. Commit `cover desktop fidelity e2e`.
 
 ---
 
+## Review triage record (2026-09-01)
+
+All three reviewer verdicts were REVISE; every blocking/important finding is folded in above: complete CSS inventory in T2 (+`.icon-art` contract, checkerboard dither); seven icons not six; lastVisibleRect for trace from-rects; rehydrate-in-effect (no hydration mismatch) + hydrated flag; immutable Set rule + test; injectable tileAll viewport; keyboard-only focus-select; Taskbar onBarContextMenu prop; app-boot StrictMode ran-guard + flag-at-completion + POINTERUP fast-forward + T8 seeding; desktop contextmenu target guard; RetroMenu Escape stopPropagation; T3 rewritten to the verified single-path zstd restore (constructor initial_state rejected as uncatchable; node zstdCompressSync; meta fs.json hash staleness guard; abort-aware fallback; restored flag; post-restore newline + 5s echo belt); sloppy-dblclick movedRef guard; idle capture:true fix; T4 rAF-cancel-before-commit; duration unification (flash 120ms everywhere, menu 90ms, start menu 120ms); GRID approximation truth; e2e asserts the boot notice not terminal text; keyboard contextmenu coord fallback; synchronous persistence (debounce dropped); multi-tab comment; TerminalVM restored signal; icons stay buttons.
+
 ## Self-review notes
 
-- Spec §1→T1/T5, §2→T1/T5, §3→T2/T5/T6, §4→T1(+T5 background apply), §5a→T2/T6, §5b→T6, §5c→T7, §5d→T7, §5e→T7, §5f→T5, §6 snapshot→T3, §6 drag→T4. No gaps.
-- Cross-task names: `DESKTOP_ICON_IDS`, `defaultIconPos`, `desktopBackgroundStyle`, `safeLocalStorage`, `useDesktopStore` API, `cascadeAll/tileAll/minimizeAll`, `RetroMenu`/`MenuItem`/`useContextMenu`, `outlineRect`/`runZoomTrace`/`Rect`, `data-desktop-icon`/`data-taskbar-button`, CSS class names — defined once (T1/T2), consumed later; checked consistent.
-- Known risks: v86 state-restore API surface (T3 decision tree + hard size gate), open-trace on deep-link mount (T6 step 1 note), marquee vs window pointerdown interplay (T5 targets the bare desktop div only), StrictMode double-run of app-boot (session flag is set on first run; second pass sees it — verify).
+- Spec §1→T1/T5, §2→T1/T5, §3→T2/T5/T6, §4→T1/T5, §5a→T2/T6, §5b→T2/T6, §5c→T7, §5d→T7, §5e→T7, §5f→T5, §6→T3/T4. Constraints (keyboard menus, native-menu preservation, mobile, reduced motion) each land in a named contract.
+- Cross-task names checked: store APIs, `RetroMenu`/`useContextMenu`, `runZoomTrace`/`outlineRect`, CSS inventory names, data attrs, boot-flag key param, `restored` flag.
+- Known risks: v86 state size gate (T3), deep-link open-trace fallback (T6), pre-hydration boot flash truthfully labeled (T7).
