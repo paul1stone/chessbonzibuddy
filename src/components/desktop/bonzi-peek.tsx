@@ -68,9 +68,10 @@ export function BonziPeek() {
     <div
       data-bonzi-peek
       aria-hidden="true"
-      // Under the taskbar's z-50, so the slide starts hidden behind the bar.
+      // Absolute inside the desktop, whose bottom edge is the taskbar top: its overflow-hidden
+      // clips the slide, so he rises from behind the bar instead of painting over it.
       className={cn(
-        "pointer-events-none fixed right-6 bottom-[var(--r-taskbar-h)] z-[45]",
+        "pointer-events-none absolute right-6 bottom-0 z-[45]",
         phase === "in" ? "bonzi-peek--in" : "bonzi-peek--out"
       )}
     >

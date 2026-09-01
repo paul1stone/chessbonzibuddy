@@ -12,6 +12,7 @@ import { DesktopMenus, DESKTOP_MENU, iconMenuKey } from "./desktop-menus";
 import { DesktopWindow } from "./desktop-window";
 import { ICON_LABELS, WINDOW_ICONS } from "./icons";
 import { AppTaskbar } from "./app-taskbar";
+import { BonziPeek } from "./bonzi-peek";
 
 export interface WindowDef {
   title: string;
@@ -99,6 +100,7 @@ export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
           {defs[id].render()}
         </DesktopWindow>
       ))}
+      <BonziPeek />
       <AppTaskbar />
     </div>
   );

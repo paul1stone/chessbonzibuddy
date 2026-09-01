@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { msSans, vt323 } from "@/fonts/retro-fonts";
 import { AppBoot } from "@/components/desktop/app-boot";
-import { BonziPeek } from "@/components/desktop/bonzi-peek";
 import { Toaster } from "@/components/ui/sonner";
 import { ViewParamSync } from "./app/view-param-sync";
 
@@ -16,7 +15,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </Suspense>
       {children}
       <AppBoot />
-      <BonziPeek />
       <Toaster
         position="bottom-right"
         offset={{ bottom: 38 }}
