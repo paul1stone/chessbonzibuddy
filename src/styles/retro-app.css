@@ -171,11 +171,41 @@ body.cursor-progress * { cursor: progress !important; }
 /* xterm brings its own scroller, so .r-scroll never reaches it; same containment rule. */
 .retro .xterm-viewport { overscroll-behavior: contain; }
 
-/* Sonner hardcodes border-radius:50% on the close button and never reads its own
-   --border-radius, so the round pill outlives the .retro reset. The extra attribute is
-   load-bearing: the library's own selector ties this one, and its sheet is injected later. */
+/* Sonner's close button is a round pill that overhangs the top-LEFT corner, i.e. straight
+   over the type glyph. Rebuilt as a Win98 close box in the top-right. Every selector here
+   carries the extra attribute on purpose: the library ties on specificity and its sheet is
+   injected after this file, so an exact match would lose. */
 .retro [data-sonner-toast][data-styled="true"] [data-close-button] {
+  --r-close-bevel:
+    inset -1px -1px var(--r-dark), inset 1px 1px var(--r-highlight),
+    inset -2px -2px var(--r-shadow), inset 2px 2px var(--r-face-light);
+  left: unset;
+  right: 0;
+  transform: none;
+  border: none;
   border-radius: 0;
+  background: var(--r-face);
+  color: var(--r-dark);
+  box-shadow: var(--r-close-bevel);
+}
+/* Win98 buttons don't light up under the cursor; beats sonner's own hover pair. */
+.retro [data-sonner-toast][data-styled="true"]:hover [data-close-button]:hover {
+  background: var(--r-face);
+}
+/* Sonner swaps the shadow for a modern glow on focus; keep the bevel and let retro.css's
+   dotted ring be the focus indicator. */
+.retro [data-sonner-toast][data-styled="true"] [data-close-button]:focus-visible {
+  box-shadow: var(--r-close-bevel);
+}
+.retro [data-sonner-toast][data-styled="true"] [data-close-button]:active {
+  box-shadow:
+    inset -1px -1px var(--r-highlight), inset 1px 1px var(--r-dark),
+    inset -2px -2px var(--r-face-light), inset 2px 2px var(--r-shadow);
+}
+/* The box overhangs the text column by 8px, and the toast's own padding is set inline from
+   sonner.tsx where CSS can't reach it — so the long error copy is kept clear here instead. */
+.retro [data-sonner-toast][data-styled="true"]:has([data-close-button]) [data-content] {
+  padding-right: 12px;
 }
 
 /* ---- The landing's last section: the desktop itself ---- */
