@@ -20,8 +20,10 @@ export const DEFAULT_MENU_ITEMS: TaskbarMenuItem[] = [
   { href: "https://github.com/paul1stone/chessbonzibuddy", label: "GitHub", external: true },
 ];
 
+// Stacked items grow their own box on a finger rather than wearing .hit-44: a 44px overlay on a
+// 27px item reaches into its neighbour, so the bottom third of every row opened the NEXT one.
 const MENU_ITEM_CLASS =
-  "hit-44 flex items-center gap-2 px-3 py-[6px] no-underline hover:bg-[var(--r-title-a)] hover:text-[var(--r-title-text)]";
+  "flex items-center gap-2 px-3 py-[6px] no-underline pointer-coarse:min-h-[44px] pointer-coarse:py-2 hover:bg-[var(--r-title-a)] hover:text-[var(--r-title-text)]";
 
 /**
  * The slot appears for every item of a menu that has any icons at all, so one iconless entry

@@ -6,13 +6,19 @@ import type { WindowId } from "@/stores/window-store";
  *
  * A leaf on purpose — type-only imports, nothing at runtime. The `(app)` layout pulls
  * ViewParamSync in, so anything reachable from here lands in the layout's chunk.
+ *
+ * Null-prototype so a hostile `?view=` can't reach an inherited member: on a plain literal
+ * `?view=toString` resolves Object.prototype.toString and hands `open()` a function.
  */
-export const VIEW_PARAM_WINDOWS: Record<string, WindowId> = {
-  "play-bonzi": "play",
-  games: "games",
-  import: "import",
-  review: "review",
-  practice: "practice",
-  profile: "profile",
-  terminal: "terminal",
-};
+export const VIEW_PARAM_WINDOWS: Record<string, WindowId> = Object.assign(
+  Object.create(null) as Record<string, WindowId>,
+  {
+    "play-bonzi": "play",
+    games: "games",
+    import: "import",
+    review: "review",
+    practice: "practice",
+    profile: "profile",
+    terminal: "terminal",
+  } satisfies Record<string, WindowId>
+);
