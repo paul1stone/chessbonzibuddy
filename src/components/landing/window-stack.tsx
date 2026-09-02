@@ -49,9 +49,16 @@ export function WindowStack({ items, managedQuery }: WindowStackProps) {
   }, []);
 
   return (
-    // 12 columns at lg+ so windows can step across the full width a column at a time
-    // instead of stacking into a pair of half-page columns.
-    <div className="grid gap-6 md:pr-[96px] lg:grid-cols-12 lg:gap-x-6 lg:gap-y-3 lg:pr-0">
+    // 12 columns at lg+ so windows can step across the full width a column at a time instead
+    // of stacking into a pair of half-page columns.
+    //
+    // The right padding is the scroll companion's lane. He is anchored to the viewport edge,
+    // and 112px is what keeps his 64px sprite (which takes pointer events, so an overlap
+    // would swallow clicks meant for a window) and his 160px bubble off the widest window.
+    // The clamp is a step function, not a gradient: it reads 0 below 1440px and 112px at or
+    // above it, which is exactly where bonzi-companion's WIDE_QUERY mounts him — narrower
+    // screens have no companion, so they keep the space for their windows.
+    <div className="grid gap-6 md:pr-[96px] lg:grid-cols-12 lg:gap-x-6 lg:gap-y-3 lg:pr-[clamp(0px,calc((100vw_-_1439px)*1000),112px)]">
       {items.map((item, i) => (
         <StackWindow
           key={item.key}

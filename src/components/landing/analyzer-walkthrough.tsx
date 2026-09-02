@@ -40,8 +40,10 @@ const ITEMS: {
     key: "practice",
     title: "Practice",
     // One column right of Import, and a column wider: the cascade steps down-and-right, and
-    // the sixth column keeps this window at its natural size so the section still fits the
-    // pinned viewport. Columns 2-7 clear Review's column 8 by the gutter at every lg width.
+    // the sixth column keeps this window at its natural size, which is what lets the section
+    // fit a pinned 900px viewport from ~1280px up (at 1024x768 the three windows are taller
+    // than the viewport regardless of placement). Columns 2-7 clear Review's column 8 by at
+    // least the gutter at every lg width.
     place: "lg:col-start-2 lg:col-span-6 lg:row-start-2 lg:self-start",
     copy: "Every mistake becomes a puzzle. Find the move you should have played.",
     demo: <PracticeDemo />,

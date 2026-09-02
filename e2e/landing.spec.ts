@@ -124,7 +124,8 @@ test.describe("landing page", () => {
   });
 
   test("has no horizontal overflow at 1024px", async ({ browser }) => {
-    // Guards the two-column walkthrough at iPad-landscape widths (lg grid tracks are narrower than 560px).
+    // Guards the walkthrough's 12-column grid at iPad-landscape widths, where the tracks are
+    // narrow enough that the windows fill them instead of capping at 560px.
     const context = await browser.newContext({ viewport: { width: 1024, height: 768 } });
     const page = await context.newPage();
     await page.goto("/");
