@@ -23,7 +23,8 @@ const READY_DEADLINE_MS = 60_000;
 // greeting would never be seen — it is replayed here instead. Mirrors
 // scripts/terminal/rootfs-extra/etc/motd (String.raw keeps the art's backslashes literal);
 // change one and change the other, then rebuild the image (see build-image.sh's header).
-const MOTD_BANNER = String.raw`
+// Exported so create-vm.test.ts can hold it against the file rather than trusting this comment.
+export const MOTD_BANNER = String.raw`
                         ___
                    .-'''   '''-.
                  .'   .-"""-.   '.
