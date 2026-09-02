@@ -1,0 +1,19 @@
+#!/bin/sh
+# The tour. busybox ash ships a "help" builtin that wins over PATH, so this is reached
+# through the help() function in /etc/profile.d/bonzi.sh.
+cat <<'HELP'
+
+BONZI BUDDY - things worth trying
+
+  bonzi                    wisdom, dispensed at random
+  cat chess_openings.txt   my opening repertoire, annotated
+  cat README.TXT           what you are actually running
+  cat /etc/motd            the greeting, again
+  uname -a                 proof
+  ps aux                   real processes, doing real nothing
+  rm -rf /                 I dare you. It grows back.
+
+Anything else: Bad command or file name.
+(A lie. It is Linux, so it will tell you the truth instead.)
+
+HELP

@@ -19,6 +19,33 @@ const STATE_DEADLINE_MS = 8000;
 // rather than pinning the snapshot and the emulator inside a promise that never returns.
 const READY_DEADLINE_MS = 60_000;
 
+// A restored guest resumes *past* the login that printed /etc/motd, so on the fast path the
+// greeting would never be seen — it is replayed here instead. Mirrors
+// scripts/terminal/rootfs-extra/etc/motd (String.raw keeps the art's backslashes literal);
+// change one and change the other, then rebuild the image (see build-image.sh's header).
+const MOTD_BANNER = String.raw`
+                        ___
+                   .-'''   '''-.
+                 .'   .-"""-.   '.
+                /    /  o   o \    \
+               |    |    ___   |    |
+               |    |   \___/  |    |
+                \    '.       .'    /
+                 '.    '-...-'    .'
+                   '-._________.-'
+                  /               \
+                 |   B O N Z I     |
+                  \               /
+                   '-.._______..-'
+
+    BonziOS 1.0 (definitely MS-DOS)
+    Type "help" for things worth trying. Type "bonzi" for wisdom.
+    Everything else: Bad command or file name.
+
+`
+  // The serial console emits CRLF; a bare LF would staircase the art across the xterm.
+  .replaceAll("\n", "\r\n");
+
 const STATE_URL = "/terminal/state.bin.zst";
 const STATE_META_URL = "/terminal/state.meta.json";
 const FS_JSON_URL = "/terminal/fs.json";
@@ -156,6 +183,13 @@ export async function createVM({
     if (frame === 0) frame = requestAnimationFrame(flush);
   });
 
+  // Client-written output shares that buffer, so text queued before the guest is poked always
+  // reaches the terminal ahead of the prompt the poke echoes back.
+  const write = (text: string) => {
+    pending.push(...new TextEncoder().encode(text));
+    if (frame === 0) frame = requestAnimationFrame(flush);
+  };
+
   // One machine, one path: restore if there is something valid to restore, then run. Every
   // failure (missing file, stale image, bad magic, version mismatch) leaves a cold boot.
   const restored = (async () => {
@@ -185,6 +219,9 @@ export async function createVM({
       // Spent only once a restored machine actually started, so an aborted StrictMode
       // double-mount does not cost the surviving one its restore.
       restoreSpent = true;
+      // The greeting the guest printed before the snapshot went to a terminal that no longer
+      // exists, so replay it — queued first, so it lands above the prompt rather than racing it.
+      write(MOTD_BANNER);
       // The restored guest is parked at a prompt it printed before the snapshot, so it says
       // nothing until poked — and an unpoked session looks identical to a dead one.
       emulator.serial0_send("\n");

@@ -2,6 +2,12 @@
 # Builds the Alpine 9p rootfs that public/terminal/ serves to the in-browser v86 VM.
 # Adapted from copy/v86 tools/docker/alpine/build.sh @ 180830d539dcc87db1a191febf6c914f516d102f.
 # Outputs are committed; rerun this only when the Dockerfile or rootfs-extra/ changes.
+#
+# Regen contract: rootfs-extra/etc/motd is mirrored as MOTD_BANNER in
+# src/lib/terminal/create-vm.ts (the restored path replays it client-side, since a snapshot
+# resumes past the login that printed it) — edit the two together. Then re-run save-state.mjs
+# and commit fs.json + rootfs-flat/ + state.bin.zst + state.meta.json in ONE commit: the meta
+# pins the fs.json hash, so a split commit makes every visitor cold boot.
 set -euo pipefail
 
 cd "$(dirname "$0")"

@@ -16,6 +16,7 @@ So go ahead and break things.
 
 Things worth trying:
 
+  help                     this list, from the prompt
   bonzi                    wisdom, dispensed at random
   cat chess_openings.txt   my opening repertoire, annotated
   cat /etc/motd            the greeting, again

@@ -21,7 +21,7 @@ RUN for i in hwclock modules sysctl hostname syslog bootmisc; do rc-update add $
 RUN rc-update add killprocs shutdown
 
 COPY rootfs-extra/ /
-RUN chmod 755 /usr/local/bin/bonzi /etc/profile.d/bonzi.sh
+RUN chmod 755 /usr/local/bin/bonzi /usr/local/bin/help /etc/profile.d/bonzi.sh
 
 # Generate initramfs with 9p modules
 RUN mkinitfs -F "base virtio 9p" $(cat /usr/share/kernel/$KERNEL/kernel.release)
