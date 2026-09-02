@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { OUTLINE_STEPS, SEGMENTS, outlineRect, segmentPhase } from "./cascade-timeline";
+import { OUTLINE_SHARE, OUTLINE_STEPS, SEGMENTS, outlineRect, segmentPhase } from "./cascade-timeline";
 
 describe("outlineRect", () => {
   const from = { x: 0, y: 100, w: 40, h: 20 };
@@ -40,14 +40,36 @@ describe("segmentPhase", () => {
     expect(segmentPhase(1, seg).revealed).toBe(true);
   });
 
-  test("outlineT spans 0..1 over the first 70% of the segment", () => {
+  test("outlineT spans 0..1 over the outline share of the segment", () => {
     const span = seg.end - seg.start;
     expect(segmentPhase(seg.start, seg).outlineT).toBe(0);
-    expect(segmentPhase(seg.start + span * 0.35, seg).outlineT).toBeCloseTo(0.5);
-    expect(segmentPhase(seg.start + span * 0.699, seg).outlineT).toBeCloseTo(0.9986);
+    expect(segmentPhase(seg.start + span * OUTLINE_SHARE * 0.5, seg).outlineT).toBeCloseTo(0.5);
+    expect(segmentPhase(seg.start + span * OUTLINE_SHARE * 0.999, seg).outlineT).toBeCloseTo(0.999);
   });
 
   test("segments never overlap and stay ordered", () => {
     for (let i = 1; i < SEGMENTS.length; i++) expect(SEGMENTS[i].start).toBeGreaterThan(SEGMENTS[i - 1].end);
+  });
+
+  // The pinned section shows nothing but its heading until the cascade puts something up,
+  // which is what left the audit's ~900px dead zone. Both halves of the fix are pinned here:
+  // the opening beat is short, and from there on some outline or window is always drawn.
+  test("the blank opening beat is a sliver of the pin", () => {
+    expect(SEGMENTS[0].start).toBeLessThanOrEqual(0.02);
+  });
+
+  test("something is on screen for every frame after the opening beat", () => {
+    for (let p = SEGMENTS[0].start; p <= 1.0001; p += 0.005) {
+      const live = SEGMENTS.some((s) => {
+        const { outlineT, revealed } = segmentPhase(p, s);
+        return outlineT !== null || revealed;
+      });
+      expect(live, `progress ${p.toFixed(3)} draws nothing`).toBe(true);
+    }
+  });
+
+  test("the first window is revealed well inside the opening third of the pin", () => {
+    const firstReveal = SEGMENTS[0].start + (SEGMENTS[0].end - SEGMENTS[0].start) * OUTLINE_SHARE;
+    expect(firstReveal).toBeLessThan(0.2);
   });
 });

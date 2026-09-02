@@ -5,6 +5,7 @@ import { BonziAvatar } from "@/components/bonzi/bonzi-avatar";
 import { SpeechBubble } from "@/components/bonzi/speech-bubble";
 import { loadGsap } from "@/lib/gsap-loader";
 import { usePrefersReducedMotion } from "@/lib/motion";
+import { getRandomQuip } from "@/lib/bonzi/quips";
 import type { BonziGifState } from "@/lib/bonzi/types";
 import { useDockStore, type DockId } from "@/stores/dock-store";
 
@@ -40,6 +41,7 @@ const BACKFLIP_MS = 1800;
 const FLING_DEBOUNCE_MS = 4000;
 const REACTION_MS = 2500;
 const QUIP_MS = 3500;
+const CLICK_THROTTLE_MS = 5000;
 
 // Module scope, not a ref: crossing 1440px remounts Companion, and a per-instance Set
 // would hand out every quip again.
@@ -61,6 +63,7 @@ function Companion() {
   const reactingRef = useRef(false);
   const flippingRef = useRef(false);
   const lastFlipRef = useRef(0);
+  const lastClickRef = useRef(0);
   const gifTimerRef = useRef(0);
   const quipTimerRef = useRef(0);
 
@@ -76,6 +79,28 @@ function Companion() {
       flippingRef.current = false;
       setGif("idle");
     }, BACKFLIP_MS);
+  }, []);
+
+  // Poking him talks back. Throttled so a click-happy visitor gets one line at a time, and
+  // it outranks a backflip the same way a section reaction does.
+  const talk = useCallback(() => {
+    const now = Date.now();
+    if (now - lastClickRef.current < CLICK_THROTTLE_MS) return;
+    lastClickRef.current = now;
+
+    const { gif: next, quip: line } = getRandomQuip("game_start");
+    window.clearTimeout(gifTimerRef.current);
+    window.clearTimeout(quipTimerRef.current);
+    flippingRef.current = false;
+    reactingRef.current = true;
+    setGif(next);
+    setQuip(line);
+
+    gifTimerRef.current = window.setTimeout(() => {
+      reactingRef.current = false;
+      setGif("idle");
+    }, REACTION_MS);
+    quipTimerRef.current = window.setTimeout(() => setQuip(undefined), QUIP_MS);
   }, []);
 
   useEffect(() => {
@@ -159,9 +184,9 @@ function Companion() {
   );
 
   return (
+    // Only the sprite takes pointer events; the bubble and the anchor never block the page.
     <div
       ref={wrapRef}
-      aria-hidden
       className="pointer-events-none fixed z-40"
       style={{ right: "max(8px, calc((100vw - 1240px) / 2 - 96px))", top: 0 }}
     >
@@ -173,7 +198,14 @@ function Companion() {
             <SpeechBubble text={quip} visible />
           </div>
         )}
-        <BonziAvatar gif={gif} size="md" showBubble={false} />
+        <button
+          type="button"
+          onClick={talk}
+          aria-label="Ask Bonzi for a comment"
+          className="pointer-events-auto block cursor-default"
+        >
+          <BonziAvatar gif={gif} size="md" showBubble={false} />
+        </button>
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ const CASCADE_QUERY = "(min-width: 1024px) and (prefers-reduced-motion: no-prefe
 
 /**
  * The armed cascade pins the walkthrough and keeps every window `visibility: hidden` until its
- * segment reveals it, so park the scrub at the end of the pin (`+=250%`) first. Returns false
+ * segment reveals it, so park the scrub at the end of the pin (`+=210%`) first. Returns false
  * when nothing is armed and the caller still owns bringing the window on screen.
  */
 async function revealCascade(page: Page): Promise<boolean> {
@@ -31,7 +31,7 @@ async function revealCascade(page: Page): Promise<boolean> {
           // Pinning parks the section itself at the viewport top; only its pin-spacer still
           // reports the document position the scroll target is measured from.
           const holder = el.closest(".pin-spacer") ?? el;
-          window.scrollTo(0, holder.getBoundingClientRect().top + window.scrollY + window.innerHeight * 2.5);
+          window.scrollTo(0, holder.getBoundingClientRect().top + window.scrollY + window.innerHeight * 2.1);
           return el.querySelectorAll("[data-stack-key].cascade-open").length;
         }),
       { timeout: 20_000 }

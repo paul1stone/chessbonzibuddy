@@ -15,6 +15,8 @@ export const CASCADE_QUERY = "(min-width: 1024px) and (prefers-reduced-motion: n
 // The outline grows out of a taskbar-button-sized stub, not the whole slot strip.
 const SLOT_W = 120;
 const SLOT_H = 22;
+// How long a parked scrub may leave an outline on screen before it fades away.
+const STALL_MS = 400;
 
 // Pins the walkthrough and scrubs the three windows open in sequence, each announced by a
 // stepped Win98 zoom outline flying up from the taskbar. Below lg, under reduced motion, or
@@ -71,6 +73,20 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
               : { x: 4, y: window.innerHeight - SLOT_H - 4, w: SLOT_W, h: SLOT_H };
           };
 
+          // The taskbar is the desktop's floor. Read live for the same reason as the stub:
+          // an early refresh can land while the bar is still sliding up on a boot visit.
+          const taskbarTop = () => {
+            const s = document.querySelector("[data-dock-slots]")?.getBoundingClientRect();
+            return s ? s.top - 2 : window.innerHeight - SLOT_H - 6;
+          };
+
+          // Only rects that have already climbed clear of the bar get clamped: the stub
+          // itself IS a taskbar button and has to keep drawing down there.
+          const clampToFloor = (r: Rect): Rect => {
+            const floor = taskbarTop();
+            return r.y >= floor ? r : { ...r, h: Math.min(r.h, floor - r.y) };
+          };
+
           const draw = (key: CascadeKey, r: Rect) => {
             let el = outlines.get(key);
             if (!el) {
@@ -87,7 +103,22 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
             el.style.height = `${r.h}px`;
           };
 
+          // A scrub that stops mid-flight parks a naked rectangle on the desktop. Fade it out
+          // after a beat; any progress delta, forwards or back, brings it straight back.
+          let lastProgress = -1;
+          let stallTimer = 0;
+          const setStalled = (on: boolean) => {
+            for (const el of outlines.values()) el.classList.toggle("cascade-outline--stalled", on);
+          };
+
           const apply = (progress: number) => {
+            if (progress !== lastProgress) {
+              lastProgress = progress;
+              setStalled(false);
+              window.clearTimeout(stallTimer);
+              stallTimer = window.setTimeout(() => setStalled(true), STALL_MS);
+            }
+
             // Geometry can't drive `active` here — the pinned windows never move — so the scrub
             // owns it: the most recently revealed window. Tying it to the reveal (not to the
             // outline flight) keeps the pressed button one that is actually docked.
@@ -109,7 +140,7 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
                   const el = outlines.get(seg.key);
                   if (el) el.style.display = "none";
                 } else {
-                  draw(seg.key, outlineRect(slotStub(), target, outlineT));
+                  draw(seg.key, clampToFloor(outlineRect(slotStub(), target, outlineT)));
                 }
               }
               if (!prev || prev.open !== revealed) {
@@ -130,7 +161,7 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
           const st = ScrollTrigger.create({
             trigger: section,
             start: "top top",
-            end: "+=250%",
+            end: "+=210%",
             pin: true,
             scrub: 0.3,
             onRefresh: (self) => {
@@ -154,6 +185,7 @@ export function useCascadeScroll(sectionRef: RefObject<HTMLElement | null>) {
 
           return () => {
             cancelAnimationFrame(refresh);
+            window.clearTimeout(stallTimer);
             // Release the dock state this scrub owned: on disarm no geometry transition would
             // ever fire to correct it, so the buttons would stay docked for good.
             for (const key of CASCADE_KEYS) {

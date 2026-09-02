@@ -15,7 +15,7 @@ export interface StackItem {
   title: string;
   content: ReactNode;
   statusBar?: ReactNode;
-  /** lg+ grid placement classes (two-column desktop composition). */
+  /** lg+ grid placement classes (12-column desktop composition). */
   place?: string;
   /** lg+ base offset, a deliberate zigzag so title bars are not ruler-aligned. */
   offset?: { x: number; y: number };
@@ -49,7 +49,9 @@ export function WindowStack({ items, managedQuery }: WindowStackProps) {
   }, []);
 
   return (
-    <div className="grid gap-6 md:pr-[96px] lg:grid-cols-2 lg:gap-x-6 lg:gap-y-10 lg:pr-[32px]">
+    // 12 columns at lg+ so windows can step across the full width a column at a time
+    // instead of stacking into a pair of half-page columns.
+    <div className="grid gap-6 md:pr-[96px] lg:grid-cols-12 lg:gap-x-6 lg:gap-y-3 lg:pr-0">
       {items.map((item, i) => (
         <StackWindow
           key={item.key}

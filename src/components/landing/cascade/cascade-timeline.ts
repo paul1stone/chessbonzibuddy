@@ -11,15 +11,17 @@ export interface Segment {
   end: number;
 }
 
-// Gaps between segments let one window settle before the next outline starts.
+// The first segment opens almost at the pin so the section never sits empty; the gaps
+// between segments let one window settle before the next outline starts.
 export const SEGMENTS: Segment[] = [
-  { key: "import", start: 0.04, end: 0.3 },
+  { key: "import", start: 0.02, end: 0.3 },
   { key: "review", start: 0.36, end: 0.62 },
   { key: "practice", start: 0.68, end: 0.94 },
 ];
 
-// Share of a segment spent growing the outline; the rest holds the revealed window.
-const OUTLINE_SHARE = 0.7;
+// Share of a segment spent growing the outline; the rest holds the revealed window. The
+// zoom is a flourish, not the beat — holding the window is what the scroll is for.
+export const OUTLINE_SHARE = 0.4;
 
 export interface SegmentPhase {
   outlineT: number | null;

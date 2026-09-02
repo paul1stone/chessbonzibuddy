@@ -86,11 +86,14 @@ export function useHeroScroll({ sectionRef, windowRef, dialogRef, progressRef }:
             },
             0.05
           );
+          // Win98 dialogs never faded in. A single step over a near-zero duration means the
+          // scrub can only ever read 0 or 1 here — no partial ghost at any scroll position,
+          // in either direction — instead of the old fade across 8% of the timeline.
           tl.fromTo(
             dialog,
             { xPercent: -50, yPercent: -50, autoAlpha: 0 },
-            { autoAlpha: 1, duration: 0.08 },
-            0.9
+            { autoAlpha: 1, duration: 0.01, ease: "steps(1)" },
+            0.94
           );
 
           // The button pops in exactly where and when the window died: the minimize tween ends
