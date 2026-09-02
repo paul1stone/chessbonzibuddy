@@ -228,13 +228,19 @@ test.describe("landing page", () => {
 
   test("docks a taskbar button per section and jumps back to one", async ({ page }) => {
     await page.goto("/");
-    // Re-scrolled every poll: the hero grows to 300vh once its trigger lands, so the first
-    // "bottom" is not the final one.
+    // Parked one viewport above the finale — the page bottom is now the desktop, where the
+    // bar legitimately swaps these buttons for the real window ones. Re-scrolled every poll:
+    // the hero grows to 300vh once its trigger lands, so the first measurement is not final.
     await expect
       .poll(
         () =>
           page.evaluate(() => {
-            window.scrollTo(0, document.documentElement.scrollHeight);
+            const finale = document.querySelector("[data-finale]");
+            if (!finale) return "no finale";
+            window.scrollTo(
+              0,
+              finale.getBoundingClientRect().top + window.scrollY - window.innerHeight
+            );
             return [...document.querySelectorAll("[data-dock-button]")]
               .map((el) => el.getAttribute("data-dock-button"))
               .join(",");

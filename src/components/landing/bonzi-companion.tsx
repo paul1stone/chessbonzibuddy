@@ -50,7 +50,9 @@ const quipped = new Set<DockId>();
 export function BonziCompanion() {
   const reduced = usePrefersReducedMotion();
   const wide = useIsWide();
-  if (reduced || !wide) return null;
+  // The finale's desktop has its own Bonzi peeking out of the taskbar; two is one too many.
+  const desktopActive = useDockStore((s) => s.desktopActive);
+  if (reduced || !wide || desktopActive) return null;
   return <Companion />;
 }
 

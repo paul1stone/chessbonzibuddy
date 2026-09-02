@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "@/lib/motion";
+import { useDockStore } from "@/stores/dock-store";
 import { createIdleWatcher, IDLE_EVENTS } from "./idle";
 
 const GLYPHS = ["♟", "♞", "♛", "♜"];
@@ -14,20 +15,24 @@ interface ScreensaverProps {
 
 export function Screensaver({ idleMs = 45000 }: ScreensaverProps) {
   const reduced = usePrefersReducedMotion();
+  // Reading a chess game on the finale's desktop is not idling: never black out over it.
+  const desktopActive = useDockStore((s) => s.desktopActive);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [active, setActive] = useState(false);
   // One condition for the guards below and the render: reduced motion must tear the loop down,
   // not just hide the canvas.
-  const showing = active && !reduced;
+  const showing = active && !reduced && !desktopActive;
 
   // The watcher stays armed while the screensaver shows: the input that dismisses it
   // also resets the countdown, so it re-arms itself.
   useEffect(() => {
-    if (reduced) return;
+    // Nothing to un-set on the way in: scroll is an idle event, so the scroll that reaches the
+    // finale has already dismissed any screensaver that was up.
+    if (reduced || desktopActive) return;
     const watcher = createIdleWatcher(idleMs, () => setActive(true));
     watcher.arm();
     return () => watcher.disarm();
-  }, [reduced, idleMs]);
+  }, [reduced, desktopActive, idleMs]);
 
   useEffect(() => {
     if (!showing) return;
