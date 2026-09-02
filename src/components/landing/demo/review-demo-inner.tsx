@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Board } from "@/components/chess/board";
+import { useBoardSize } from "@/hooks/use-board-size";
 import { CLASSIFICATION_COLORS, classificationArrowColor } from "@/lib/classification-colors";
 import { DEMO, demoPositions, worstLossIndex } from "./demo-utils";
 
@@ -21,6 +22,9 @@ function label(move: (typeof MOVES)[number]) {
 export default function ReviewDemoInner({ inView, reduced }: { inView: boolean; reduced: boolean }) {
   const [ply, setPly] = useState(() => (reduced ? STATIC_PLY : 0));
   const [userTouched, setUserTouched] = useState(false);
+  // M10: the board takes the card's width on a phone. The square wrapper keeps the measurement
+  // out of the board's own height, and the cap holds the lg cascade to the size it was tuned at.
+  const { ref, width } = useBoardSize();
 
   useEffect(() => {
     if (!inView || reduced || userTouched) return;
@@ -43,14 +47,19 @@ export default function ReviewDemoInner({ inView, reduced }: { inView: boolean; 
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <Board position={POSITIONS[ply]} boardWidth={260} interactive={false} customArrows={arrows} />
+      <div ref={ref} className="aspect-square w-full max-w-[300px] lg:max-w-[260px]">
+        {/* boardWidth 0 = the ResizeObserver has not measured yet; skip the flash. */}
+        {width > 0 && (
+          <Board position={POSITIONS[ply]} boardWidth={width} interactive={false} customArrows={arrows} />
+        )}
+      </div>
       <input
         type="range"
         min={0}
         max={LAST_PLY}
         value={ply}
         aria-label="Scrub through the game"
-        className="r-slider w-full max-w-[260px]"
+        className="r-slider w-full max-w-[300px] lg:max-w-[260px]"
         onChange={(event) => {
           setUserTouched(true);
           setPly(Number(event.target.value));

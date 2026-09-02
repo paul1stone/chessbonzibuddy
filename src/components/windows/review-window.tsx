@@ -7,6 +7,7 @@ import { isCurrentAnalysis } from "@/lib/engine";
 import { useGameStore } from "@/stores/game-store";
 import { useWindowStore } from "@/stores/window-store";
 import type { Game } from "@/db/schema";
+import { WindowEmptyState } from "./window-empty-state";
 
 interface ReviewWindowProps {
   isAnalyzing: boolean;
@@ -24,10 +25,11 @@ export function ReviewWindow({
   // Never mount ReviewBody without a pgn (cold open, or the game was deleted).
   if (!activeGame) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-4 text-center">
-        <p>No game selected.</p>
-        <RetroButton onClick={() => open("games")}>Open my games</RetroButton>
-      </div>
+      <WindowEmptyState
+        message="No game open. Import a game or pick one from My games."
+        actionLabel="Open My games"
+        onAction={() => open("games")}
+      />
     );
   }
 

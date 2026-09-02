@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Chess } from "chess.js";
 import { Board } from "@/components/chess/board";
 import { RetroButton } from "@/components/retro";
+import { useBoardSize } from "@/hooks/use-board-size";
 import { classificationArrowColor } from "@/lib/classification-colors";
 import { DEMO, demoPositions, worstLossIndex } from "./demo-utils";
 
@@ -16,11 +17,21 @@ const BEST_ARROW: Array<[string, string, string?]> = [
   [PUZZLE.bestMove.slice(0, 2), PUZZLE.bestMove.slice(2, 4), classificationArrowColor("best")],
 ];
 
+// M9: the board takes taps as well as drags, so the prompt has to match the pointer holding it.
+const START_HINT = (
+  <>
+    <span className="[@media(hover:none)]:hidden">Drag a piece to play your move.</span>
+    <span className="hidden [@media(hover:none)]:inline">Tap a piece, then tap where it goes.</span>
+  </>
+);
+
 export default function PracticeDemoInner() {
   const [position, setPosition] = useState(POSITION);
   const [solved, setSolved] = useState(false);
   const [misses, setMisses] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  // M10: same responsive board as the review demo.
+  const { ref, width } = useBoardSize();
 
   // The answer stays hidden until it is asked for, or a second try misses.
   const answerShown = revealed || misses >= 2;
@@ -53,14 +64,19 @@ export default function PracticeDemoInner() {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <Board
-        position={position}
-        boardWidth={260}
-        interactive={!done}
-        boardOrientation={ORIENTATION}
-        onPieceDrop={handleDrop}
-        customArrows={done ? BEST_ARROW : undefined}
-      />
+      <div ref={ref} className="aspect-square w-full max-w-[300px] lg:max-w-[260px]">
+        {/* boardWidth 0 = the ResizeObserver has not measured yet; skip the flash. */}
+        {width > 0 && (
+          <Board
+            position={position}
+            boardWidth={width}
+            interactive={!done}
+            boardOrientation={ORIENTATION}
+            onPieceDrop={handleDrop}
+            customArrows={done ? BEST_ARROW : undefined}
+          />
+        )}
+      </div>
       <p className="text-center">
         {TO_MOVE} to move. {PUZZLE.moveNumber}
         {PUZZLE.color === "w" ? "." : "..."}{PUZZLE.san} was a {PUZZLE.classification}. Find the better move.
@@ -77,7 +93,7 @@ export default function PracticeDemoInner() {
               ? `Not quite. Best was ${PUZZLE.bestMoveSan}.`
               : misses > 0
                 ? "Not quite. Try another move."
-                : "Drag a piece to play your move."}
+                : START_HINT}
         </p>
       </div>
       <div className="flex gap-2">

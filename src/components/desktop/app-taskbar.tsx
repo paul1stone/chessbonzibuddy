@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { RetroMenu, Taskbar, useContextMenu, type MenuItem, type TaskbarMenuItem } from "@/components/retro";
+import { AboutDialog, RetroMenu, Taskbar, useContextMenu, type MenuItem, type TaskbarMenuItem } from "@/components/retro";
 import { cn } from "@/lib/utils";
 import { useWindowStore, WINDOW_IDS, type WindowId } from "@/stores/window-store";
 import { ICON_LABELS, WINDOW_ICONS } from "./icons";
+import { DocGlyph, GlobeGlyph, HomeGlyph } from "./menu-glyphs";
 import { useIsMobile } from "./use-is-mobile";
 
 // Taskbar buttons use the same static labels as the desktop icons (never the dynamic window title).
@@ -17,16 +18,16 @@ const BAR_MENU = "bar";
  * arrived finale builds the same list against its own `open` and then edits the ends of it.
  */
 export const APP_MENU_ITEMS_FACTORY = (open: (id: WindowId) => void): TaskbarMenuItem[] => [
-  { label: "Play Bonzi Buddy", onSelect: () => open("play") },
-  { label: "My games", onSelect: () => open("games") },
-  { label: "Import", onSelect: () => open("import") },
-  { label: "Practice", onSelect: () => open("practice") },
-  { label: "Profile", onSelect: () => open("profile") },
-  { label: "MS-DOS Prompt", onSelect: () => open("terminal") },
-  { href: "/", label: "Home" },
-  { href: "/privacy", label: "Privacy" },
-  { href: "/terms", label: "Terms" },
-  { href: "https://github.com/paul1stone/chessbonzibuddy", label: "GitHub", external: true },
+  { label: "Play Bonzi Buddy", icon: WINDOW_ICONS.play, onSelect: () => open("play") },
+  { label: "My games", icon: WINDOW_ICONS.games, onSelect: () => open("games") },
+  { label: "Import", icon: WINDOW_ICONS.import, onSelect: () => open("import") },
+  { label: "Practice", icon: WINDOW_ICONS.practice, onSelect: () => open("practice") },
+  { label: "Profile", icon: WINDOW_ICONS.profile, onSelect: () => open("profile") },
+  { label: "MS-DOS Prompt", icon: WINDOW_ICONS.terminal, onSelect: () => open("terminal") },
+  { href: "/", label: "Home", icon: <HomeGlyph /> },
+  { href: "/privacy", label: "Privacy", icon: <DocGlyph /> },
+  { href: "/terms", label: "Terms", icon: <DocGlyph /> },
+  { href: "https://github.com/paul1stone/chessbonzibuddy", label: "GitHub", external: true, icon: <GlobeGlyph /> },
 ];
 
 /**
@@ -83,7 +84,8 @@ export function WindowButtons() {
             className={cn(
               // M3: r-btn's 75px min-width is unlayered, so it outranks a plain `min-w-0` and
               // floors the buttons at six-across-a-phone — past the clock. The ! puts it back.
-              "r-btn hit-44 h-[22px] min-w-0! max-w-[160px] flex-1 justify-start gap-1 truncate px-2",
+              // No hit-44: the rail is 23px and overflow-hidden, so a 44px box is clipped away.
+              "r-btn h-[22px] min-w-0! max-w-[160px] flex-1 justify-start gap-1 truncate px-2",
               isFocused && "font-bold"
             )}
             style={isFocused ? { boxShadow: "inset -1px -1px var(--r-highlight), inset 1px 1px var(--r-dark), inset -2px -2px var(--r-face-light), inset 2px 2px var(--r-shadow)" } : undefined}
@@ -107,9 +109,23 @@ export function WindowButtons() {
 export function AppTaskbar() {
   const { open, cascadeAll, tileAll, minimizeAll } = useWindowStore.getState();
   const isMobile = useIsMobile();
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const { menu, openAt, close: closeMenu } = useContextMenu();
   const [menuLayer, setMenuLayer] = useState<HTMLElement | null>(null);
+
+  // Appended here, not in the factory: the finale builds its own menu off the same list and
+  // owns its own About state.
+  const menuItems: TaskbarMenuItem[] = [
+    ...APP_MENU_ITEMS_FACTORY(open),
+    {
+      label: "About Chess Bonzi Buddy",
+      // The dialog's own app icon: a whole-body Bonzi shrunk to 16px is a speck.
+      // eslint-disable-next-line @next/next/no-img-element
+      icon: <img src="/favicon-32.png" alt="" width={16} height={16} className="[image-rendering:pixelated]" />,
+      onSelect: () => setAboutOpen(true),
+    },
+  ];
 
   const barItems: MenuItem[] = [
     { label: "Cascade Windows", onSelect: () => cascadeAll() },
@@ -122,7 +138,7 @@ export function AppTaskbar() {
   return (
     <>
       <Taskbar
-        menuItems={APP_MENU_ITEMS_FACTORY(open)}
+        menuItems={menuItems}
         onBarContextMenu={(e) => {
           // Start and the window buttons own their own menus; bare bar gets the window list one.
           if ((e.target as HTMLElement).closest("button, a")) return;
@@ -137,6 +153,7 @@ export function AppTaskbar() {
         menu &&
         menuLayer &&
         createPortal(<RetroMenu items={barItems} x={menu.x} y={menu.y} onClose={closeMenu} />, menuLayer)}
+      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
     </>
   );
 }

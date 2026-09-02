@@ -1,10 +1,10 @@
 "use client";
 
 import { PracticeView } from "@/components/practice/practice-view";
-import { RetroButton } from "@/components/retro";
 import { isCurrentAnalysis } from "@/lib/engine";
 import { useGameStore } from "@/stores/game-store";
 import { useWindowStore } from "@/stores/window-store";
+import { WindowEmptyState } from "./window-empty-state";
 
 /** Practice window body: drills the mistakes in the active game's analysis. */
 export function PracticeWindow() {
@@ -17,10 +17,11 @@ export function PracticeWindow() {
   // Never mount PracticeView without moves: no game, or an absent / pre-v2 analysis.
   if (!activeGame || !isCurrentAnalysis(analysis)) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-4 text-center">
-        <p>Analyze a game first.</p>
-        <RetroButton onClick={() => open("games")}>Open my games</RetroButton>
-      </div>
+      <WindowEmptyState
+        message="Mistakes from analyzed games become puzzles. Analyze a game first."
+        actionLabel="Open My games"
+        onAction={() => open("games")}
+      />
     );
   }
 

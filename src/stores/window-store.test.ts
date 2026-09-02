@@ -12,8 +12,9 @@ describe("window store", () => {
     const games = s().windows.games;
     const imp = s().windows.import;
     expect(games.open).toBe(true);
-    expect(games.x).toBe(48);
-    expect(imp.x).toBe(72);
+    expect(games.x).toBe(120);
+    expect(games.y).toBe(48);
+    expect(imp.x).toBe(144);
     expect(imp.y).toBe(72);
     expect(s().focused).toBe("import");
     expect(imp.z).toBeGreaterThan(games.z);
@@ -87,9 +88,9 @@ describe("window store", () => {
     s().open("profile");
     s().move("games", 500, 500);
     s().cascadeAll();
-    expect(s().windows.games).toMatchObject({ x: 48, y: 48 });
-    expect(s().windows.review).toMatchObject({ x: 72, y: 72 });
-    expect(s().windows.profile).toMatchObject({ x: 96, y: 96 });
+    expect(s().windows.games).toMatchObject({ x: 120, y: 48 });
+    expect(s().windows.review).toMatchObject({ x: 144, y: 72 });
+    expect(s().windows.profile).toMatchObject({ x: 168, y: 96 });
     expect(s().focused).toBe("profile");
     expect(s().windows.profile.z).toBeGreaterThan(s().windows.review.z);
   });
@@ -100,9 +101,9 @@ describe("window store", () => {
     s().open("profile");
     s().focus("games");
     s().cascadeAll();
-    expect(s().windows.review).toMatchObject({ x: 48, y: 48 });
-    expect(s().windows.profile).toMatchObject({ x: 72, y: 72 });
-    expect(s().windows.games).toMatchObject({ x: 96, y: 96 });
+    expect(s().windows.review).toMatchObject({ x: 120, y: 48 });
+    expect(s().windows.profile).toMatchObject({ x: 144, y: 72 });
+    expect(s().windows.games).toMatchObject({ x: 168, y: 96 });
     expect(s().focused).toBe("games");
     expect(s().windows.games.z).toBeGreaterThan(s().windows.profile.z);
     expect(s().windows.profile.z).toBeGreaterThan(s().windows.review.z);
@@ -115,8 +116,15 @@ describe("window store", () => {
     s().move("profile", 300, 300);
     s().minimize("profile");
     s().cascadeAll();
-    expect(s().windows.games).toMatchObject({ x: 48, y: 48, maximized: false });
+    expect(s().windows.games).toMatchObject({ x: 120, y: 48, maximized: false });
     expect(s().windows.profile).toMatchObject({ x: 300, y: 300, minimized: true });
+  });
+
+  it("starts the stair right of the icon column but keeps it above the taskbar", () => {
+    s().open("review");
+    // S1: x clears the icons; y cannot follow it, or the tallest window overflows a 768px screen.
+    expect(s().windows.review.x).toBe(120);
+    expect(s().windows.review.y + WINDOW_SIZES.review.h).toBeLessThanOrEqual(768 - 30);
   });
 
   it("tiles the visible windows into a grid inside the given viewport", () => {

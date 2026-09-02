@@ -115,7 +115,8 @@ export function DesktopIcon({ id, index, label, icon, flash, onOpen, onContextMe
       data-desktop-icon={id}
       style={{ left: pos.x, top: pos.y }}
       className={cn(
-        "absolute flex w-[76px] select-none flex-col items-center gap-1 p-1",
+        // hit-44 keeps the target ≥44px however short the art and label render.
+        "hit-44 absolute flex w-[76px] select-none flex-col items-center gap-1 p-1",
         "focus-visible:outline-1 focus-visible:outline-dotted focus-visible:outline-[var(--r-highlight)]",
         selected && "icon-selected",
         (flash || opening) && "icon-flash"

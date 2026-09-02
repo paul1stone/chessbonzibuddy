@@ -264,11 +264,12 @@ export function DesktopWindow({ id, title, children, statusBar }: DesktopWindowP
       >
         <span id={`win-title-${id}`} className="truncate">{title}</span>
         <span className="ml-auto flex gap-[2px]">
-          <button type="button" className="r-title-glyph" aria-label="Minimize" onClick={() => minimize(id)}>_</button>
+          {/* 16x14 glyphs: hit-44 grows the tap target vertically, never sideways into its neighbour. */}
+          <button type="button" className="r-title-glyph hit-44" aria-label="Minimize" onClick={() => minimize(id)}>_</button>
           {!isMobile && (
-            <button type="button" className="r-title-glyph" aria-label={win.maximized ? "Restore" : "Maximize"} onClick={() => toggleMaximize(id)}>□</button>
+            <button type="button" className="r-title-glyph hit-44" aria-label={win.maximized ? "Restore" : "Maximize"} onClick={() => toggleMaximize(id)}>□</button>
           )}
-          <button type="button" className="r-title-glyph" aria-label="Close" onClick={() => close(id)}>×</button>
+          <button type="button" className="r-title-glyph hit-44" aria-label="Close" onClick={() => close(id)}>×</button>
         </span>
       </div>
       <div className="r-body flex min-h-0 flex-1 flex-col p-2">{children}</div>

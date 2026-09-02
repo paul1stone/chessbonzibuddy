@@ -42,7 +42,11 @@ export const WINDOW_IDS: WindowId[] = [
   "display",
 ];
 
-const CASCADE_ORIGIN = 48;
+// S1: the stair starts right of the icon column so the first window never covers the icons.
+// Only x moves out — a 640px-tall window dropped at y 120 hangs past the taskbar on a 768px
+// viewport, so the vertical origin stays where it was.
+const CASCADE_ORIGIN_X = 120;
+const CASCADE_ORIGIN_Y = 48;
 const CASCADE_STEP = 24;
 // Mirrors --r-taskbar-h: the desktop surface windows sit on stops above the taskbar.
 const TASKBAR_H = 30;
@@ -122,11 +126,19 @@ export const useWindowStore = create<WindowStore>((set) => ({
         return { ...normalizeZ({ ...s.windows, [id]: { ...w, minimized: false, z: s.nextZ } }), focused: id };
       }
       const openCount = WINDOW_IDS.filter((i) => s.windows[i].open).length;
-      const offset = CASCADE_ORIGIN + CASCADE_STEP * openCount;
+      const step = CASCADE_STEP * openCount;
       return {
         ...normalizeZ({
           ...s.windows,
-          [id]: { ...w, open: true, minimized: false, maximized: false, x: offset, y: offset, z: s.nextZ },
+          [id]: {
+            ...w,
+            open: true,
+            minimized: false,
+            maximized: false,
+            x: CASCADE_ORIGIN_X + step,
+            y: CASCADE_ORIGIN_Y + step,
+            z: s.nextZ,
+          },
         }),
         focused: id,
       };
@@ -177,8 +189,14 @@ export const useWindowStore = create<WindowStore>((set) => ({
       const windows = { ...s.windows };
       let z = s.nextZ;
       ids.forEach((id, i) => {
-        const offset = CASCADE_ORIGIN + CASCADE_STEP * i;
-        windows[id] = { ...windows[id], maximized: false, x: offset, y: offset, z: z++ };
+        const step = CASCADE_STEP * i;
+        windows[id] = {
+          ...windows[id],
+          maximized: false,
+          x: CASCADE_ORIGIN_X + step,
+          y: CASCADE_ORIGIN_Y + step,
+          z: z++,
+        };
       });
       return { ...normalizeZ(windows), focused: ids[ids.length - 1] };
     }),
