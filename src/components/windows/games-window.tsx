@@ -1,8 +1,8 @@
 "use client";
 
-import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { RetroButton } from "@/components/retro";
+import { toastError } from "@/components/ui/toast-helpers";
 import { useGameStore } from "@/stores/game-store";
 import { useProfileStore } from "@/stores/profile-store";
 import { useWindowStore } from "@/stores/window-store";
@@ -12,6 +12,13 @@ function resultDot(result: string) {
   if (result === "1-0") return "#008000";
   if (result === "0-1") return "#800000";
   return "var(--r-shadow)";
+}
+
+/** One authored line per branch — a failed fetch never puts the server's own words on screen. */
+function libraryFailureCopy() {
+  return typeof navigator !== "undefined" && !navigator.onLine
+    ? "You're offline."
+    : "The game library is offline. Try again in a minute.";
 }
 
 function SkeletonRows() {
@@ -42,6 +49,7 @@ export function GamesWindow() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Fetch games from API, filtered by linked username
   const username = chessComUsername || lichessUsername;
@@ -49,11 +57,14 @@ export function GamesWindow() {
   useEffect(() => {
     if (!username) {
       setGames([]);
+      setFetchError(null);
       setIsLoading(false);
       return;
     }
 
     let cancelled = false;
+    setIsLoading(true);
+    setFetchError(null);
 
     async function fetchGames() {
       try {
@@ -70,7 +81,7 @@ export function GamesWindow() {
         }
       } catch {
         if (!cancelled) {
-          setFetchError("Could not load games");
+          setFetchError(libraryFailureCopy());
         }
       } finally {
         if (!cancelled) {
@@ -83,7 +94,7 @@ export function GamesWindow() {
     return () => {
       cancelled = true;
     };
-  }, [setGames, username]);
+  }, [setGames, username, reloadKey]);
 
   async function handleDelete(e: React.MouseEvent, gameId: string) {
     e.stopPropagation();
@@ -94,10 +105,10 @@ export function GamesWindow() {
       if (res.ok || res.status === 204) {
         removeGame(gameId);
       } else {
-        toast.error("Could not delete game");
+        toastError("Could not delete game");
       }
     } catch {
-      toast.error("Could not delete game");
+      toastError("Could not delete game");
     } finally {
       setDeletingId(null);
     }
@@ -111,17 +122,20 @@ export function GamesWindow() {
       return;
     }
 
-    // Otherwise fetch the full game record (with pgn + analysis)
+    // Otherwise fetch the full game record (with pgn + analysis). Both failure
+    // branches stop here: the row's own record has no pgn, so opening Review on
+    // it would show an empty board with no way to tell why.
     try {
       const res = await fetch(`/api/games/${game.id}`);
-      if (res.ok) {
-        const fullGame = (await res.json()) as Game;
-        setActiveGame(fullGame);
-      } else {
-        setActiveGame(game);
+      if (!res.ok) {
+        toastError(`Could not open that game. ${libraryFailureCopy()}`);
+        return;
       }
+      const fullGame = (await res.json()) as Game;
+      setActiveGame(fullGame);
     } catch {
-      setActiveGame(game);
+      toastError(`Could not open that game. ${libraryFailureCopy()}`);
+      return;
     }
     openWindow("review");
   }
@@ -142,7 +156,13 @@ export function GamesWindow() {
         {isLoading ? (
           <SkeletonRows />
         ) : fetchError ? (
-          <p className="px-2 py-8 text-center text-[#800000]">{fetchError}</p>
+          <div className="flex flex-col items-center gap-3 px-2 py-8 text-center">
+            <p className="font-bold text-[#800000]">Could not load games</p>
+            <p className="text-[var(--r-shadow)]">{fetchError}</p>
+            <RetroButton onClick={() => setReloadKey((k) => k + 1)}>
+              Retry
+            </RetroButton>
+          </div>
         ) : !username ? (
           <div className="flex flex-col items-center gap-3 px-2 py-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -172,7 +192,7 @@ export function GamesWindow() {
                       : "hover:bg-[var(--r-face-light)]"
                   }`}
                 >
-                  {/* Delete button (visible on hover) */}
+                  {/* Delete button: hover-revealed on mice, always out and 32px on touch. */}
                   <span
                     role="button"
                     tabIndex={0}
@@ -190,12 +210,12 @@ export function GamesWindow() {
                       deletingId === game.id
                         ? "opacity-50"
                         : "opacity-0 focus:opacity-100 group-hover:opacity-100"
-                    }`}
+                    } [@media(hover:none)]:h-8 [@media(hover:none)]:w-8 [@media(hover:none)]:text-[16px] [@media(hover:none)]:opacity-100`}
                   >
                     &times;
                   </span>
 
-                  <span className="truncate pr-5 font-medium">
+                  <span className="truncate pr-5 font-medium [@media(hover:none)]:pr-10">
                     {game.whitePlayer} vs {game.blackPlayer}
                   </span>
                   <div className="flex items-center gap-2">

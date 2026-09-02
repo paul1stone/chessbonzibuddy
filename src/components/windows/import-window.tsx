@@ -1,10 +1,15 @@
 "use client";
 
-import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { RetroButton } from "@/components/retro";
-import { RecentGames, type RecentGameData } from "@/components/import/recent-games";
+import {
+  RecentGames,
+  type ImportOne,
+  type ImportProgress,
+  type RecentGameData,
+} from "@/components/import/recent-games";
 
-export type { RecentGameData };
+export type { ImportOne, RecentGameData };
 
 const TABS = [
   { id: "recent", label: "Recent games" },
@@ -15,19 +20,38 @@ type TabId = (typeof TABS)[number]["id"];
 
 interface ImportWindowProps {
   onImportUrl: (url: string) => Promise<void>;
-  onBulkImport: (games: RecentGameData[]) => Promise<void>;
+  onImportOne?: ImportOne;
+  /** Legacy fire-and-forget bulk handler; kept until every caller passes `onImportOne`. */
+  onBulkImport?: (games: RecentGameData[]) => Promise<void>;
   importing: boolean;
 }
 
 export function ImportWindow({
   onImportUrl,
+  onImportOne,
   onBulkImport,
   importing,
 }: ImportWindowProps) {
   const [tab, setTab] = useState<TabId>("recent");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
   const tabRefs = useRef<Partial<Record<TabId, HTMLButtonElement | null>>>({});
+
+  const busy = importing || progress !== null;
+
+  // Hourglass while a POST is in flight, same as the analysis queue's.
+  useEffect(() => {
+    if (!busy) return;
+    document.body.classList.add("cursor-progress");
+    return () => document.body.classList.remove("cursor-progress");
+  }, [busy]);
+
+  const status = progress
+    ? `Importing ${progress.done} of ${progress.total}…`
+    : importing
+      ? "Importing…"
+      : "Ready";
 
   // Roving tablist: arrows move selection and focus together.
   function handleTabKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -97,7 +121,11 @@ export function ImportWindow({
         className="r-face r-bevel-out flex min-h-0 flex-1 flex-col p-3"
       >
         {tab === "recent" ? (
-          <RecentGames onImport={onBulkImport} />
+          <RecentGames
+            onImportOne={onImportOne}
+            onBulkImport={onBulkImport}
+            onProgress={setProgress}
+          />
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <label className="flex flex-col gap-1">
@@ -118,6 +146,14 @@ export function ImportWindow({
             </div>
           </form>
         )}
+      </div>
+
+      <div
+        className="r-bevel-in r-statusbar shrink-0"
+        role="status"
+        aria-live="polite"
+      >
+        {status}
       </div>
     </div>
   );

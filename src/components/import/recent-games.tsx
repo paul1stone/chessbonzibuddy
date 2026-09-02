@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Download, Check, RefreshCw, Search } from "lucide-react";
 import { RetroButton } from "@/components/retro";
+import { toastError } from "@/components/ui/toast-helpers";
 import { useProfileStore } from "@/stores/profile-store";
-import { toast } from "sonner";
+import { useWindowStore } from "@/stores/window-store";
 
 export interface RecentGameData {
   id: string;
@@ -17,8 +18,20 @@ export interface RecentGameData {
   pgn: string;
 }
 
+/** Imports one game and resolves whether it really landed. Never throws. */
+export type ImportOne = (game: RecentGameData) => Promise<boolean>;
+
+export interface ImportProgress {
+  /** 1-based index of the game being imported right now. */
+  done: number;
+  total: number;
+}
+
 interface RecentGamesProps {
-  onImport: (games: RecentGameData[]) => void;
+  onImportOne?: ImportOne;
+  /** Legacy fire-and-forget bulk handler; kept until every caller passes `onImportOne`. */
+  onBulkImport?: (games: RecentGameData[]) => Promise<void>;
+  onProgress?: (progress: ImportProgress | null) => void;
 }
 
 function resultColor(result: string) {
@@ -38,14 +51,20 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export function RecentGames({ onImport }: RecentGamesProps) {
+export function RecentGames({
+  onImportOne,
+  onBulkImport,
+  onProgress,
+}: RecentGamesProps) {
   const chessComUsername = useProfileStore((s) => s.chessComUsername);
   const lichessUsername = useProfileStore((s) => s.lichessUsername);
+  const openWindow = useWindowStore((s) => s.open);
 
   const [games, setGames] = useState<RecentGameData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [imported, setImported] = useState<Set<string>>(new Set());
+  const [isImporting, setIsImporting] = useState(false);
   const [search, setSearch] = useState("");
 
   const hasAccount = Boolean(chessComUsername || lichessUsername);
@@ -96,7 +115,7 @@ export function RecentGames({ onImport }: RecentGamesProps) {
 
       setGames(allGames);
     } catch {
-      toast.error("Failed to fetch recent games");
+      toastError("Failed to fetch recent games");
     } finally {
       setIsLoading(false);
     }
@@ -117,17 +136,62 @@ export function RecentGames({ onImport }: RecentGamesProps) {
     });
   }, []);
 
-  const handleImport = useCallback(() => {
-    const gamesToImport = games.filter((g) => selected.has(g.id));
-    if (gamesToImport.length === 0) return;
-    onImport(gamesToImport);
-    setImported((prev) => {
-      const next = new Set(prev);
-      for (const g of gamesToImport) next.add(g.id);
-      return next;
-    });
-    setSelected(new Set());
-  }, [games, selected, onImport]);
+  const importOne = useCallback<ImportOne>(
+    async (game) => {
+      if (onImportOne) return onImportOne(game);
+      // The legacy bulk handler resolves whether or not the import succeeded, so it
+      // cannot confirm a game — leave the row enabled rather than fake a checkmark.
+      await onBulkImport?.([game]);
+      return false;
+    },
+    [onImportOne, onBulkImport]
+  );
+
+  const handleImport = useCallback(async () => {
+    const queue = games.filter((g) => selected.has(g.id) && !imported.has(g.id));
+    if (queue.length === 0 || isImporting) return;
+
+    setIsImporting(true);
+    try {
+      // Sequential: each POST is awaited so the row it belongs to can be marked
+      // on its own result rather than on the batch having been handed off.
+      for (let i = 0; i < queue.length; i++) {
+        const game = queue[i];
+        onProgress?.({ done: i + 1, total: queue.length });
+        const ok = await importOne(game);
+        if (!ok) continue;
+        setImported((prev) => new Set(prev).add(game.id));
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(game.id);
+          return next;
+        });
+      }
+    } finally {
+      onProgress?.(null);
+      setIsImporting(false);
+    }
+  }, [games, selected, imported, isImporting, importOne, onProgress]);
+
+  // Drop the progress line if the window closes mid-run.
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
+  useEffect(() => () => onProgressRef.current?.(null), []);
+
+  if (!hasAccount) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-2 py-8">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/coolmonkey.gif" alt="" className="h-16 w-16" />
+        <p className="text-center text-[var(--r-shadow)]">
+          Connect your Chess.com or Lichess account to import games
+        </p>
+        <RetroButton onClick={() => openWindow("profile")}>
+          Open profile
+        </RetroButton>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -178,7 +242,11 @@ export function RecentGames({ onImport }: RecentGamesProps) {
           {search && ` matching "${search}"`}
         </span>
         {selected.size > 0 && (
-          <RetroButton className="min-w-0! px-2!" onClick={handleImport}>
+          <RetroButton
+            className="min-w-0! px-2!"
+            onClick={handleImport}
+            disabled={isImporting}
+          >
             <Download className="mr-1 h-3 w-3" />
             Import {selected.size}
           </RetroButton>
