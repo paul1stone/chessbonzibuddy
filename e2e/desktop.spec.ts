@@ -23,8 +23,8 @@ async function openDesktop(page: Page, url = "/app") {
 const closeGlyphs = (page: Page) => page.locator('[role="dialog"]:visible .r-title [aria-label="Close"]');
 
 /**
- * /app opens My games (and Profile, until an account is linked) straight over the icon column,
- * so the surface tests shut them first to get bare desktop under the pointer.
+ * /app opens My games straight over the icon column, so the surface tests shut it first to get
+ * bare desktop under the pointer.
  */
 async function clearDesktop(page: Page) {
   const closers = closeGlyphs(page);
@@ -255,7 +255,7 @@ test.describe("win98 desktop app", () => {
   test("the taskbar menu minimizes every window", async ({ page }) => {
     await openDesktop(page);
     const windows = page.locator('[role="dialog"]:visible');
-    await expect(windows).toHaveCount(2);
+    await expect(windows).toHaveCount(1);
 
     const bar = (await page.locator("[data-taskbar]").boundingBox())!;
     // Past the window buttons, short of the clock: the bare bar, which owns the window-list menu.
@@ -264,7 +264,7 @@ test.describe("win98 desktop app", () => {
 
     await expect(windows).toHaveCount(0);
     // Minimized, not closed: every taskbar button is still there to restore from.
-    await expect(page.locator("[data-taskbar-button]")).toHaveCount(2);
+    await expect(page.locator("[data-taskbar-button]")).toHaveCount(1);
   });
 
   test("the system menu closes the window from the title bar", async ({ page }) => {

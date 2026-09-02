@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useContextMenu } from "@/components/retro";
+import { cn } from "@/lib/utils";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useWindowStore, WINDOW_IDS, type WindowId } from "@/stores/window-store";
 import { DESKTOP_ICON_IDS, desktopBackgroundStyle, useDesktopStore } from "@/stores/desktop-store";
@@ -26,7 +27,16 @@ export { ICON_LABELS };
 // Matches the .icon-flash keyframes.
 const FLASH_MS = 120;
 
-export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
+interface DesktopProps {
+  defs: Record<WindowId, WindowDef>;
+  /**
+   * Fills its positioned parent instead of the viewport and drops the taskbar — the landing's
+   * finale section is already one viewport tall minus the marketing bar, which stays put.
+   */
+  embedded?: boolean;
+}
+
+export function Desktop({ defs, embedded = false }: DesktopProps) {
   const windows = useWindowStore((s) => s.windows);
   const { open } = useWindowStore.getState();
   const isMobile = useIsMobile();
@@ -56,7 +66,10 @@ export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
 
   return (
     <div
-      className="fixed inset-x-0 top-0 bottom-[var(--r-taskbar-h)] overflow-hidden bg-[var(--r-desktop)]"
+      className={cn(
+        "overflow-hidden bg-[var(--r-desktop)]",
+        embedded ? "absolute inset-0" : "fixed inset-x-0 top-0 bottom-[var(--r-taskbar-h)]"
+      )}
       // Pre-hydration paints the default teal, so the server markup and the first client
       // render agree; the stored appearance lands once rehydrate() has run.
       style={hydrated ? desktopBackgroundStyle(appearance) : undefined}
@@ -73,7 +86,27 @@ export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
         openAt(e, DESKTOP_MENU);
       }}
     >
-      {!isMobile && (
+      {isMobile ? (
+        // M1: one tap opens, and nothing else — no selection, drag, or menus on a finger.
+        <div className="icon-grid-mobile">
+          {DESKTOP_ICON_IDS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              data-desktop-icon={id}
+              className="flex select-none flex-col items-center gap-1 p-1"
+              onClick={() => open(id)}
+            >
+              <span className="icon-art" aria-hidden="true">
+                {WINDOW_ICONS[id]}
+              </span>
+              <span className="icon-label max-w-full px-[2px] text-center text-[11px] leading-tight text-[var(--r-title-text)] [text-shadow:1px_1px_0_var(--r-dark)]">
+                {ICON_LABELS[id]}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
         <>
           {DESKTOP_ICON_IDS.map((id, i) => (
             <DesktopIcon
@@ -101,7 +134,7 @@ export function Desktop({ defs }: { defs: Record<WindowId, WindowDef> }) {
         </DesktopWindow>
       ))}
       <BonziPeek />
-      <AppTaskbar />
+      {!embedded && <AppTaskbar />}
     </div>
   );
 }

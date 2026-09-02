@@ -35,4 +35,25 @@ describe("dock store", () => {
   test("labels cover every dock id", () => {
     for (const id of DOCK_ORDER) expect(DOCK_LABELS[id]).toBeTruthy();
   });
+
+  test("tracks the arrived desktop finale", () => {
+    expect(useDockStore.getState().desktopActive).toBe(false);
+    useDockStore.getState().setDesktopActive(true);
+    expect(useDockStore.getState().desktopActive).toBe(true);
+    useDockStore.getState().setDesktopActive(false);
+    expect(useDockStore.getState().desktopActive).toBe(false);
+  });
+
+  test("reset clears the arrived flag", () => {
+    useDockStore.getState().setDesktopActive(true);
+    useDockStore.getState().reset();
+    expect(useDockStore.getState().desktopActive).toBe(false);
+  });
+
+  test("setDesktopActive keeps the same state object when unchanged", () => {
+    useDockStore.getState().setDesktopActive(true);
+    const before = useDockStore.getState();
+    useDockStore.getState().setDesktopActive(true);
+    expect(useDockStore.getState()).toBe(before);
+  });
 });

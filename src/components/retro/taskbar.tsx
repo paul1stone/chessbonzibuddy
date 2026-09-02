@@ -8,6 +8,8 @@ export interface TaskbarMenuItem {
   label: string;
   external?: boolean;
   onSelect?: () => void;
+  /** Rendered in a fixed 16px slot ahead of the label, Win98-style. */
+  icon?: ReactNode;
 }
 
 export const DEFAULT_MENU_ITEMS: TaskbarMenuItem[] = [
@@ -19,7 +21,20 @@ export const DEFAULT_MENU_ITEMS: TaskbarMenuItem[] = [
 ];
 
 const MENU_ITEM_CLASS =
-  "block px-3 py-[6px] no-underline hover:bg-[var(--r-title-a)] hover:text-[var(--r-title-text)]";
+  "hit-44 flex items-center gap-2 px-3 py-[6px] no-underline hover:bg-[var(--r-title-a)] hover:text-[var(--r-title-text)]";
+
+/**
+ * The slot appears for every item of a menu that has any icons at all, so one iconless entry
+ * can't break the label column — and menus with no icons keep their old flush layout.
+ */
+function MenuItemIcon({ icon, reserve }: { icon?: ReactNode; reserve: boolean }) {
+  if (!reserve) return null;
+  return (
+    <span className="h-4 w-4 shrink-0 [&>*]:h-4 [&>*]:w-4" aria-hidden="true">
+      {icon}
+    </span>
+  );
+}
 
 function Clock() {
   const [time, setTime] = useState<string | null>(null);
@@ -49,6 +64,7 @@ export function Taskbar({
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const reserveIcons = menuItems.some((item) => item.icon);
 
   useEffect(() => {
     if (!open) return;
@@ -79,7 +95,7 @@ export function Taskbar({
       <button
         ref={buttonRef}
         type="button"
-        className="r-btn h-[22px] min-w-0 gap-1 px-2 font-bold"
+        className="r-btn hit-44 h-[22px] min-w-0 gap-1 px-2 font-bold"
         aria-expanded={open}
         aria-controls="start-menu"
         onClick={() => setOpen((o) => !o)}
@@ -114,6 +130,7 @@ export function Taskbar({
                       setOpen(false);
                     }}
                   >
+                    <MenuItemIcon icon={item.icon} reserve={reserveIcons} />
                     {item.label}
                   </button>
                 ) : item.external ? (
@@ -123,6 +140,7 @@ export function Taskbar({
                     rel="noreferrer"
                     onClick={() => setOpen(false)}
                   >
+                    <MenuItemIcon icon={item.icon} reserve={reserveIcons} />
                     {item.label}
                   </a>
                 ) : (
@@ -131,6 +149,7 @@ export function Taskbar({
                     className={MENU_ITEM_CLASS}
                     onClick={() => setOpen(false)}
                   >
+                    <MenuItemIcon icon={item.icon} reserve={reserveIcons} />
                     {item.label}
                   </Link>
                 )}
