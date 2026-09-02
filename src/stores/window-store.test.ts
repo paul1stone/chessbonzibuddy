@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useWindowStore, WINDOW_IDS, WINDOW_SIZES } from "./window-store";
 
 const s = () => useWindowStore.getState();
+// Wide enough that every window fits at the full cascade origin, so placement tests that are not
+// about the clamp keep their stair whatever the headless viewport fallback happens to be.
+const WIDE = { w: 1440, h: 900 };
 
 beforeEach(() => useWindowStore.getState().reset());
 
@@ -87,7 +90,7 @@ describe("window store", () => {
     s().open("review");
     s().open("profile");
     s().move("games", 500, 500);
-    s().cascadeAll();
+    s().cascadeAll(WIDE);
     expect(s().windows.games).toMatchObject({ x: 120, y: 48 });
     expect(s().windows.review).toMatchObject({ x: 144, y: 72 });
     expect(s().windows.profile).toMatchObject({ x: 168, y: 96 });
@@ -100,7 +103,7 @@ describe("window store", () => {
     s().open("review");
     s().open("profile");
     s().focus("games");
-    s().cascadeAll();
+    s().cascadeAll(WIDE);
     expect(s().windows.review).toMatchObject({ x: 120, y: 48 });
     expect(s().windows.profile).toMatchObject({ x: 144, y: 72 });
     expect(s().windows.games).toMatchObject({ x: 168, y: 96 });
@@ -121,10 +124,34 @@ describe("window store", () => {
   });
 
   it("starts the stair right of the icon column but keeps it above the taskbar", () => {
-    s().open("review");
+    s().open("review", WIDE);
     // S1: x clears the icons; y cannot follow it, or the tallest window overflows a 768px screen.
     expect(s().windows.review.x).toBe(120);
     expect(s().windows.review.y + WINDOW_SIZES.review.h).toBeLessThanOrEqual(768 - 30);
+  });
+
+  it("pulls the origin left rather than open a window off the right edge", () => {
+    for (const [width, expected] of [
+      [1440, 120], // room for the full origin
+      [1024, 56], // 120 + 960 would overhang by 56, so it backs off to the 8px margin
+      [320, 8], // narrower than the window itself: all the way back to the margin
+    ] as const) {
+      s().reset();
+      s().open("review", { w: width, h: 768 });
+      expect(s().windows.review.x).toBe(expected);
+      expect(s().windows.review.x).toBeGreaterThanOrEqual(8);
+    }
+  });
+
+  it("cascade clamps each window against its own width", () => {
+    const vp = { w: 1024, h: 768 };
+    s().open("games", vp);
+    s().open("review", vp);
+    s().cascadeAll(vp);
+    // The 360px window still clears the icon column; only the 960px one gives up its step.
+    expect(s().windows.games).toMatchObject({ x: 120, y: 48 });
+    expect(s().windows.review).toMatchObject({ x: 56, y: 72 });
+    expect(s().windows.review.x + WINDOW_SIZES.review.w).toBeLessThanOrEqual(vp.w - 8);
   });
 
   it("tiles the visible windows into a grid inside the given viewport", () => {
