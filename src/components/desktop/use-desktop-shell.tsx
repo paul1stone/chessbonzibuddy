@@ -148,26 +148,35 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
     processingRef.current = true;
 
     (async () => {
-      // A3: the engine is 113 MB, so nothing downloads it until the user says so. Gated
-      // BEFORE the dequeue — a decline leaves the queue whole, ready for the next attempt.
-      if (!isEngineFetched() && !(await requestEngineDownload())) {
-        processingRef.current = false;
-        return;
-      }
+      try {
+        // A3: the engine is 113 MB, so nothing downloads it until the user says so. Gated
+        // BEFORE the dequeue — a decline leaves the queue whole, ready for the next attempt.
+        if (!isEngineFetched() && !(await requestEngineDownload())) return;
 
-      const next = dequeueAnalysis();
-      if (!next) {
+        // Drain the queue in this one run rather than a game per effect pass. runAnalysis
+        // ends with store writes that re-render synchronously, so the effect re-enters
+        // while this ref is still held (it clears a microtask later) and bails — leaving
+        // every game after the first parked in the queue with nothing left to wake it.
+        for (;;) {
+          // Re-read the guard between games: opening the play window mid-drain pauses us
+          // after the current game, and closing it re-runs this effect to resume.
+          if (useWindowStore.getState().windows.play.open) break;
+
+          // A fresh snapshot each pass — games queued while this ran are picked up here.
+          const next = dequeueAnalysis();
+          if (!next) break;
+
+          // If no game is currently active, make the queued game active. Read fresh: the
+          // gate may have held this run open for the length of a download.
+          if (!useGameStore.getState().activeGame) {
+            setActiveGame(next);
+          }
+          // Awaited, so the engine only ever runs one game at a time.
+          await runAnalysis(next);
+        }
+      } finally {
         processingRef.current = false;
-        return;
       }
-      // If no game is currently active, make the queued game active. Read fresh: the gate
-      // may have held this run open for the length of a download.
-      if (!useGameStore.getState().activeGame) {
-        setActiveGame(next);
-      }
-      runAnalysis(next).finally(() => {
-        processingRef.current = false;
-      });
     })();
   }, [
     isAnalyzing,
