@@ -48,7 +48,7 @@ export const WINDOW_IDS: WindowId[] = [
 const CASCADE_ORIGIN_X = 120;
 const CASCADE_ORIGIN_Y = 48;
 const CASCADE_STEP = 24;
-// The margin the frame's own `min(w, calc(100vw - 16px))` width already assumes on each side.
+// The margin the frame's own `min(size, calc(100v* - 16px))` sizing already assumes on each side.
 const CASCADE_MARGIN = 8;
 // Mirrors --r-taskbar-h: the desktop surface windows sit on stops above the taskbar.
 const TASKBAR_H = 30;
@@ -74,16 +74,26 @@ interface WindowStore {
   reset: () => void;
 }
 
+/** One axis of the stair: the full step, unless the window would hang past the far edge. */
+function stairAxis(origin: number, step: number, available: number, size: number): number {
+  return Math.min(origin + step, Math.max(CASCADE_MARGIN, available - size - CASCADE_MARGIN));
+}
+
 /**
- * The stair's x for one window. 120 clears the icon column, but a 960px window placed there runs
- * off a 1024px screen, and content off the edge is worse than a partly covered icon — so a window
- * that cannot fit at its step falls back toward the left margin instead.
+ * Where a window lands on the cascade. The origin clears the icon column, but a window that
+ * cannot fit there backs off toward the margin instead — content off the edge is worse than a
+ * partly covered icon. Both axes need it: a 960px window at x 120 runs off a 1024px screen, and
+ * a 640px window four steps down hangs below the taskbar on a 768px one.
+ *
+ * `vp.h` is already the height above the taskbar (viewportSize subtracts it), so this must not
+ * subtract TASKBAR_H again.
  */
-function cascadeX(id: WindowId, step: number, vp: Viewport): number {
-  return Math.min(
-    CASCADE_ORIGIN_X + step,
-    Math.max(CASCADE_MARGIN, vp.w - WINDOW_SIZES[id].w - CASCADE_MARGIN)
-  );
+function cascadePos(id: WindowId, step: number, vp: Viewport): { x: number; y: number } {
+  const { w, h } = WINDOW_SIZES[id];
+  return {
+    x: stairAxis(CASCADE_ORIGIN_X, step, vp.w, w),
+    y: stairAxis(CASCADE_ORIGIN_Y, step, vp.h, h),
+  };
 }
 
 const closedWindow = (id: WindowId): WindowState => ({
@@ -154,8 +164,7 @@ export const useWindowStore = create<WindowStore>((set) => ({
             open: true,
             minimized: false,
             maximized: false,
-            x: cascadeX(id, step, viewport ?? viewportSize()),
-            y: CASCADE_ORIGIN_Y + step,
+            ...cascadePos(id, step, viewport ?? viewportSize()),
             z: s.nextZ,
           },
         }),
@@ -208,15 +217,13 @@ export const useWindowStore = create<WindowStore>((set) => ({
       const vp = viewport ?? viewportSize();
       const windows = { ...s.windows };
       let z = s.nextZ;
-      // Clamped per window: each one is measured against its own width, so a narrow window keeps
-      // the full origin while a wide one in the same cascade steps back to the margin.
+      // Clamped per window: each one is measured against its own size, so a small window keeps
+      // the full origin while a large one in the same cascade steps back to the margin.
       ids.forEach((id, i) => {
-        const step = CASCADE_STEP * i;
         windows[id] = {
           ...windows[id],
           maximized: false,
-          x: cascadeX(id, step, vp),
-          y: CASCADE_ORIGIN_Y + step,
+          ...cascadePos(id, CASCADE_STEP * i, vp),
           z: z++,
         };
       });

@@ -143,6 +143,27 @@ describe("window store", () => {
     }
   });
 
+  it("keeps a tall window above the taskbar however deep the stair goes", () => {
+    // The store's viewport is the area above the taskbar, so 738 is a 768px screen.
+    const vp = { w: 1440, h: 738 };
+    s().open("games", vp);
+    s().open("import", vp);
+    s().open("profile", vp);
+    s().open("review", vp);
+    // Step 3 would be y 120, and 120 + 640 overhangs the taskbar by 22.
+    expect(s().windows.review.y).toBe(90);
+    expect(s().windows.review.y + WINDOW_SIZES.review.h).toBeLessThanOrEqual(vp.h);
+    // The shorter windows ahead of it keep their full step.
+    expect(s().windows.games.y).toBe(48);
+    expect(s().windows.import.y).toBe(72);
+    expect(s().windows.profile.y).toBe(96);
+  });
+
+  it("floors the vertical origin on a viewport shorter than the window", () => {
+    s().open("review", { w: 1440, h: 300 });
+    expect(s().windows.review.y).toBe(8);
+  });
+
   it("cascade clamps each window against its own width", () => {
     const vp = { w: 1024, h: 768 };
     s().open("games", vp);
@@ -152,6 +173,17 @@ describe("window store", () => {
     expect(s().windows.games).toMatchObject({ x: 120, y: 48 });
     expect(s().windows.review).toMatchObject({ x: 56, y: 72 });
     expect(s().windows.review.x + WINDOW_SIZES.review.w).toBeLessThanOrEqual(vp.w - 8);
+  });
+
+  it("cascade clamps the stair's depth per window", () => {
+    const vp = { w: 1440, h: 738 };
+    for (const id of ["games", "import", "profile", "review"] as const) s().open(id, vp);
+    s().move("review", 500, 500);
+    s().cascadeAll(vp);
+    // Same as opening: only the 640px window gives up part of its step.
+    expect(s().windows.profile).toMatchObject({ y: 96 });
+    expect(s().windows.review).toMatchObject({ y: 90 });
+    expect(s().windows.review.y + WINDOW_SIZES.review.h).toBeLessThanOrEqual(vp.h);
   });
 
   it("tiles the visible windows into a grid inside the given viewport", () => {
