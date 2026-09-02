@@ -11,4 +11,10 @@
   outline: 1px dotted var(--r-highlight);
   pointer-events: none;
   z-index: 60;
+  transition: opacity 200ms steps(4);
+}
+/* A stalled scrub leaves the outline parked as an empty rectangle; it fades instead, and
+   any progress delta clears the class and brings it straight back. */
+.cascade-outline--stalled {
+  opacity: 0;
 }

@@ -29,6 +29,14 @@
   border-radius: 0;
 }
 
+/* Win98 highlighted text in the title-bar navy. Literal values: highlight pseudo-elements
+   resolve custom properties inconsistently across engines. */
+.retro::selection,
+.retro ::selection {
+  background: #000080;
+  color: #ffffff;
+}
+
 .r-face { background: var(--r-face); }
 .r-paper { background: var(--r-paper); }
 
@@ -59,6 +67,12 @@
   font-weight: 700;
   user-select: none;
 }
+/* The title bar is a drag/nudge target with tabIndex 0; the dark ring used everywhere else
+   would vanish into the navy, so this one is drawn in the highlight. */
+.r-title:focus-visible {
+  outline: 1px dotted var(--r-highlight);
+  outline-offset: -3px;
+}
 .r-title-glyph {
   display: inline-flex;
   align-items: center;
@@ -88,7 +102,8 @@
   color: var(--r-dark);
   font: inherit;
   text-decoration: none;
-  cursor: pointer;
+  /* Win98 never showed the hand over a button — only text links get the pointer. */
+  cursor: default;
   box-shadow:
     inset -1px -1px var(--r-dark),
     inset 1px 1px var(--r-highlight),
@@ -126,6 +141,8 @@
   text-decoration: underline;
 }
 
+/* Verdana is deliberate, not a fallback: it shipped with IE4 and is the period-correct body
+   face for 1999 prose, the one place this UI stops being 11px MS Sans Serif. */
 .r-body {
   font-family: Verdana, Tahoma, "DejaVu Sans", sans-serif;
   font-size: 14px;
@@ -192,7 +209,9 @@
 }
 .r-badge--flat { background: var(--r-face-light); color: var(--r-dark); }
 
-.r-scroll { overflow: auto; }
+/* contain, not none: reaching the end of a list stops there instead of chaining into the
+   page — a flick inside a finale window must never fling the story back up. */
+.r-scroll { overflow: auto; overscroll-behavior: contain; }
 /* Standard scrollbar properties disable ::-webkit-scrollbar in Chromium; scope them to Firefox. */
 @supports not selector(::-webkit-scrollbar) {
   .r-scroll { scrollbar-width: auto; scrollbar-color: var(--r-face) var(--r-face-light); }
@@ -244,6 +263,44 @@
   padding: 0 4px;
   margin-left: 8px;
   background: var(--r-face);
+}
+
+/* A 1999 title glyph is 16x14. On a finger that is a miss, so coarse pointers get a
+   transparent ::after that lifts the target to 44px without moving one visible pixel. */
+@media (pointer: coarse) {
+  /* Tailwind's position utilities are layered and this file is not, so an unconditional
+     `relative` here would silently un-anchor an absolutely placed consumer. */
+  .hit-44:not(.absolute, .fixed, .sticky) {
+    position: relative;
+  }
+  .hit-44::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    height: max(100%, 44px);
+    transform: translateY(-50%);
+    /* Vertical only by default. Title glyphs sit 18px apart, so a 44px-wide box would
+       cover its neighbour and steal its taps; widen per-consumer with --hit-x instead. */
+    left: calc(-1 * var(--hit-x, 0px));
+    right: calc(-1 * var(--hit-x, 0px));
+  }
+}
+
+/* L7: the eval bar is an instrument, so it gets a well and a caption instead of reading
+   as a broken scrollbar. 1px bevel — a 2px one would out-weigh the 10px bar inside it. */
+.eval-frame {
+  padding: 2px;
+  background: var(--r-face);
+  box-shadow: inset -1px -1px var(--r-highlight), inset 1px 1px var(--r-shadow);
+}
+.eval-frame-caption {
+  margin-top: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1;
+  text-align: center;
+  color: var(--r-dark);
 }
 
 @media (prefers-reduced-motion: reduce) {

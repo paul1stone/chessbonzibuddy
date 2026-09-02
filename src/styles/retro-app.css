@@ -167,3 +167,33 @@ body.cursor-progress,
 body.cursor-progress * { cursor: progress !important; }
 .cursor-wait-all,
 .cursor-wait-all * { cursor: wait !important; }
+
+/* xterm brings its own scroller, so .r-scroll never reaches it; same containment rule. */
+.retro .xterm-viewport { overscroll-behavior: contain; }
+
+/* ---- The landing's last section: the desktop itself ---- */
+
+/* Exactly one viewport minus the bar, so the arrival observer can see the whole section:
+   the marketing layout's taskbar padding would otherwise cap visibility below any threshold
+   worth latching on. Positioned, because the embedded Desktop anchors to inset-0. */
+.desktop-finale {
+  position: relative;
+  height: calc(100svh - var(--r-taskbar-h));
+  overflow: hidden;
+  background: var(--r-desktop);
+}
+
+/* Mobile has no drag, no marquee and no menus, so the icons stop being placed and become a
+   plain tap grid. Unlayered, so it wins over DesktopIcon's `absolute` without an ! suffix. */
+.icon-grid-mobile {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(44px, auto);
+  align-content: start;
+  gap: 8px;
+  padding: 12px;
+}
+.icon-grid-mobile > * {
+  position: static;
+  width: auto;
+}

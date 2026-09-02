@@ -127,6 +127,21 @@
   }
 }
 
+/* P4: the page scrollbar. Every route is retro, but html sits above the .retro scope, so the
+   Win98 values are written out rather than read from --r-*. Mirrors .r-scroll. */
+@supports not selector(::-webkit-scrollbar) {
+  html { scrollbar-width: auto; scrollbar-color: #c0c0c0 #dfdfdf; }
+}
+html::-webkit-scrollbar { width: 16px; height: 16px; }
+html::-webkit-scrollbar-track {
+  background: repeating-conic-gradient(#dfdfdf 0% 25%, #ffffff 0% 50%) 0 0 / 2px 2px;
+}
+html::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  box-shadow: inset -1px -1px #000000, inset 1px 1px #ffffff,
+    inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+}
+
 @keyframes bubblePop {
   0% {
     transform: scale(0.6);
