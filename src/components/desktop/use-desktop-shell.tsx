@@ -2,6 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { requestEngineDownload } from "@/components/retro/download-dialog";
+import {
+  acquireProgressCursor,
+  releaseProgressCursor,
+  toastError,
+} from "@/components/ui/toast-helpers";
 import DisplayPropertiesWindow from "@/components/windows/display-properties-window";
 import { GamesWindow } from "@/components/windows/games-window";
 import {
@@ -16,6 +22,7 @@ import {
   ReviewWindow,
 } from "@/components/windows/review-window";
 import TerminalWindow from "@/components/windows/terminal-window";
+import { isEngineFetched } from "@/lib/engine-prefetch";
 import { useGameStore } from "@/stores/game-store";
 import { useWindowStore, type WindowId } from "@/stores/window-store";
 import type { Game } from "@/db/schema";
@@ -25,6 +32,13 @@ import { VIEW_PARAM_WINDOWS } from "./view-params";
 
 export type { ImportOne };
 export { VIEW_PARAM_WINDOWS };
+
+/** One authored line for the branches where the server's own words can't be trusted (A8). */
+function unreachableCopy(): string {
+  return typeof navigator !== "undefined" && !navigator.onLine
+    ? "You're offline."
+    : "Could not reach the game library. Try again in a minute.";
+}
 
 /**
  * The window definitions and the import/analyze handlers behind them, shared by the `/app`
@@ -62,10 +76,8 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
 
       try {
         // Dynamic import keeps Stockfish and the opening book out of the initial bundle.
+        // No warm-up toast: the gate above has already named the download and shown its bar.
         const { analyzeGame } = await import("@/lib/analyze");
-        toast.info(
-          "Warming up Stockfish - first analysis downloads the engine (~113 MB)"
-        );
 
         const result = await analyzeGame(game.pgn, {
           onProgress: (current, total) => {
@@ -105,7 +117,7 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
         console.error("Analysis failed:", err);
         const errorMessage =
           err instanceof Error ? err.message : "Unknown error";
-        toast.error("Analysis failed: " + errorMessage);
+        toastError("Analysis failed: " + errorMessage);
       } finally {
         setIsAnalyzing(false);
         setAnalysisProgress(0);
@@ -134,33 +146,43 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
       return;
 
     processingRef.current = true;
-    const next = dequeueAnalysis();
-    if (next) {
-      // If no game is currently active, make the queued game active
-      if (!activeGame) {
+
+    (async () => {
+      // A3: the engine is 113 MB, so nothing downloads it until the user says so. Gated
+      // BEFORE the dequeue — a decline leaves the queue whole, ready for the next attempt.
+      if (!isEngineFetched() && !(await requestEngineDownload())) {
+        processingRef.current = false;
+        return;
+      }
+
+      const next = dequeueAnalysis();
+      if (!next) {
+        processingRef.current = false;
+        return;
+      }
+      // If no game is currently active, make the queued game active. Read fresh: the gate
+      // may have held this run open for the length of a download.
+      if (!useGameStore.getState().activeGame) {
         setActiveGame(next);
       }
       runAnalysis(next).finally(() => {
         processingRef.current = false;
       });
-    } else {
-      processingRef.current = false;
-    }
+    })();
   }, [
     isAnalyzing,
     playOpen,
     analysisQueue,
     dequeueAnalysis,
     runAnalysis,
-    activeGame,
     setActiveGame,
   ]);
 
   // ---- Hourglass while the engine works ----
   useEffect(() => {
     if (!isAnalyzing) return;
-    document.body.classList.add("cursor-progress");
-    return () => document.body.classList.remove("cursor-progress");
+    acquireProgressCursor();
+    return releaseProgressCursor;
   }, [isAnalyzing]);
 
   const handleAnalyze = useCallback(() => {
@@ -178,21 +200,29 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: rawUrl }),
         })
-          .then(async (res) => ({ ok: res.ok, data: await res.json() }))
+          .then(async (res) => ({
+            ok: res.ok,
+            status: res.status,
+            data: await res.json().catch(() => null),
+          }))
           .catch(() => null);
 
-        if (!result) {
-          toast.error("Failed to import game: Network error");
-          throw new Error("Network error. Please try again.");
-        }
+        // A8: one surface for the failure — the form's own inline line, which is what the
+        // caller renders from these throws. No toast saying the same thing beside it.
+        if (!result) throw new Error(unreachableCopy());
 
         if (!result.ok) {
-          const errorMessage = result.data?.error ?? "Failed to import game";
-          toast.error("Failed to import game: " + errorMessage);
-          throw new Error(errorMessage);
+          // 4xx bodies are this app's own validation copy; anything else can carry raw
+          // upstream text, which never reaches the screen.
+          const authored =
+            result.status < 500 && typeof result.data?.error === "string"
+              ? (result.data.error as string)
+              : unreachableCopy();
+          throw new Error(authored);
         }
 
-        const importedGame = result.data as Game;
+        const importedGame = result.data as Game | null;
+        if (!importedGame) throw new Error(unreachableCopy());
         addGame(importedGame);
         setActiveGame(importedGame);
         useWindowStore.getState().open("review");
@@ -217,7 +247,7 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
 
         if (!res.ok) {
           // A rejected import resolves the fetch, so only this branch reports it.
-          toast.error(`Failed to import ${g.white} vs ${g.black}`);
+          toastError(`Failed to import ${g.white} vs ${g.black}`);
           return false;
         }
 
@@ -229,7 +259,7 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
         enqueueAnalysis([game]);
         return true;
       } catch {
-        toast.error(`Failed to import ${g.white} vs ${g.black}`);
+        toastError(`Failed to import ${g.white} vs ${g.black}`);
         return false;
       }
     },

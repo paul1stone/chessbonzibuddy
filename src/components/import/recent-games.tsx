@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Download, Check, RefreshCw, Search } from "lucide-react";
+import { toast } from "sonner";
 import { RetroButton } from "@/components/retro";
 import { toastError } from "@/components/ui/toast-helpers";
 import { useProfileStore } from "@/stores/profile-store";
@@ -172,6 +173,7 @@ export function RecentGames({
     try {
       // Sequential: each POST is awaited so the row it belongs to can be marked
       // on its own result rather than on the batch having been handed off.
+      let landed = 0;
       for (let i = 0; i < queue.length; i++) {
         if (cancelledRef.current) break;
         const game = queue[i];
@@ -179,12 +181,22 @@ export function RecentGames({
         const ok = await importOne(game);
         if (cancelledRef.current) break;
         if (!ok) continue;
+        landed += 1;
         setImported((prev) => new Set(prev).add(game.id));
         setSelected((prev) => {
           const next = new Set(prev);
           next.delete(game.id);
           return next;
         });
+      }
+
+      // One summary and one window at the end of the run — the payoff an explicit Import
+      // click expects, and never per game.
+      if (landed > 0 && !cancelledRef.current) {
+        toast.success(
+          `Imported ${landed} of ${queue.length} game${queue.length === 1 ? "" : "s"}`
+        );
+        openWindow("review");
       }
     } finally {
       onProgress?.(null);
@@ -199,6 +211,7 @@ export function RecentGames({
     onProgress,
     onImportOne,
     onBulkImport,
+    openWindow,
   ]);
 
   // Drop the progress line if the window closes mid-run.
