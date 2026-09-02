@@ -171,6 +171,13 @@ body.cursor-progress * { cursor: progress !important; }
 /* xterm brings its own scroller, so .r-scroll never reaches it; same containment rule. */
 .retro .xterm-viewport { overscroll-behavior: contain; }
 
+/* Sonner hardcodes border-radius:50% on the close button and never reads its own
+   --border-radius, so the round pill outlives the .retro reset. The extra attribute is
+   load-bearing: the library's own selector ties this one, and its sheet is injected later. */
+.retro [data-sonner-toast][data-styled="true"] [data-close-button] {
+  border-radius: 0;
+}
+
 /* ---- The landing's last section: the desktop itself ---- */
 
 /* Exactly one viewport minus the bar, so the arrival observer can see the whole section:
