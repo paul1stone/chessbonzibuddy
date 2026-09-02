@@ -132,8 +132,10 @@
   outline: 1px dotted var(--r-dark);
   outline-offset: -4px;
 }
+/* One ring system: the same dotted marquee as buttons, offset outward so it clears the
+   underline instead of cutting through the text. */
 .retro a:not(.r-btn):focus-visible {
-  outline: 2px solid var(--r-dark);
+  outline: 1px dotted var(--r-dark);
   outline-offset: 2px;
 }
 .retro a:not(.r-btn) {
@@ -165,6 +167,11 @@
 .r-title--inactive {
   background: linear-gradient(90deg, var(--r-shadow), var(--r-face-light));
 }
+/* Tab reaches unfocused windows too, and the highlight ring disappears into the gray
+   gradient. Same specificity as the rule above, so it has to stay below it. */
+.r-title--inactive:focus-visible {
+  outline-color: var(--r-dark);
+}
 
 .r-statusbar:empty {
   display: none;
@@ -192,7 +199,8 @@
 .r-tab {
   padding: 3px 12px;
   background: var(--r-face);
-  cursor: pointer;
+  /* A bevelled control, so the arrow — same rule as .r-btn. */
+  cursor: default;
   font: inherit;
   box-shadow: inset -1px -1px var(--r-dark), inset 1px 1px var(--r-highlight),
     inset -2px -2px var(--r-shadow), inset 2px 2px var(--r-face-light);
@@ -223,6 +231,8 @@
   box-shadow: inset -1px -1px var(--r-dark), inset 1px 1px var(--r-highlight),
     inset -2px -2px var(--r-shadow), inset 2px 2px var(--r-face-light);
 }
+/* Where the two bars meet: flat face, never the track's dither. */
+.r-scroll::-webkit-scrollbar-corner { background: var(--r-face); }
 
 .r-skeleton {
   background: repeating-linear-gradient(45deg, var(--r-face-light) 0 8px, var(--r-face) 8px 16px);

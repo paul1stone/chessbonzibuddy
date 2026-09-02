@@ -141,6 +141,7 @@ html::-webkit-scrollbar-thumb {
   box-shadow: inset -1px -1px #000000, inset 1px 1px #ffffff,
     inset -2px -2px #808080, inset 2px 2px #dfdfdf;
 }
+html::-webkit-scrollbar-corner { background: #c0c0c0; }
 
 @keyframes bubblePop {
   0% {

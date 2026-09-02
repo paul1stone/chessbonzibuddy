@@ -184,7 +184,7 @@ body.cursor-progress * { cursor: progress !important; }
 }
 
 /* Mobile has no drag, no marquee and no menus, so the icons stop being placed and become a
-   plain tap grid. Unlayered, so it wins over DesktopIcon's `absolute` without an ! suffix. */
+   plain tap grid. */
 .icon-grid-mobile {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -193,7 +193,14 @@ body.cursor-progress * { cursor: progress !important; }
   gap: 8px;
   padding: 12px;
 }
-.icon-grid-mobile > * {
+/* Today's mobile branch renders plain flow buttons, so this is defensive: it keeps a placed
+   DesktopIcon usable here, unlayered so it beats that component's `absolute`. */
+.icon-grid-mobile > [data-desktop-icon] {
   position: static;
   width: auto;
+}
+/* A cell is already ≥44px, and a child forced back to static would anchor its .hit-44 box
+   to the section instead of itself — a full-viewport tap-stealer. No expansion in here. */
+.icon-grid-mobile > .hit-44::after {
+  display: none;
 }
