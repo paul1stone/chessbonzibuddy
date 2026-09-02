@@ -136,6 +136,16 @@ export function RecentGames({
     });
   }, []);
 
+  // A run outlives this component otherwise: leaving the tab or closing the
+  // window would revert the status line while the POSTs kept going.
+  const cancelledRef = useRef(false);
+  useEffect(() => {
+    cancelledRef.current = false;
+    return () => {
+      cancelledRef.current = true;
+    };
+  }, []);
+
   const importOne = useCallback<ImportOne>(
     async (game) => {
       if (onImportOne) return onImportOne(game);
@@ -148,6 +158,13 @@ export function RecentGames({
   );
 
   const handleImport = useCallback(async () => {
+    if (!onImportOne && !onBulkImport) {
+      // No handler wired: without this the counter would run to completion
+      // having imported nothing.
+      toastError("Import is unavailable right now.");
+      return;
+    }
+
     const queue = games.filter((g) => selected.has(g.id) && !imported.has(g.id));
     if (queue.length === 0 || isImporting) return;
 
@@ -156,9 +173,11 @@ export function RecentGames({
       // Sequential: each POST is awaited so the row it belongs to can be marked
       // on its own result rather than on the batch having been handed off.
       for (let i = 0; i < queue.length; i++) {
+        if (cancelledRef.current) break;
         const game = queue[i];
         onProgress?.({ done: i + 1, total: queue.length });
         const ok = await importOne(game);
+        if (cancelledRef.current) break;
         if (!ok) continue;
         setImported((prev) => new Set(prev).add(game.id));
         setSelected((prev) => {
@@ -171,11 +190,22 @@ export function RecentGames({
       onProgress?.(null);
       setIsImporting(false);
     }
-  }, [games, selected, imported, isImporting, importOne, onProgress]);
+  }, [
+    games,
+    selected,
+    imported,
+    isImporting,
+    importOne,
+    onProgress,
+    onImportOne,
+    onBulkImport,
+  ]);
 
   // Drop the progress line if the window closes mid-run.
   const onProgressRef = useRef(onProgress);
-  onProgressRef.current = onProgress;
+  useEffect(() => {
+    onProgressRef.current = onProgress;
+  }, [onProgress]);
   useEffect(() => () => onProgressRef.current?.(null), []);
 
   if (!hasAccount) {

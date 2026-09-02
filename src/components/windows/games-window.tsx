@@ -15,10 +15,27 @@ function resultDot(result: string) {
 }
 
 /** One authored line per branch — a failed fetch never puts the server's own words on screen. */
-function libraryFailureCopy() {
+function offlineCopy() {
   return typeof navigator !== "undefined" && !navigator.onLine
     ? "You're offline."
     : "The game library is offline. Try again in a minute.";
+}
+
+/** A 4xx is the record being gone, not the server being down — don't say "try again". */
+function isMissing(status: number | null) {
+  return status !== null && status >= 400 && status < 500;
+}
+
+function listFailureCopy(status: number | null) {
+  return isMissing(status)
+    ? "No game library found for that account."
+    : offlineCopy();
+}
+
+function openFailureCopy(status: number | null) {
+  return isMissing(status)
+    ? "That game is no longer in your library."
+    : `Could not open that game. ${offlineCopy()}`;
 }
 
 function SkeletonRows() {
@@ -72,7 +89,8 @@ export function GamesWindow() {
           `/api/games?username=${encodeURIComponent(username)}`
         );
         if (!res.ok) {
-          throw new Error("Failed to fetch games");
+          if (!cancelled) setFetchError(listFailureCopy(res.status));
+          return;
         }
         const data = (await res.json()) as Game[];
         if (!cancelled) {
@@ -81,7 +99,7 @@ export function GamesWindow() {
         }
       } catch {
         if (!cancelled) {
-          setFetchError(libraryFailureCopy());
+          setFetchError(listFailureCopy(null));
         }
       } finally {
         if (!cancelled) {
@@ -128,13 +146,13 @@ export function GamesWindow() {
     try {
       const res = await fetch(`/api/games/${game.id}`);
       if (!res.ok) {
-        toastError(`Could not open that game. ${libraryFailureCopy()}`);
+        toastError(openFailureCopy(res.status));
         return;
       }
       const fullGame = (await res.json()) as Game;
       setActiveGame(fullGame);
     } catch {
-      toastError(`Could not open that game. ${libraryFailureCopy()}`);
+      toastError(openFailureCopy(null));
       return;
     }
     openWindow("review");

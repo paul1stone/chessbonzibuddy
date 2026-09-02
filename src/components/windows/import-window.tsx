@@ -1,7 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { RetroButton } from "@/components/retro";
+import {
+  acquireProgressCursor,
+  releaseProgressCursor,
+} from "@/components/ui/toast-helpers";
 import {
   RecentGames,
   type ImportOne,
@@ -36,16 +47,34 @@ export function ImportWindow({
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<ImportProgress | null>(null);
+  const [announcement, setAnnouncement] = useState("");
   const tabRefs = useRef<Partial<Record<TabId, HTMLButtonElement | null>>>({});
+  const runningRef = useRef(false);
 
   const busy = importing || progress !== null;
 
-  // Hourglass while a POST is in flight, same as the analysis queue's.
+  // Hourglass while a POST is in flight, refcounted because the analysis queue
+  // raises the same one.
   useEffect(() => {
     if (!busy) return;
-    document.body.classList.add("cursor-progress");
-    return () => document.body.classList.remove("cursor-progress");
+    acquireProgressCursor();
+    return releaseProgressCursor;
   }, [busy]);
+
+  // The counter ticks per game but only the run's start and end are announced:
+  // a live region on the counter itself queues one reading per import.
+  const handleProgress = useCallback((next: ImportProgress | null) => {
+    setProgress(next);
+    if (next && !runningRef.current) {
+      runningRef.current = true;
+      setAnnouncement(
+        `Importing ${next.total} game${next.total === 1 ? "" : "s"}.`
+      );
+    } else if (!next && runningRef.current) {
+      runningRef.current = false;
+      setAnnouncement("Import finished.");
+    }
+  }, []);
 
   const status = progress
     ? `Importing ${progress.done} of ${progress.total}…`
@@ -124,7 +153,7 @@ export function ImportWindow({
           <RecentGames
             onImportOne={onImportOne}
             onBulkImport={onBulkImport}
-            onProgress={setProgress}
+            onProgress={handleProgress}
           />
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -148,13 +177,10 @@ export function ImportWindow({
         )}
       </div>
 
-      <div
-        className="r-bevel-in r-statusbar shrink-0"
-        role="status"
-        aria-live="polite"
-      >
-        {status}
-      </div>
+      <div className="r-bevel-in r-statusbar shrink-0">{status}</div>
+      <span role="status" className="sr-only">
+        {announcement}
+      </span>
     </div>
   );
 }

@@ -86,6 +86,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
         {
           "--normal-bg": "var(--r-face)",
           "--normal-text": "var(--r-dark)",
+          // The toast itself draws no border — the bevel is the edge. These two
+          // are what the close button reads: its border is var(--gray4), which
+          // otherwise falls back to sonner's near-white.
+          "--normal-border": "var(--r-shadow)",
+          "--gray4": "var(--r-shadow)",
           "--border-radius": "0px",
         } as React.CSSProperties
       }
