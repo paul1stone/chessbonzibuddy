@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Privacy policy" };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="28 August 2026">
+    <LegalPage title="Privacy policy" updated="28 August 2026" self="privacy">
       <p>
         Chess Bonzi Buddy is a hobby project. This page describes what the site stores and why. There are no accounts and no passwords.
       </p>

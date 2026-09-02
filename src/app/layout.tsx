@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Chess Bonzi Buddy",
     description: DESCRIPTION,
-    images: ["/og.png"],
+    images: [{ url: "/og.png", alt: OG_ALT }],
   },
 };
 

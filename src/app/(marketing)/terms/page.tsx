@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Terms of use" };
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of use" updated="28 August 2026">
+    <LegalPage title="Terms of use" updated="28 August 2026" self="terms">
       <p>By using Chess Bonzi Buddy you agree to the following. They are short because the site is small.</p>
 
       <h2>What the site is</h2>
