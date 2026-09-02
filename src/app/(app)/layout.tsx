@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { msSans, vt323 } from "@/fonts/retro-fonts";
 import { AppBoot } from "@/components/desktop/app-boot";
 import { Toaster } from "@/components/ui/sonner";
 import { ViewParamSync } from "./app/view-param-sync";
+
+export const metadata: Metadata = { title: "Desktop" };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
