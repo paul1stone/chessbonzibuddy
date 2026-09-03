@@ -3,9 +3,9 @@
  * progress bar the user agreed to rather than inside a silent worker handshake.
  *
  * The request deliberately mirrors the worker's own — same URL, default options, body drained
- * to the end — so a browser that caches it can serve the worker from cache. Measured locally,
- * a repeat fetch of this response costs ~325ms against ~3.5s cold, but the worker's own request
- * did not always reuse it; the gate's value is the consent and the bar, not the saved bytes.
+ * to the end — so both land on one cache entry: verified in dev, the worker's streaming
+ * instantiate reuses this response (~300 bytes on the wire against a 75 MB body) instead of
+ * fetching the engine again.
  */
 
 export const ENGINE_WASM_URL = "/stockfish/stockfish.wasm";
@@ -16,13 +16,13 @@ export const ENGINE_WASM_URL = "/stockfish/stockfish.wasm";
  */
 const SESSION_KEY = "cbb-engine-fetched";
 
-/** Used when the response declines to declare a size, so the bar is still a bar. */
+/** Used when no usable size is declared, so the bar is still a bar. */
 const APPROX_BYTES = 113_000_000;
 
 export interface PrefetchProgress {
   /** Bytes drained so far. */
   received: number;
-  /** Declared Content-Length, or the ~113 MB estimate when the response withheld one. */
+  /** Declared Content-Length, or the ~113 MB estimate when there is no usable one. */
   total: number;
   /** 0-100, held below 100 until the stream actually ends. */
   percent: number;
@@ -68,7 +68,9 @@ export function cancelEnginePrefetch(): void {
 }
 
 export function isAbortError(err: unknown): boolean {
-  return err instanceof Error && err.name === "AbortError";
+  // Not `instanceof Error`: an abort arrives as a DOMException, which some browsers do not
+  // derive from Error.
+  return (err as { name?: unknown } | null | undefined)?.name === "AbortError";
 }
 
 /** Test seam: drops the latch, the listeners, and any run in flight. */
@@ -119,19 +121,26 @@ async function download(signal: AbortSignal): Promise<void> {
     throw new Error(`Engine download failed (HTTP ${res.status})`);
   }
 
+  // Content-Length counts ENCODED bytes while the reader hands back decoded ones, so on a
+  // compressed response (the wasm gzips 113 MB down to ~76 MB) the declared length would run
+  // out a third early and park the bar on its clamp. Estimate instead.
   const declared = Number(res.headers.get("Content-Length"));
-  const estimated = !(Number.isFinite(declared) && declared > 0);
+  const estimated =
+    Boolean(res.headers.get("Content-Encoding")) ||
+    !(Number.isFinite(declared) && declared > 0);
   const total = estimated ? APPROX_BYTES : declared;
 
-  const report = (received: number, done: boolean) =>
-    emit({
-      received,
-      total,
-      // Clamped below 100 until the stream ends: an estimate that undershoots must never
-      // park the bar at "done" while bytes are still arriving.
-      percent: done ? 100 : Math.min(99, Math.floor((received / total) * 100)),
-      estimated,
-    });
+  let lastPercent = -1;
+  const report = (received: number, done: boolean) => {
+    // Clamped below 100 until the stream ends: an estimate that undershoots must never
+    // park the bar at "done" while bytes are still arriving.
+    const percent = done ? 100 : Math.min(99, Math.floor((received / total) * 100));
+    // One emit per whole percent — the raw stream fires thousands of chunks, and each one
+    // would otherwise re-render the dialog for a bar that cannot move.
+    if (percent === lastPercent) return;
+    lastPercent = percent;
+    emit({ received, total, percent, estimated });
+  };
 
   if (!res.body) {
     // No stream to read (a test double, or a browser without streaming responses): the cache

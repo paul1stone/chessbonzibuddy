@@ -163,6 +163,8 @@ function DownloadDialogView({ onSettle }: { onSettle: (ok: boolean) => void }) {
 
 let pending: Promise<boolean> | null = null;
 let openHost: HTMLElement | null = null;
+/** Idempotent teardown for the dialog `openHost` belongs to. */
+let disposeOpen: (() => void) | null = null;
 
 /**
  * Shows the gate and resolves true once the engine is cached, false if declined.
@@ -172,29 +174,51 @@ let openHost: HTMLElement | null = null;
  */
 export function requestEngineDownload(): Promise<boolean> {
   if (typeof document === "undefined") return Promise.resolve(false);
-  // A host torn out with its layer (a route change mid-dialog) can never answer, so the next
-  // caller gets a fresh dialog rather than that dead promise.
   if (pending && openHost?.isConnected) return pending;
+
+  // A host torn out with its layer (a route change mid-dialog) can never answer. Drop that
+  // root rather than leak it, and give this caller a live dialog.
+  if (openHost) {
+    disposeOpen?.();
+    pending = null;
+    openHost = null;
+    disposeOpen = null;
+  }
 
   // Inside `.retro` so the dialog inherits the theme tokens and the pixel font.
   const layer = document.querySelector<HTMLElement>(".retro") ?? document.body;
   const host = document.createElement("div");
   layer.appendChild(host);
-  openHost = host;
   const root = createRoot(host);
+
+  let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    // Out of band: React refuses to unmount a root from inside a render pass, and this can
+    // be called from one.
+    setTimeout(() => {
+      root.unmount();
+      host.remove();
+    }, 0);
+  };
+
+  openHost = host;
+  disposeOpen = dispose;
 
   pending = new Promise<boolean>((resolve) => {
     root.render(
       <DownloadDialogView
         onSettle={(ok) => {
-          pending = null;
-          openHost = null;
+          // Only clear the tracking while it still points at THIS dialog: an orphan whose
+          // download finishes late must not wipe the live dialog's.
+          if (openHost === host) {
+            pending = null;
+            openHost = null;
+            disposeOpen = null;
+          }
           resolve(ok);
-          // Out of band: React refuses to unmount a root from inside its own render pass.
-          setTimeout(() => {
-            root.unmount();
-            host.remove();
-          }, 0);
+          dispose();
         }}
       />
     );

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  cancelEnginePrefetch,
   ENGINE_WASM_URL,
+  isAbortError,
   isEngineFetched,
   prefetchEngine,
   resetEnginePrefetch,
@@ -112,6 +114,72 @@ describe("prefetchEngine", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(play.at(-1)?.percent).toBe(100);
     expect(analysis.at(-1)?.percent).toBe(100);
+  });
+
+  it("ignores Content-Length on a compressed response", async () => {
+    // The header counts encoded bytes, the reader yields decoded ones — trusting it would
+    // run the bar out early and park it on the clamp.
+    vi.stubGlobal("fetch", async () =>
+      streamedResponse([50, 50], {
+        "Content-Length": "60",
+        "Content-Encoding": "gzip",
+      })
+    );
+
+    const seen: PrefetchProgress[] = [];
+    await prefetchEngine((p) => seen.push(p));
+
+    expect(seen.every((p) => p.estimated)).toBe(true);
+    expect(seen.every((p) => p.total === 113_000_000)).toBe(true);
+    expect(seen.at(-1)?.percent).toBe(100);
+  });
+
+  it("emits once per whole percent rather than once per chunk", async () => {
+    // 200 single-byte chunks against a declared 100 bytes: each percent is reached twice.
+    vi.stubGlobal("fetch", async () =>
+      streamedResponse(Array(200).fill(1), { "Content-Length": "100" })
+    );
+
+    const seen: PrefetchProgress[] = [];
+    await prefetchEngine((p) => seen.push(p));
+
+    expect(seen.length).toBeLessThanOrEqual(101);
+    expect(new Set(seen.map((p) => p.percent)).size).toBe(seen.length);
+  });
+
+  it("cancel aborts the download and leaves it retryable", async () => {
+    const aborting = vi.fn(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError"))
+          );
+        })
+    );
+    vi.stubGlobal("fetch", aborting);
+
+    const settled = prefetchEngine().catch((err) => err);
+    cancelEnginePrefetch();
+    const err = await settled;
+
+    expect(isAbortError(err)).toBe(true);
+    expect(isEngineFetched()).toBe(false);
+
+    // The next attempt starts a fresh request rather than reusing the aborted one.
+    vi.stubGlobal("fetch", async () =>
+      streamedResponse([10], { "Content-Length": "10" })
+    );
+    await prefetchEngine();
+    expect(isEngineFetched()).toBe(true);
+  });
+
+  it("recognises an abort without requiring an Error subclass", () => {
+    expect(isAbortError(new DOMException("Aborted", "AbortError"))).toBe(true);
+    expect(isAbortError({ name: "AbortError" })).toBe(true);
+    expect(isAbortError(new Error("boom"))).toBe(false);
+    expect(isAbortError(null)).toBe(false);
+    expect(isAbortError(undefined)).toBe(false);
+    expect(isAbortError("AbortError")).toBe(false);
   });
 
   it("leaves the flag unset when the download fails, so a retry re-runs it", async () => {
