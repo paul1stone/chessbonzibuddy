@@ -290,8 +290,13 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
 
     // Matched here rather than through useIsMobile: that hook hands the hydrating render its
     // server snapshot (false), and the hydrating render is the only one this effect ever sees.
-    // Mobile maximizes one window over everything, so bare /app stays on the icon grid.
-    if (window.matchMedia("(max-width: 767px)").matches) return;
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      // M5: a phone arrives to play Bonzi, not to a file manager. Safe now that opening the
+      // window downloads nothing — the gate asks at Start. Closing it falls back to the icon
+      // grid, so the last close never strands a blank screen.
+      useWindowStore.getState().open("play");
+      return;
+    }
     // S2: My games alone — Profile comes from its own "Open profile" CTA.
     useWindowStore.getState().open("games");
   }, [autoOpen]);
