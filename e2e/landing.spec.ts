@@ -364,6 +364,24 @@ test.describe("landing page", () => {
     await expect(page.getByRole("dialog", { name: "My games" })).toBeVisible();
     await expect(page.locator('[data-taskbar-button="games"]')).toBeVisible();
 
+    // The handed-over bar serves the desktop's own menu: app items, no Home (we are home),
+    // Shut Down and About above GitHub — the same order /app shows.
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await expect(page.getByRole("navigation", { name: "Start menu" }).locator("li")).toHaveText([
+      "Play Bonzi Buddy",
+      "My games",
+      "Import",
+      "Practice",
+      "Profile",
+      "MS-DOS Prompt",
+      "Privacy",
+      "Terms",
+      "Shut Down…",
+      "About Chess Bonzi Buddy",
+      "GitHub",
+    ]);
+    await page.keyboard.press("Escape");
+
     // Scrolling back into the story hands the bar to the sections again. One viewport up, not
     // the top of the page: the sections undock behind you, so at scrollY 0 there is nothing
     // for the bar to show either way.

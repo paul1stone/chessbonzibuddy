@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { AboutDialog, RetroMenu, Taskbar, useContextMenu, type MenuItem, type TaskbarMenuItem } from "@/components/retro";
+import { AboutDialog, beforeGitHub, RetroMenu, Taskbar, useContextMenu, type MenuItem, type TaskbarMenuItem } from "@/components/retro";
 import { cn } from "@/lib/utils";
 import { useWindowStore, WINDOW_IDS, type WindowId } from "@/stores/window-store";
 import { ICON_LABELS, WINDOW_ICONS } from "./icons";
@@ -118,10 +118,9 @@ export function AppTaskbar() {
   const { menu, openAt, close: closeMenu } = useContextMenu();
   const [menuLayer, setMenuLayer] = useState<HTMLElement | null>(null);
 
-  // Appended here, not in the factory: the finale builds its own menu off the same list and
-  // owns its own About state.
-  const menuItems: TaskbarMenuItem[] = [
-    ...APP_MENU_ITEMS_FACTORY(open),
+  // Added here, not in the factory: the finale builds its own menu off the same list and
+  // owns its own About state. Same slot as the marketing bar so the two menus agree.
+  const menuItems: TaskbarMenuItem[] = beforeGitHub(APP_MENU_ITEMS_FACTORY(open), [
     {
       label: "About Chess Bonzi Buddy",
       // The dialog's own app icon: a whole-body Bonzi shrunk to 16px is a speck.
@@ -129,7 +128,7 @@ export function AppTaskbar() {
       icon: <img src="/favicon-32.png" alt="" width={16} height={16} className="[image-rendering:pixelated]" />,
       onSelect: () => setAboutOpen(true),
     },
-  ];
+  ]);
 
   const barItems: MenuItem[] = [
     { label: "Cascade Windows", onSelect: () => cascadeAll() },

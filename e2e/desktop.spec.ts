@@ -403,8 +403,9 @@ test.describe("win98 desktop app", () => {
       "Home",
       "Privacy",
       "Terms",
-      "GitHub",
+      // Local items sit above GitHub, the one off-site link — same rule as the marketing bar.
       "About Chess Bonzi Buddy",
+      "GitHub",
     ]);
 
     // L11: every row carries a 16px icon, so no label ever sits against an empty slot.

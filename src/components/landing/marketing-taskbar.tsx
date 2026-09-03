@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AboutDialog, Taskbar, type TaskbarMenuItem } from "@/components/retro";
-import { DEFAULT_MENU_ITEMS } from "@/components/retro/taskbar";
+import { beforeGitHub, DEFAULT_MENU_ITEMS } from "@/components/retro/taskbar";
 import { APP_MENU_ITEMS_FACTORY, WindowButtons } from "@/components/desktop/app-taskbar";
 import { WINDOW_ICONS } from "@/components/desktop/icons";
 import { ShutDownGlyph } from "@/components/desktop/menu-glyphs";
@@ -14,13 +14,6 @@ import { useWindowStore, type WindowId } from "@/stores/window-store";
 import { clearBootFlag, safeSessionStorage } from "./easter/boot-flag";
 import { ShutdownOverlay } from "./easter/shutdown-overlay";
 import { MarketingTerminal } from "./marketing-terminal";
-
-/** GitHub is the off-site item; everything local belongs above it. */
-function beforeGitHub(base: TaskbarMenuItem[], extras: TaskbarMenuItem[]): TaskbarMenuItem[] {
-  const github = base.findIndex((item) => item.label === "GitHub");
-  const at = github < 0 ? base.length : github;
-  return [...base.slice(0, at), ...extras, ...base.slice(at)];
-}
 
 export function MarketingTaskbar() {
   const docked = useDockStore((s) => s.docked);

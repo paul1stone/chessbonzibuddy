@@ -31,6 +31,13 @@ export const DEFAULT_MENU_ITEMS: TaskbarMenuItem[] = [
   },
 ];
 
+/** GitHub is the off-site item; everything local belongs above it. */
+export function beforeGitHub(base: TaskbarMenuItem[], extras: TaskbarMenuItem[]): TaskbarMenuItem[] {
+  const github = base.findIndex((item) => item.label === "GitHub");
+  const at = github < 0 ? base.length : github;
+  return [...base.slice(0, at), ...extras, ...base.slice(at)];
+}
+
 // Stacked items grow their own box on a finger rather than wearing .hit-44: a 44px overlay on a
 // 27px item reaches into its neighbour, so the bottom third of every row opened the NEXT one.
 const MENU_ITEM_CLASS =
