@@ -6,6 +6,11 @@
  * to the end — so both land on one cache entry: verified in dev, the worker's streaming
  * instantiate reuses this response (~300 bytes on the wire against a 75 MB body) instead of
  * fetching the engine again.
+ *
+ * Not provable from the e2e suite: Playwright's newContext is incognito-like and caches in
+ * memory, which will not hold a 75 MB entry, so re-measuring there shows a second full download
+ * and reads as a bug. Confirmed against prod with launchPersistentContext (a real on-disk
+ * profile, default cache size): one 75 MB transfer for the whole flow, zero bytes from the worker.
  */
 
 export const ENGINE_WASM_URL = "/stockfish/stockfish.wasm";
