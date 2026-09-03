@@ -4,6 +4,7 @@ import { useWindowStore, WINDOW_IDS, WINDOW_SIZES } from "./window-store";
 const s = () => useWindowStore.getState();
 // Wide enough that every window fits at the full cascade origin, so placement tests that are not
 // about the clamp keep their stair whatever the headless viewport fallback happens to be.
+// As everywhere in this store, `h` is the area above the taskbar — what viewportSize reports.
 const WIDE = { w: 1440, h: 900 };
 
 beforeEach(() => useWindowStore.getState().reset());
@@ -137,7 +138,7 @@ describe("window store", () => {
       [320, 8], // narrower than the window itself: all the way back to the margin
     ] as const) {
       s().reset();
-      s().open("review", { w: width, h: 768 });
+      s().open("review", { w: width, h: 738 });
       expect(s().windows.review.x).toBe(expected);
       expect(s().windows.review.x).toBeGreaterThanOrEqual(8);
     }
@@ -165,7 +166,7 @@ describe("window store", () => {
   });
 
   it("cascade clamps each window against its own width", () => {
-    const vp = { w: 1024, h: 768 };
+    const vp = { w: 1024, h: 738 };
     s().open("games", vp);
     s().open("review", vp);
     s().cascadeAll(vp);
