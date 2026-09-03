@@ -73,7 +73,9 @@ function DownloadDialogView({ onSettle }: { onSettle: (ok: boolean) => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[80] grid place-items-center p-2"
+      // `app` scopes .retro.app typography here: the marketing layout's .retro lacks it, and the
+      // gate must read identically at the finale and on /app (13px r-body, not 14px).
+      className="retro app fixed inset-0 z-[80] grid place-items-center p-2"
       onKeyDown={(e) => {
         if (e.key !== "Escape") return;
         e.preventDefault();
