@@ -30,8 +30,6 @@ export interface ImportProgress {
 
 interface RecentGamesProps {
   onImportOne?: ImportOne;
-  /** Legacy fire-and-forget bulk handler; kept until every caller passes `onImportOne`. */
-  onBulkImport?: (games: RecentGameData[]) => Promise<void>;
   onProgress?: (progress: ImportProgress | null) => void;
 }
 
@@ -52,11 +50,7 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export function RecentGames({
-  onImportOne,
-  onBulkImport,
-  onProgress,
-}: RecentGamesProps) {
+export function RecentGames({ onImportOne, onProgress }: RecentGamesProps) {
   const chessComUsername = useProfileStore((s) => s.chessComUsername);
   const lichessUsername = useProfileStore((s) => s.lichessUsername);
   const openWindow = useWindowStore((s) => s.open);
@@ -147,19 +141,8 @@ export function RecentGames({
     };
   }, []);
 
-  const importOne = useCallback<ImportOne>(
-    async (game) => {
-      if (onImportOne) return onImportOne(game);
-      // The legacy bulk handler resolves whether or not the import succeeded, so it
-      // cannot confirm a game — leave the row enabled rather than fake a checkmark.
-      await onBulkImport?.([game]);
-      return false;
-    },
-    [onImportOne, onBulkImport]
-  );
-
   const handleImport = useCallback(async () => {
-    if (!onImportOne && !onBulkImport) {
+    if (!onImportOne) {
       // No handler wired: without this the counter would run to completion
       // having imported nothing.
       toastError("Import is unavailable right now.");
@@ -178,7 +161,7 @@ export function RecentGames({
         if (cancelledRef.current) break;
         const game = queue[i];
         onProgress?.({ done: i + 1, total: queue.length });
-        const ok = await importOne(game);
+        const ok = await onImportOne(game);
         if (cancelledRef.current) break;
         if (!ok) continue;
         landed += 1;
@@ -207,10 +190,8 @@ export function RecentGames({
     selected,
     imported,
     isImporting,
-    importOne,
     onProgress,
     onImportOne,
-    onBulkImport,
     openWindow,
   ]);
 

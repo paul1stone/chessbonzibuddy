@@ -32,15 +32,12 @@ type TabId = (typeof TABS)[number]["id"];
 interface ImportWindowProps {
   onImportUrl: (url: string) => Promise<void>;
   onImportOne?: ImportOne;
-  /** Legacy fire-and-forget bulk handler; kept until every caller passes `onImportOne`. */
-  onBulkImport?: (games: RecentGameData[]) => Promise<void>;
   importing: boolean;
 }
 
 export function ImportWindow({
   onImportUrl,
   onImportOne,
-  onBulkImport,
   importing,
 }: ImportWindowProps) {
   const [tab, setTab] = useState<TabId>("recent");
@@ -150,11 +147,7 @@ export function ImportWindow({
         className="r-face r-bevel-out flex min-h-0 flex-1 flex-col p-3"
       >
         {tab === "recent" ? (
-          <RecentGames
-            onImportOne={onImportOne}
-            onBulkImport={onBulkImport}
-            onProgress={handleProgress}
-          />
+          <RecentGames onImportOne={onImportOne} onProgress={handleProgress} />
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <label className="flex flex-col gap-1">
