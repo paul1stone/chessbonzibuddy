@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { WINDOW_ICONS } from "@/components/desktop/icons";
+import { DocGlyph, GlobeGlyph } from "@/components/desktop/menu-glyphs";
 
 export interface TaskbarMenuItem {
   href?: string;
@@ -12,12 +14,21 @@ export interface TaskbarMenuItem {
   icon?: ReactNode;
 }
 
+// L11 applies to both Start menus: the same pixel icons the desktop uses for the app links, and
+// the small glyphs for the rest. Every item carries one, so the label column never sits against
+// an empty slot.
 export const DEFAULT_MENU_ITEMS: TaskbarMenuItem[] = [
-  { href: "/app?view=play-bonzi", label: "Play Bonzi Buddy" },
-  { href: "/app", label: "Analyze my games" },
-  { href: "/privacy", label: "Privacy" },
-  { href: "/terms", label: "Terms" },
-  { href: "https://github.com/paul1stone/chessbonzibuddy", label: "GitHub", external: true },
+  { href: "/app?view=play-bonzi", label: "Play Bonzi Buddy", icon: WINDOW_ICONS.play },
+  // /app opens My games on arrival, so that is the icon the link promises.
+  { href: "/app", label: "Analyze my games", icon: WINDOW_ICONS.games },
+  { href: "/privacy", label: "Privacy", icon: <DocGlyph /> },
+  { href: "/terms", label: "Terms", icon: <DocGlyph /> },
+  {
+    href: "https://github.com/paul1stone/chessbonzibuddy",
+    label: "GitHub",
+    external: true,
+    icon: <GlobeGlyph />,
+  },
 ];
 
 // Stacked items grow their own box on a finger rather than wearing .hit-44: a 44px overlay on a

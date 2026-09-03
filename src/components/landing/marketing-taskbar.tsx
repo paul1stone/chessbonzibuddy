@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AboutDialog, Taskbar, type TaskbarMenuItem } from "@/components/retro";
 import { DEFAULT_MENU_ITEMS } from "@/components/retro/taskbar";
 import { APP_MENU_ITEMS_FACTORY, WindowButtons } from "@/components/desktop/app-taskbar";
+import { WINDOW_ICONS } from "@/components/desktop/icons";
 import { ShutDownGlyph } from "@/components/desktop/menu-glyphs";
 import { prefersReducedMotion } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -38,32 +39,27 @@ export function MarketingTaskbar() {
   const menuItems = useMemo<TaskbarMenuItem[]>(() => {
     const about: TaskbarMenuItem = {
       label: "About Chess Bonzi Buddy",
+      // The app taskbar's About icon: the dialog's own 32px raster, shrunk to the slot.
+      // eslint-disable-next-line @next/next/no-img-element
+      icon: <img src="/favicon-32.png" alt="" width={16} height={16} className="[image-rendering:pixelated]" />,
       onSelect: () => setAboutOpen(true),
     };
-    const shutDown: TaskbarMenuItem = { label: "Shut Down…", onSelect: () => setShuttingDown(true) };
+    const shutDown: TaskbarMenuItem = {
+      label: "Shut Down…",
+      icon: <ShutDownGlyph />,
+      onSelect: () => setShuttingDown(true),
+    };
 
     if (arrived) {
       // The running desktop's own menu, minus Home (we are home) — and the factory already
       // carries MS-DOS Prompt, so the overlay item would collide with it on label and key.
       const open = (id: WindowId) => useWindowStore.getState().open(id);
       const app = APP_MENU_ITEMS_FACTORY(open).filter((item) => item.label !== "Home");
-      // Every factory item carries a glyph, which reserves the 16px column for the whole
-      // menu — so these two need one as well or they sit against an empty slot.
-      return beforeGitHub(app, [
-        { ...shutDown, icon: <ShutDownGlyph /> },
-        {
-          ...about,
-          // The app taskbar's About icon: the dialog's own 32px raster, shrunk to the slot.
-          // eslint-disable-next-line @next/next/no-img-element
-          icon: <img src="/favicon-32.png" alt="" width={16} height={16} className="[image-rendering:pixelated]" />,
-        },
-      ]);
+      return beforeGitHub(app, [shutDown, about]);
     }
 
-    // No icons here on purpose: nothing in the marketing list has one, so the menu keeps its
-    // flush layout instead of indenting every label past a column of empty slots.
     return beforeGitHub(DEFAULT_MENU_ITEMS, [
-      { label: "MS-DOS Prompt", onSelect: () => setTerminalOpen(true) },
+      { label: "MS-DOS Prompt", icon: WINDOW_ICONS.terminal, onSelect: () => setTerminalOpen(true) },
       shutDown,
       about,
     ]);
