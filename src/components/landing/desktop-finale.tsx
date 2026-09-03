@@ -112,8 +112,7 @@ function FinaleDesktop() {
     let io: IntersectionObserver | undefined;
 
     const arm = () => {
-      if (io || window.scrollY < window.innerHeight) return;
-      window.removeEventListener("scroll", arm);
+      if (window.scrollY < window.innerHeight) return false;
       const observer = new IntersectionObserver(
         ([entry]) => {
           if (!entry.isIntersecting) return;
@@ -124,12 +123,18 @@ function FinaleDesktop() {
       );
       observer.observe(el);
       io = observer;
+      return true;
     };
 
-    arm();
-    window.addEventListener("scroll", arm, { passive: true });
+    const onScroll = () => {
+      if (arm()) window.removeEventListener("scroll", onScroll);
+    };
+
+    // Already a viewport in (a restored scroll position): no listener is ever needed.
+    if (!arm()) window.addEventListener("scroll", onScroll, { passive: true });
+
     return () => {
-      window.removeEventListener("scroll", arm);
+      window.removeEventListener("scroll", onScroll);
       io?.disconnect();
     };
   }, []);
@@ -211,7 +216,7 @@ function FinaleGrid() {
         <p className="mb-3 text-[12px] text-[var(--r-title-text)] [text-shadow:1px_1px_0_var(--r-dark)]">
           Everything you just saw, on a desktop of your own.
         </p>
-        <RetroButton href="/app?view=play-bonzi" variant="default" size="lg">
+        <RetroButton href="/app?view=play-bonzi" variant="default" size="lg" className="hit-44">
           Play Bonzi Buddy
         </RetroButton>
       </div>

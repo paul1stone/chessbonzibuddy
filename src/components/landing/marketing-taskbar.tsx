@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AboutDialog, Taskbar, type TaskbarMenuItem } from "@/components/retro";
 import { DEFAULT_MENU_ITEMS } from "@/components/retro/taskbar";
 import { APP_MENU_ITEMS_FACTORY, WindowButtons } from "@/components/desktop/app-taskbar";
+import { ShutDownGlyph } from "@/components/desktop/menu-glyphs";
 import { prefersReducedMotion } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { DOCK_LABELS, DOCK_ORDER, useDockStore, type DockId } from "@/stores/dock-store";
@@ -46,9 +47,21 @@ export function MarketingTaskbar() {
       // carries MS-DOS Prompt, so the overlay item would collide with it on label and key.
       const open = (id: WindowId) => useWindowStore.getState().open(id);
       const app = APP_MENU_ITEMS_FACTORY(open).filter((item) => item.label !== "Home");
-      return beforeGitHub(app, [shutDown, about]);
+      // Every factory item carries a glyph, which reserves the 16px column for the whole
+      // menu — so these two need one as well or they sit against an empty slot.
+      return beforeGitHub(app, [
+        { ...shutDown, icon: <ShutDownGlyph /> },
+        {
+          ...about,
+          // The app taskbar's About icon: the dialog's own 32px raster, shrunk to the slot.
+          // eslint-disable-next-line @next/next/no-img-element
+          icon: <img src="/favicon-32.png" alt="" width={16} height={16} className="[image-rendering:pixelated]" />,
+        },
+      ]);
     }
 
+    // No icons here on purpose: nothing in the marketing list has one, so the menu keeps its
+    // flush layout instead of indenting every label past a column of empty slots.
     return beforeGitHub(DEFAULT_MENU_ITEMS, [
       { label: "MS-DOS Prompt", onSelect: () => setTerminalOpen(true) },
       shutDown,
@@ -85,7 +98,10 @@ export function MarketingTaskbar() {
                   type="button"
                   data-dock-button={id}
                   className={cn(
-                    "r-btn h-[22px] min-w-0 max-w-[160px] flex-1 justify-start truncate px-2",
+                    // M3, same as the app bar: r-btn's 75px min-width is unlayered, so it
+                    // outranks a plain `min-w-0` and floors five buttons past the clock at
+                    // 375px — the last two vanish. The ! puts the shrink back.
+                    "r-btn h-[22px] min-w-0! max-w-[160px] flex-1 justify-start truncate px-2",
                     isActive && "font-bold"
                   )}
                   style={

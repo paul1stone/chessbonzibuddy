@@ -45,6 +45,23 @@ export function DocGlyph() {
   );
 }
 
+/** A power plate: the button you press to stop the machine. */
+export function ShutDownGlyph() {
+  return (
+    <svg {...SVG_PROPS}>
+      <rect x="2" y="2" width="12" height="12" fill="#000000" />
+      <rect x="3" y="3" width="10" height="10" fill="#c0c0c0" />
+      {/* The power mark: a stem standing in an open-topped ring. */}
+      <g fill="#800000">
+        <rect x="7" y="4" width="2" height="4" />
+        <rect x="4" y="6" width="2" height="3" />
+        <rect x="10" y="6" width="2" height="3" />
+        <rect x="5" y="9" width="6" height="2" />
+      </g>
+    </svg>
+  );
+}
+
 /** The 1999 shorthand for "this link leaves the app". */
 export function GlobeGlyph() {
   return (
