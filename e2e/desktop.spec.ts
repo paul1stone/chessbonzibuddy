@@ -1,7 +1,24 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 // Windows are `role="dialog"` labelled by their title bar text (ICON_LABELS).
 const PLAY = { name: "Play Bonzi Buddy" } as const;
+
+/**
+ * The first engine use of a session — starting a game, or draining the analysis queue — opens
+ * a Win98 confirm in front of Stockfish's 113 MB download; every later one is latched past it.
+ *
+ * `settled` is whatever proves the gate is behind us; pass it wherever the latch may already be
+ * set, so a second call in the same page never blocks on a dialog that will not come.
+ */
+async function passEngineGate(page: Page, settled?: Locator) {
+  const gate = page.getByRole("dialog", { name: "Download Stockfish" });
+  await expect(settled ? gate.or(settled).first() : gate).toBeVisible({ timeout: 20_000 });
+  if (!(await gate.isVisible())) return;
+  await gate.getByRole("button", { name: "Download", exact: true }).click();
+  // Localhost, but still 113 MB through the dev server's static handler, and the dialog only
+  // closes once the body has been drained to the end.
+  await expect(gate).toHaveCount(0, { timeout: 180_000 });
+}
 
 /**
  * Every test but the cascade one starts past the first visit of a session: that boot slides the
@@ -62,6 +79,8 @@ test.describe("win98 desktop app", () => {
   });
 
   test("opens play from a desktop icon, boots the board, and Bonzi replies", async ({ page }) => {
+    // The download the gate asks for lands in front of everything else this test measures.
+    test.setTimeout(240_000);
     await openDesktop(page);
     await page.getByRole("button", PLAY).first().dblclick();
     const dialog = page.getByRole("dialog", PLAY);
@@ -71,8 +90,10 @@ test.describe("win98 desktop app", () => {
     // ~20s on move 1, which measures its time management rather than the engine wiring.
     // Measured end to end here: ~3.5s engine handshake plus a ~2s search.
     await dialog.getByRole("button", { name: "1+0", exact: true }).click();
+    const board = dialog.locator("[data-column]").first();
     await dialog.getByRole("button", { name: "Start game" }).click();
-    await expect(dialog.locator("[data-column]").first()).toBeVisible({ timeout: 15000 });
+    await passEngineGate(page, board);
+    await expect(board).toBeVisible({ timeout: 15000 });
 
     // Click-to-move: select e2, then click the legal target e4.
     await dialog.locator('[data-square="e2"]').click();
@@ -340,5 +361,149 @@ test.describe("win98 desktop app", () => {
     const width = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(width).toBeLessThanOrEqual(375);
     await ctx.close();
+  });
+
+  test("mobile opens play on arrival, and a deep link stands that down", async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 700 } });
+
+    // M5: a phone arrives to play Bonzi, not to a file manager. Nothing downloads on open —
+    // the 113 MB gate is at Start game — so this must not put a dialog in front of anyone.
+    const page = await ctx.newPage();
+    await openDesktop(page);
+    const play = page.getByRole("dialog", PLAY);
+    await expect(play).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "My games" })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Download Stockfish" })).toHaveCount(0);
+
+    // Closing it lands on the tap grid, never a blank screen.
+    await play.locator('.r-title [aria-label="Close"]').click();
+    await expect(page.locator('[data-desktop-icon="play"]')).toBeVisible();
+
+    // A view param picked the window already, so the auto-open stands down rather than
+    // stacking play on top of it. This is what the finale's mobile grid links land on.
+    const linked = await ctx.newPage();
+    await openDesktop(linked, "/app?view=practice");
+    await expect(linked.getByRole("dialog", { name: "Practice" })).toBeVisible();
+    await expect(linked.getByRole("dialog", PLAY)).toHaveCount(0);
+
+    await ctx.close();
+  });
+
+  test("the Start menu lists every window, each with an icon", async ({ page }) => {
+    await openDesktop(page);
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    const menu = page.getByRole("navigation", { name: "Start menu" });
+    await expect(menu.locator("li")).toHaveText([
+      "Play Bonzi Buddy",
+      "My games",
+      "Import",
+      "Practice",
+      "Profile",
+      "MS-DOS Prompt",
+      "Home",
+      "Privacy",
+      "Terms",
+      "GitHub",
+      "About Chess Bonzi Buddy",
+    ]);
+
+    // L11: every row carries a 16px icon, so no label ever sits against an empty slot.
+    // Each row is one link or button whose first child is the icon slot.
+    const iconless = await menu
+      .locator("li > *")
+      .evaluateAll((rows) =>
+        rows
+          .filter((row) => !row.firstElementChild?.firstElementChild)
+          .map((row) => row.textContent?.trim() ?? "")
+      );
+    expect(iconless).toEqual([]);
+  });
+
+  test("About opens from the Start menu and carries the disclaimer", async ({ page }) => {
+    await openDesktop(page);
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    const menu = page.getByRole("navigation", { name: "Start menu" });
+    await menu.getByRole("button", { name: "About Chess Bonzi Buddy" }).click();
+    // The deleted landing footer's disclaimer and credits live here now.
+    const about = page.getByRole("dialog", { name: "About Chess Bonzi Buddy" });
+    await expect(about).toBeVisible();
+    await expect(about).toContainText("BonziOS 1.0");
+    await expect(about).toContainText(/not affiliated/i);
+    await about.getByRole("button", { name: "OK" }).click();
+    await expect(about).toHaveCount(0);
+  });
+
+  test("the analysis queue drains every queued game behind one gate", async ({ page }) => {
+    // One engine download, one engine init, then two games of real Stockfish.
+    test.setTimeout(300_000);
+
+    // There is no DATABASE_URL here, so both endpoints are faked: the queue is what is under
+    // test, not the API. Four plies is a whole game to the pipeline.
+    const PGN = '[Event "e2e"]\n[White "?"]\n[Black "?"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 Nc6 *';
+    const GAMES = [
+      { id: "queued-game-one", whitePlayer: "Alice", blackPlayer: "Bob" },
+      { id: "queued-game-two", whitePlayer: "Carol", blackPlayer: "Dave" },
+    ];
+    const body = (i: number) => ({
+      ...GAMES[i],
+      chessComUrl: `https://www.chess.com/game/live/${i + 1}`,
+      pgn: PGN,
+      result: "*",
+      playedAt: null,
+      analysis: null,
+      whiteAccuracy: null,
+      blackAccuracy: null,
+      createdAt: new Date().toISOString(),
+    });
+
+    let imported = 0;
+    const analyzed: string[] = [];
+    await page.route("**/api/games/import", (route) =>
+      route.fulfill({ json: body(Math.min(imported++, GAMES.length - 1)) })
+    );
+    await page.route("**/api/games/*/analysis", (route) => {
+      const id = new URL(route.request().url()).pathname.split("/").at(-2)!;
+      analyzed.push(id);
+      const i = GAMES.findIndex((g) => g.id === id);
+      return route.fulfill({ json: { ...body(i), whiteAccuracy: 90, blackAccuracy: 90 } });
+    });
+
+    // Play open holds the queue: analysis and Bonzi each run their own 113 MB engine.
+    await openDesktop(page, "/app?view=play-bonzi");
+    await expect(page.getByRole("dialog", PLAY)).toBeVisible();
+
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page
+      .getByRole("navigation", { name: "Start menu" })
+      .getByRole("button", { name: "Import" })
+      .click();
+    const importWindow = page.getByRole("dialog", { name: "Import" });
+    await importWindow.getByRole("tab", { name: "Paste URL" }).click();
+
+    for (const [i, game] of GAMES.entries()) {
+      await importWindow.getByRole("textbox").fill(`https://www.chess.com/game/live/${i + 1}`);
+      await importWindow.getByRole("button", { name: "Import", exact: true }).click();
+      // Every import opens its own review window on top; close it to get the form back.
+      const review = page.getByRole("dialog", {
+        name: `${game.whitePlayer} vs ${game.blackPlayer}`,
+      });
+      await review.locator('.r-title [aria-label="Close"]').click();
+      await expect(review).toHaveCount(0);
+    }
+
+    // Both queued, neither started: the play window is still open.
+    expect(analyzed).toEqual([]);
+
+    await page.getByRole("dialog", PLAY).locator('.r-title [aria-label="Close"]').click();
+    // One gate for the whole drain, asked before the first dequeue.
+    await passEngineGate(page);
+    await expect
+      .poll(() => analyzed, { timeout: 240_000 })
+      .toEqual(["queued-game-one", "queued-game-two"]);
+  });
+
+  test("the app route is titled Desktop", async ({ page }) => {
+    await openDesktop(page);
+    await expect(page).toHaveTitle("Desktop | Chess Bonzi Buddy");
   });
 });

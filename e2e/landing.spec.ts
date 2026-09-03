@@ -50,6 +50,30 @@ async function demoWindow(page: Page, name: string): Promise<Locator> {
 }
 
 /**
+ * Parks the scroll on the finale — the page's last section, a real desktop — and waits for the
+ * taskbar to hand its section buttons over to that desktop's window buttons.
+ *
+ * Re-scrolled every poll for the same reason `revealCascade` is: the hero grows to 300vh and
+ * the walkthrough pins three viewports, both after first paint, so an early measurement of
+ * where the section starts is never the final one.
+ */
+async function arriveAtFinale(page: Page) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const finale = document.querySelector("[data-finale]");
+          if (!finale) return "no finale section";
+          window.scrollTo(0, finale.getBoundingClientRect().top + window.scrollY);
+          // The section buttons live in this container, and the swap unmounts it whole.
+          return document.querySelector("[data-dock-slots]") ? "still docked" : "arrived";
+        }),
+      { timeout: 30_000 }
+    )
+    .toBe("arrived");
+}
+
+/**
  * First visit of a session zooms the hero window up out of the taskbar. Any pointerdown
  * fast-forwards that animation, which moves the window between mousedown and mouseup — the
  * click then lands on an ancestor and never reaches the link. Wait for the zoom to land.
@@ -315,6 +339,109 @@ test.describe("landing page", () => {
     await expect(page.locator(".hero-window")).toBeVisible();
     expect(await sawBootPending()).toBe(false);
     await context.close();
+  });
+
+  test("the scroll ends at a real desktop, and the taskbar hands over to it", async ({ page }) => {
+    // The finale plays /app's icon stagger on first arrival; seeding the flag it writes on
+    // completion keeps an icon from moving out from under the double-click below.
+    await page.addInitScript(() => {
+      try {
+        sessionStorage.setItem("cbb-app-booted", "1");
+      } catch {
+        // Blocked storage only means the stagger plays; nothing here depends on the write.
+      }
+    });
+    await page.goto("/");
+    await arriveAtFinale(page);
+
+    // The embedded desktop is the real one: same icons, drawn from the same store.
+    const finale = page.locator("[data-finale]");
+    await expect(finale.locator("[data-desktop-icon]").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("[data-taskbar-button]")).toHaveCount(0);
+
+    // A window opens in place — on the landing page, into the landing page's own taskbar.
+    await finale.locator('[data-desktop-icon="games"]').dblclick();
+    await expect(page.getByRole("dialog", { name: "My games" })).toBeVisible();
+    await expect(page.locator('[data-taskbar-button="games"]')).toBeVisible();
+
+    // Scrolling back into the story hands the bar to the sections again. One viewport up, not
+    // the top of the page: the sections undock behind you, so at scrollY 0 there is nothing
+    // for the bar to show either way.
+    await page.evaluate(() => {
+      const finale = document.querySelector("[data-finale]")!;
+      window.scrollTo(0, finale.getBoundingClientRect().top + window.scrollY - window.innerHeight);
+    });
+    await expect(page.locator("[data-taskbar-button]")).toHaveCount(0);
+    await expect(page.locator("[data-dock-slots]")).toHaveCount(1);
+    await expect(page.locator("[data-dock-button]").first()).toBeVisible();
+  });
+
+  test("the mobile finale grid opens the window each icon points at", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 375, height: 700 } });
+    const page = await context.newPage();
+    await page.goto("/");
+
+    // No desktop on a phone: the finale is a tap grid into /app, so its links are the whole
+    // feature. Re-scrolled every poll, as ever — the hero and the pins both grow late.
+    const icons = page.locator("[data-finale-icon]");
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const finale = document.querySelector("[data-finale]");
+            if (!finale) return 0;
+            window.scrollTo(0, finale.getBoundingClientRect().top + window.scrollY);
+            return document.querySelectorAll("[data-finale-icon]").length;
+          }),
+        { timeout: 30_000 }
+      )
+      .toBe(7);
+
+    // Every href is inverted out of the deep-link whitelist, so a missing entry would ship a
+    // literal `?view=undefined` rather than fail anywhere visible.
+    const hrefs = await icons.evaluateAll((els) => els.map((el) => el.getAttribute("href") ?? ""));
+    expect(hrefs.filter((href) => !/^\/app\?view=[a-z-]+$/.test(href))).toEqual([]);
+
+    // A NON-play link: ViewParamSync used to whitelist play-bonzi alone, so every other icon
+    // landed the visitor on a bare desktop with nothing open.
+    await page.locator('[data-finale-icon="practice"]').click();
+    await expect(page).toHaveURL(/\/app\?view=practice$/);
+    await expect(page.getByRole("dialog", { name: "Practice" })).toBeVisible();
+    await context.close();
+  });
+
+  test("carries the share metadata and favicons a link preview needs", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).toHaveTitle("Chess Bonzi Buddy");
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+      "content",
+      "Chess Bonzi Buddy"
+    );
+    // Absolute, from metadataBase: crawlers reject a relative og:image outright.
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+      "content",
+      /^https:\/\/.+\/og\.png$/
+    );
+    await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute("content", "1200");
+    await expect(page.locator('meta[property="og:image:alt"]')).not.toHaveAttribute("content", "");
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+      "content",
+      "summary_large_image"
+    );
+    await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute(
+      "content",
+      /^https:\/\/.+\/og\.png$/
+    );
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/favicon-32.png");
+    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
+      "href",
+      "/apple-touch-icon.png"
+    );
+
+    // The tags promise files that have to exist: og.png is committed, not generated on deploy.
+    for (const path of ["/og.png", "/favicon-32.png", "/apple-touch-icon.png"]) {
+      expect((await page.request.get(path)).status(), path).toBe(200);
+    }
   });
 
   test("respects reduced motion: every dock button is there from the start", async ({ browser }) => {
