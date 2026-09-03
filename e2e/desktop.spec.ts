@@ -1,24 +1,7 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // Windows are `role="dialog"` labelled by their title bar text (ICON_LABELS).
 const PLAY = { name: "Play Bonzi Buddy" } as const;
-
-/**
- * The first engine use of a session — starting a game, or draining the analysis queue — opens
- * a Win98 confirm in front of Stockfish's 113 MB download; every later one is latched past it.
- *
- * `settled` is whatever proves the gate is behind us; pass it wherever the latch may already be
- * set, so a second call in the same page never blocks on a dialog that will not come.
- */
-async function passEngineGate(page: Page, settled?: Locator) {
-  const gate = page.getByRole("dialog", { name: "Download Stockfish" });
-  await expect(settled ? gate.or(settled).first() : gate).toBeVisible({ timeout: 20_000 });
-  if (!(await gate.isVisible())) return;
-  await gate.getByRole("button", { name: "Download", exact: true }).click();
-  // Localhost, but still 113 MB through the dev server's static handler, and the dialog only
-  // closes once the body has been drained to the end.
-  await expect(gate).toHaveCount(0, { timeout: 180_000 });
-}
 
 /**
  * Every test but the cascade one starts past the first visit of a session: that boot slides the
@@ -92,7 +75,6 @@ test.describe("win98 desktop app", () => {
     await dialog.getByRole("button", { name: "1+0", exact: true }).click();
     const board = dialog.locator("[data-column]").first();
     await dialog.getByRole("button", { name: "Start game" }).click();
-    await passEngineGate(page, board);
     await expect(board).toBeVisible({ timeout: 15000 });
 
     // Click-to-move: select e2, then click the legal target e4.
@@ -367,13 +349,12 @@ test.describe("win98 desktop app", () => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 700 } });
 
     // M5: a phone arrives to play Bonzi, not to a file manager. Nothing downloads on open —
-    // the 113 MB gate is at Start game — so this must not put a dialog in front of anyone.
+    // the engine initializes at Start game.
     const page = await ctx.newPage();
     await openDesktop(page);
     const play = page.getByRole("dialog", PLAY);
     await expect(play).toBeVisible();
     await expect(page.getByRole("dialog", { name: "My games" })).toHaveCount(0);
-    await expect(page.getByRole("dialog", { name: "Download Stockfish" })).toHaveCount(0);
 
     // Closing it lands on the tap grid, never a blank screen.
     await play.locator('.r-title [aria-label="Close"]').click();
@@ -469,7 +450,7 @@ test.describe("win98 desktop app", () => {
       return route.fulfill({ json: { ...body(i), whiteAccuracy: 90, blackAccuracy: 90 } });
     });
 
-    // Play open holds the queue: analysis and Bonzi each run their own 113 MB engine.
+    // Play open holds the queue: analysis and Bonzi each run their own single-threaded engine.
     await openDesktop(page, "/app?view=play-bonzi");
     await expect(page.getByRole("dialog", PLAY)).toBeVisible();
 
@@ -496,8 +477,7 @@ test.describe("win98 desktop app", () => {
     expect(analyzed).toEqual([]);
 
     await page.getByRole("dialog", PLAY).locator('.r-title [aria-label="Close"]').click();
-    // One gate for the whole drain, asked before the first dequeue.
-    await passEngineGate(page);
+    // Closing play releases the drain; the engine initializes itself on the first game.
     await expect
       .poll(() => analyzed, { timeout: 240_000 })
       .toEqual(["queued-game-one", "queued-game-two"]);

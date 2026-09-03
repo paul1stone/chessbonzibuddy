@@ -5,9 +5,9 @@ const IMMUTABLE = "public, max-age=31536000, immutable";
 const nextConfig: NextConfig = {
   async headers() {
     return [
-      // Stockfish is 113 MB and the gate makes the user agree to it once. Next serves
-      // public/ with max-age=0, so without this every reload re-validates and any cache
-      // eviction charges them the download again.
+      // The engine lives in a VERSIONED directory (/stockfish/18-lite/) because of this
+      // header: a year of immutable means a bumped engine must ship under a new path or
+      // returning visitors keep the old one. Next serves public/ with max-age=0 otherwise.
       { source: "/stockfish/:path*", headers: [{ key: "Cache-Control", value: IMMUTABLE }] },
       // The 39 MB rootfs is content-addressed (rootfs-flat/<sha>.bin.zst), so a rebuilt image
       // writes new names and can never collide with what a browser already holds.

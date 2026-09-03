@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { requestEngineDownload } from "@/components/retro/download-dialog";
 import {
   acquireProgressCursor,
   releaseProgressCursor,
@@ -22,7 +21,6 @@ import {
   ReviewWindow,
 } from "@/components/windows/review-window";
 import TerminalWindow from "@/components/windows/terminal-window";
-import { isEngineFetched } from "@/lib/engine-prefetch";
 import { useGameStore } from "@/stores/game-store";
 import { useWindowStore, type WindowId } from "@/stores/window-store";
 import type { Game } from "@/db/schema";
@@ -73,7 +71,8 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
 
       try {
         // Dynamic import keeps Stockfish and the opening book out of the initial bundle.
-        // No warm-up toast: the gate above has already named the download and shown its bar.
+        // The review overlay reads "Initializing…" until the first move lands, which covers
+        // the engine's ~7 MB fetch-and-compile on a cold cache.
         const { analyzeGame } = await import("@/lib/analyze");
 
         const result = await analyzeGame(game.pgn, {
@@ -143,7 +142,7 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
 
   useEffect(() => {
     // Hold the queue while the user is playing Bonzi: analysis and Bonzi each
-    // spin up their own single-threaded engine, and two 113 MB WASM instances
+    // spin up their own single-threaded engine, and two searching WASM instances
     // starve the clock (and can kill the tab on mobile). A minimized play window
     // still has a live game, so `open` is the guard, not focus.
     if (
@@ -158,14 +157,6 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
 
     (async () => {
       try {
-        // A3: the engine is 113 MB, so nothing downloads it until the user says so. Gated
-        // BEFORE the dequeue — a decline leaves the queue whole, ready for the next attempt.
-        if (!isEngineFetched() && !(await requestEngineDownload())) {
-          // The queue is held rather than lost, so say what would restart it.
-          toast.info("Analysis needs the Stockfish download. Click Analyze to try again.");
-          return;
-        }
-
         // Drain the queue in this one run rather than a game per effect pass: the
         // one-game-per-pass shape stalled after the first game (verified live here and
         // against unmodified main), and draining in a single run needs no re-entry at all.
@@ -182,8 +173,8 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
           const next = dequeueAnalysis();
           if (!next) break;
 
-          // If no game is currently active, make the queued game active. Read fresh: the
-          // gate may have held this run open for the length of a download.
+          // If no game is currently active, make the queued game active. Read fresh: an
+          // earlier pass of this run may have set it.
           if (!useGameStore.getState().activeGame) {
             setActiveGame(next);
           }
@@ -310,9 +301,9 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
     // Matched here rather than through useIsMobile: that hook hands the hydrating render its
     // server snapshot (false), and the hydrating render is the only one this effect ever sees.
     if (window.matchMedia("(max-width: 767px)").matches) {
-      // M5: a phone arrives to play Bonzi, not to a file manager. Safe now that opening the
-      // window downloads nothing — the gate asks at Start. Closing it falls back to the icon
-      // grid, so the last close never strands a blank screen.
+      // M5: a phone arrives to play Bonzi, not to a file manager. Opening the window downloads
+      // nothing — the engine (~7 MB) initializes at game start. Closing it falls back to the
+      // icon grid, so the last close never strands a blank screen.
       useWindowStore.getState().open("play");
       return;
     }

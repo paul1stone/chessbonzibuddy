@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Chess } from "chess.js";
 import { Board } from "@/components/chess/board";
 import { BonziAvatar } from "@/components/bonzi/bonzi-avatar";
@@ -11,8 +11,6 @@ import { PlaySetup } from "./play-setup";
 import { useBonziPlayStore } from "@/stores/bonzi-play-store";
 import { getBonziReaction } from "@/lib/bonzi/bonzi-engine";
 import { StockfishEngine } from "@/lib/engine";
-import { isEngineFetched } from "@/lib/engine-prefetch";
-import { requestEngineDownload } from "@/components/retro/download-dialog";
 import { useBoardSize } from "@/hooks/use-board-size";
 import { RetroButton } from "@/components/retro";
 import type { BonziEvent } from "@/lib/bonzi/types";
@@ -49,11 +47,9 @@ export function PlayView({ onExit }: PlayViewProps) {
   const mountedRef = useRef(true);
   const gameRef = useRef<Chess>(new Chess());
   const bonziTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // A declined download leaves the setup screen with one quiet line explaining why.
-  const [engineNote, setEngineNote] = useState<string | null>(null);
 
-  // Boot the engine. Deliberately NOT on mount: opening the window must not start a 113 MB
-  // download, so this runs at game start, once the gate has been answered.
+  // Boot the engine at game start, not on mount: opening the window should stay free of the
+  // wasm fetch (~7 MB, seconds) — and a move made during init waits on engineReadyRef anyway.
   const ensureEngine = useCallback(() => {
     if (engineReadyRef.current || !mountedRef.current) return;
 
@@ -73,6 +69,7 @@ export function PlayView({ onExit }: PlayViewProps) {
         // Account for browser Web Worker message-passing overhead
         engine.setOption("Move Overhead", 150);
         engineRef.current = engine;
+        addLogEntry({ type: "game", message: "Engine ready." });
         return engine;
       })
       .catch((err) => {
@@ -82,7 +79,7 @@ export function PlayView({ onExit }: PlayViewProps) {
         }
         return null;
       });
-  }, []);
+  }, [addLogEntry]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -272,19 +269,8 @@ export function PlayView({ onExit }: PlayViewProps) {
 
   // Handle game start
   const handleStart = useCallback(async () => {
-    // The gate: no game begins until the engine is either cached or agreed to.
-    if (!isEngineFetched()) {
-      setEngineNote(null);
-      const agreed = await requestEngineDownload();
-      if (!mountedRef.current) return;
-      if (!agreed) {
-        setEngineNote(
-          "Bonzi needs the Stockfish download to play. Start a game to try again."
-        );
-        return;
-      }
-    }
     // Late init is fine: a move made while the engine boots waits on engineReadyRef.
+    const initStarting = !engineReadyRef.current;
     ensureEngine();
 
     gameRef.current = new Chess();
@@ -292,6 +278,9 @@ export function PlayView({ onExit }: PlayViewProps) {
 
     const colorLabel = playerColor === "w" ? "white" : "black";
     addLogEntry({ type: "game", message: `Game started - Player: ${colorLabel}, Time: ${timeControl.label}` });
+    if (initStarting) {
+      addLogEntry({ type: "game", message: "Initializing engine…" });
+    }
     fireBonziReaction("game_start");
 
     // If player is black, engine moves first
@@ -413,11 +402,6 @@ export function PlayView({ onExit }: PlayViewProps) {
         <div className="min-h-0 flex-1">
           <PlaySetup onStart={handleStart} onBack={onExit} />
         </div>
-        {engineNote && (
-          <div className="r-bevel-in r-statusbar shrink-0" role="status">
-            {engineNote}
-          </div>
-        )}
       </div>
     );
   }

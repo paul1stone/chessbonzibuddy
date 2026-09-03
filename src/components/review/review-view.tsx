@@ -123,7 +123,10 @@ export function ReviewView({
                 alt="Loading"
                 className="h-24 w-24 object-contain"
               />
-              <p className="text-lg font-bold">Analyzing...</p>
+              {/* Before the first move lands the engine is still fetching + compiling. */}
+              <p className="text-lg font-bold">
+                {analysisProgress === 0 ? "Initializing..." : "Analyzing..."}
+              </p>
 
               {/* Progress bar */}
               <div className="r-progress w-64">
@@ -134,7 +137,9 @@ export function ReviewView({
               </div>
 
               <p className="text-sm text-[var(--r-shadow)]">
-                Move {currentAnalysisMove} of {totalMoves}
+                {analysisProgress === 0
+                  ? "Starting engine"
+                  : `Move ${currentAnalysisMove} of ${totalMoves}`}
               </p>
             </div>
           </div>
