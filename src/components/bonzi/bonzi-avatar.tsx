@@ -5,6 +5,8 @@ import { SpeechBubble } from "./speech-bubble";
 import { getBonziGifUrl, FALLBACK_GIF } from "@/lib/bonzi/bonzi-engine";
 import type { BonziGifState } from "@/lib/bonzi/types";
 
+// Square boxes, but the sprites are 200x160 — object-contain keeps the box (and every layout
+// tuned against it) while letterboxing the 5:4 art instead of squashing it 20% narrower.
 const SIZES = {
   sm: "h-10 w-10",
   md: "h-16 w-16",
@@ -45,7 +47,7 @@ export function BonziAvatar({
       <img
         src={src}
         alt="Bonzi Buddy"
-        className={SIZES[size]}
+        className={`${SIZES[size]} object-contain`}
         onError={() => setImgError(true)}
         key={`${gif}-${seq}`}
       />

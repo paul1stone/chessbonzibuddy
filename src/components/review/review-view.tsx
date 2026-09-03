@@ -121,7 +121,7 @@ export function ReviewView({
               <img
                 src="/coolmonkey.gif"
                 alt="Loading"
-                className="h-24 w-24"
+                className="h-24 w-24 object-contain"
               />
               <p className="text-lg font-bold">Analyzing...</p>
 

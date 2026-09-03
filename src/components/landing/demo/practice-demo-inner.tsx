@@ -84,7 +84,7 @@ export default function PracticeDemoInner() {
       <div className="flex min-h-[52px] items-center gap-2">
         {(solved || misses > 0) && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={solved ? "/bonzi/clap.gif" : "/bonzi/sad.gif"} alt="" className="h-12 w-12" />
+          <img src={solved ? "/bonzi/clap.gif" : "/bonzi/sad.gif"} alt="" className="h-12 w-12 object-contain" />
         )}
         <p className="text-center">
           {solved

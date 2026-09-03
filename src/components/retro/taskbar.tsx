@@ -32,7 +32,9 @@ const MENU_ITEM_CLASS =
 function MenuItemIcon({ icon, reserve }: { icon?: ReactNode; reserve: boolean }) {
   if (!reserve) return null;
   return (
-    <span className="h-4 w-4 shrink-0 [&>*]:h-4 [&>*]:w-4" aria-hidden="true">
+    // object-contain for raster icons: the slot forces 16x16 on art that may not be square.
+    // Inline SVG is not a replaced element, so the drawn icons ignore it.
+    <span className="h-4 w-4 shrink-0 [&>*]:h-4 [&>*]:w-4 [&>*]:object-contain" aria-hidden="true">
       {icon}
     </span>
   );

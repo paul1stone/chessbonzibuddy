@@ -77,7 +77,7 @@ export function BonziShowcase() {
         <div className="flex flex-col items-center justify-center gap-3">
           {reduced ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/bonzi/idle-still.png" alt="Bonzi Buddy" className="h-24 w-24" />
+            <img src="/bonzi/idle-still.png" alt="Bonzi Buddy" className="h-24 w-24 object-contain" />
           ) : (
             <BonziAvatar gif={current.gif} quip={current.quip} size="lg" />
           )}

@@ -93,7 +93,11 @@ export function WindowButtons() {
             onClick={() => (isFocused ? minimize(id) : focus(id))}
             onContextMenu={(e) => openMenu(e, id)}
           >
-            <span className="h-4 w-4 shrink-0 [&>*]:h-4 [&>*]:w-4">{WINDOW_ICONS[id]}</span>
+            {/* object-contain for the one raster icon: the slot forces 16x16 on a 5:4 sprite.
+                Inline SVG is not a replaced element, so the drawn icons ignore it. */}
+            <span className="h-4 w-4 shrink-0 [&>*]:h-4 [&>*]:w-4 [&>*]:object-contain">
+              {WINDOW_ICONS[id]}
+            </span>
             <span className="truncate">{ICON_LABELS[id]}</span>
           </button>
         );

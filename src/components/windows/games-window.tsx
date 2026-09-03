@@ -184,7 +184,7 @@ export function GamesWindow() {
         ) : !username ? (
           <div className="flex flex-col items-center gap-3 px-2 py-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/coolmonkey.gif" alt="" className="h-16 w-16" />
+            <img src="/coolmonkey.gif" alt="" className="h-16 w-16 object-contain" />
             <p className="text-center text-[var(--r-shadow)]">
               Connect your Chess.com or Lichess account to view games
             </p>

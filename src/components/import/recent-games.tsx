@@ -225,7 +225,7 @@ export function RecentGames({
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-2 py-8">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/coolmonkey.gif" alt="" className="h-16 w-16" />
+        <img src="/coolmonkey.gif" alt="" className="h-16 w-16 object-contain" />
         <p className="text-center text-[var(--r-shadow)]">
           Connect your Chess.com or Lichess account to import games
         </p>
@@ -240,7 +240,7 @@ export function RecentGames({
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-8">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/coolmonkey.gif" alt="Loading" className="h-16 w-16" />
+        <img src="/coolmonkey.gif" alt="Loading" className="h-16 w-16 object-contain" />
         <span>Fetching recent games...</span>
       </div>
     );
