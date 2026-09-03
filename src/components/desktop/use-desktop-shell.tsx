@@ -30,9 +30,6 @@ import type { WindowDef } from "./desktop";
 import { ICON_LABELS } from "./icons";
 import { VIEW_PARAM_WINDOWS } from "./view-params";
 
-export type { ImportOne };
-export { VIEW_PARAM_WINDOWS };
-
 /** One authored line for the branches where the server's own words can't be trusted (A8). */
 function unreachableCopy(): string {
   return typeof navigator !== "undefined" && !navigator.onLine
