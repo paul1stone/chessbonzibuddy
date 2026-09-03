@@ -131,6 +131,18 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
 
   // ---- Queue processor: run analysis for queued games one at a time ----
   const processingRef = useRef(false);
+  // A drain that outlives its shell has to stop: the replacement shell mounts with both its
+  // own flags clear and would start a second Stockfish alongside the detached one.
+  const aliveRef = useRef(true);
+
+  useEffect(() => {
+    // Set in the body, not just cleared in the cleanup: StrictMode's mount/unmount/mount
+    // would otherwise leave this false for the life of the real mount.
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     // Hold the queue while the user is playing Bonzi: analysis and Bonzi each
@@ -151,13 +163,20 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
       try {
         // A3: the engine is 113 MB, so nothing downloads it until the user says so. Gated
         // BEFORE the dequeue — a decline leaves the queue whole, ready for the next attempt.
-        if (!isEngineFetched() && !(await requestEngineDownload())) return;
+        if (!isEngineFetched() && !(await requestEngineDownload())) {
+          // The queue is held rather than lost, so say what would restart it.
+          toast.info("Analysis needs the Stockfish download. Click Analyze to try again.");
+          return;
+        }
 
-        // Drain the queue in this one run rather than a game per effect pass. runAnalysis
-        // ends with store writes that re-render synchronously, so the effect re-enters
-        // while this ref is still held (it clears a microtask later) and bails — leaving
-        // every game after the first parked in the queue with nothing left to wake it.
+        // Drain the queue in this one run rather than a game per effect pass: the
+        // one-game-per-pass shape stalled after the first game (verified live here and
+        // against unmodified main), and draining in a single run needs no re-entry at all.
         for (;;) {
+          // Stop if this shell is gone: a detached drain would run a second engine
+          // alongside whatever the newly mounted shell starts.
+          if (!aliveRef.current) break;
+
           // Re-read the guard between games: opening the play window mid-drain pauses us
           // after the current game, and closing it re-runs this effect to resume.
           if (useWindowStore.getState().windows.play.open) break;
@@ -177,7 +196,10 @@ export function useDesktopShell({ autoOpen = false }: { autoOpen?: boolean } = {
       } finally {
         processingRef.current = false;
       }
-    })();
+    })().catch((err) => {
+      // Nothing above throws today; this keeps a future one out of the unhandled bucket.
+      console.error("Analysis queue failed:", err);
+    });
   }, [
     isAnalyzing,
     playOpen,
