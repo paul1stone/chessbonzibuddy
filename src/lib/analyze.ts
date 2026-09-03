@@ -70,7 +70,7 @@ export async function analyzeGame(
 ): Promise<GameAnalysis> {
   const nodes = opts.nodes ?? ANALYSIS_NODES;
   const multiPv = opts.multiPv ?? ANALYSIS_MULTIPV;
-  const engineInfo = { name: "stockfish-18-wasm", nodes, multiPv };
+  const engineInfo = { name: "stockfish-18-lite-wasm", nodes, multiPv };
 
   const gameFull = new Chess();
   gameFull.loadPgn(pgn);

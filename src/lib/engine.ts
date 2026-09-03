@@ -125,11 +125,9 @@ export function isCurrentAnalysis(a: unknown): a is GameAnalysis {
 /**
  * Wrapper around a Stockfish Web Worker.
  *
- * Loading strategy (tried in order):
- *  1. Inline Web Worker that uses `importScripts` to pull Stockfish from a CDN.
- *  2. If the CDN approach fails at init time, falls back to loading from a
- *     local copy at `/stockfish/stockfish.js` (which you can place in the
- *     Next.js `public/` directory).
+ * Loads the lite single-threaded build (~7 MB wasm, small NNUE net — still far
+ * superhuman) from `/stockfish/18-lite/`, copied out of node_modules by the
+ * postinstall script.
  *
  * Usage:
  * ```ts
@@ -159,12 +157,12 @@ export class StockfishEngine {
       );
     }
 
-    // The first message only lands once the ~113 MB wasm is fetched and
-    // compiled, so a slow load is normal — but it must never look like a freeze.
+    // The first message only lands once the ~7 MB wasm is fetched and
+    // compiled — a couple of seconds cold — but it must never look like a freeze.
     const slowWarning = setTimeout(() => {
       console.warn(
         "[StockfishEngine] Still waiting for Stockfish after 20s - " +
-          "the engine wasm (~113 MB) is probably still downloading."
+          "the engine wasm (~7 MB) is probably still downloading."
       );
     }, 20_000);
 
@@ -176,7 +174,7 @@ export class StockfishEngine {
       this.worker = null;
       throw new Error(
         `Failed to initialise Stockfish engine. Check that ` +
-          `/stockfish/stockfish.js and /stockfish/stockfish.wasm are both ` +
+          `/stockfish/18-lite/stockfish.js and its stockfish.wasm are both ` +
           `served (they are gitignored and copied from node_modules by the ` +
           `postinstall script, so a fresh worktree needs "npm install"). ` +
           `Original error: ${err}`
@@ -353,9 +351,12 @@ export class StockfishEngine {
   // ------------------------------------------------------------------
 
   private createLocalWorker(): Worker {
-    // Stockfish 18 single-threaded build handles Worker messaging natively
-    // (onmessage for input, postMessage for output) — no wrapper needed.
-    const worker = new Worker("/stockfish/stockfish.js");
+    // Stockfish 18 lite single-threaded build handles Worker messaging natively
+    // (onmessage for input, postMessage for output) — no wrapper needed. The js
+    // hardcodes "stockfish.wasm" beside itself, so the pair lives in a VERSIONED
+    // directory: /stockfish/* is immutable-cached for a year, and a future engine
+    // bump must change the directory name or returning visitors keep the old one.
+    const worker = new Worker("/stockfish/18-lite/stockfish.js");
     this.attachListener(worker);
     return worker;
   }
@@ -445,8 +446,8 @@ export class StockfishEngine {
    * Run the UCI + isready handshake.
    *
    * Generous timeouts: the worker's first message only lands after the browser
-   * has downloaded and compiled the ~113 MB stockfish.wasm, which is served
-   * uncached and can take minutes on a slow connection.
+   * has downloaded and compiled the ~7 MB stockfish.wasm — seconds normally,
+   * but a bad connection should degrade to slow, not to a timeout error.
    */
   private async handshake(): Promise<void> {
     this.sendCommand("uci");
